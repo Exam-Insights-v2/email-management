@@ -19,15 +19,17 @@ const getBaseUrl = (): string | undefined => {
   // Don't override for the OAuth proxy server (staging) - it needs its custom domain
   // for OAuth callbacks to work correctly
   const isOAuthProxyServer = process.env.IS_OAUTH_PROXY_SERVER === "true";
+  let url: string | undefined;
   if (
     process.env.VERCEL_ENV === "preview" &&
     process.env.VERCEL_URL &&
     !isOAuthProxyServer
   ) {
-    return `https://${process.env.VERCEL_URL}`;
+    url = `https://${process.env.VERCEL_URL}`;
+  } else {
+    url = process.env.NEXT_PUBLIC_BASE_URL;
   }
-
-  return process.env.NEXT_PUBLIC_BASE_URL;
+  return url?.replace(/\/$/, "") ?? url;
 };
 
 export const env = createEnv({
