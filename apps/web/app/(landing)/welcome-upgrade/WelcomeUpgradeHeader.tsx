@@ -15,7 +15,8 @@ export function WelcomeUpgradeHeader() {
             Start your 7-day FREE trial
           </h1>
           <p className="mt-2 text-lg text-gray-900 sm:text-xl">
-            Join {userCount} users that use Inbox Zero to be more productive!
+            Join {userCount} users that use Clarent Email Management to be more
+            productive!
           </p>
         </div>
       </div>

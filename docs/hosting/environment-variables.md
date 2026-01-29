@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-This document provides a comprehensive reference for all environment variables relevant to self-hosting Inbox Zero.
+This document provides a comprehensive reference for all environment variables relevant to self-hosting Clarent Email Management.
 
 ## Quick Start
 
@@ -74,7 +74,7 @@ cp apps/web/.env.example apps/web/.env
 | **Resend** ||||
 | `RESEND_API_KEY` | No | API key for transactional emails | — |
 | `RESEND_AUDIENCE_ID` | No | Audience ID for contacts | — |
-| `RESEND_FROM_EMAIL` | No | From email address | `Inbox Zero <updates@transactional.getinboxzero.com>` |
+| `RESEND_FROM_EMAIL` | No | From email address | `Clarent Email Management <updates@transactional.getinboxzero.com>` |
 | `NEXT_PUBLIC_IS_RESEND_CONFIGURED` | No | Client-side flag indicating if Resend is configured | — |
 | **Other** ||||
 | `CRON_SECRET` | No | Secret for cron job authentication | — |

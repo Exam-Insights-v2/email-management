@@ -36,10 +36,10 @@ export function Privacy() {
             the highest security and privacy standards.
           </p>
           <p className="mt-2 text-lg leading-8 text-gray-600">
-            Inbox Zero is SOC2 compliant and CASA Tier 2 approved. It has
-            undergone a thorough security process with Google to ensure the
-            protection of your emails. You can even self-host Inbox Zero on your
-            own infrastructure.
+            Clarent Email Management is SOC2 compliant and CASA Tier 2 approved.
+            It has undergone a thorough security process with Google to ensure
+            the protection of your emails. You can even self-host Clarent Email
+            Management on your own infrastructure.
           </p>
         </div>
       </div>

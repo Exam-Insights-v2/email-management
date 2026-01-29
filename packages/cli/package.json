@@ -1,7 +1,7 @@
 {
   "name": "@inbox-zero/cli",
   "version": "1.0.0",
-  "description": "CLI tool for setting up Inbox Zero",
+  "description": "CLI tool for setting up Clarent Email Management",
   "type": "module",
   "bin": {
     "inbox-zero": "./dist/inbox-zero.js"

@@ -1,5 +1,10 @@
 #!/bin/bash
 
+set -eo pipefail
+
 pnpm install
-pnpm prisma migrate dev
-pnpm run dev 
+
+# Use migrate deploy to apply pending migrations without interactive prompts.
+pnpm prisma migrate deploy
+
+pnpm run dev

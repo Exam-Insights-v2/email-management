@@ -61,7 +61,7 @@ export function ReferralSignatureSetting() {
   return (
     <SettingCard
       title="Include referral signature"
-      description="Add 'Drafted by Inbox Zero' with your referral link to emails we draft for you. Earn a month of credit for each person who signs up with your link."
+      description="Add 'Drafted by Clarent Email Management' with your referral link to emails we draft for you. Earn a month of credit for each person who signs up with your link."
       right={
         <LoadingContent
           loading={isLoading}

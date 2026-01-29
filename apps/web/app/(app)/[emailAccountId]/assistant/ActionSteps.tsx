@@ -540,8 +540,8 @@ function ActionCard({
     <>
       {isNotifySender ? (
         <MutedText className="px-1 h-full flex items-center">
-          Sends an automated notification from Inbox Zero informing the sender
-          their email was filtered as cold outreach.
+          Sends an automated notification from Clarent Email Management
+          informing the sender their email was filtered as cold outreach.
         </MutedText>
       ) : isDraftEmailWithoutManualContent ? (
         <MutedText className="px-1 h-full flex items-center">

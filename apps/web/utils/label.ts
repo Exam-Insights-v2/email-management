@@ -2,7 +2,7 @@ import { messageVisibility } from "@/utils/gmail/constants";
 import { getRuleLabel } from "@/utils/rule/consts";
 import { SystemType } from "@/generated/prisma/enums";
 
-export const PARENT_LABEL = "Inbox Zero";
+export const PARENT_LABEL = "Clarent Email Management";
 
 const blue = "#b6cff5";
 const cyan = "#98d7e4";

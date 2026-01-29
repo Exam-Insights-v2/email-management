@@ -35,13 +35,13 @@ const ColdEmailNotification: ColdEmailNotificationComponent = ({
                   src={"https://www.getinboxzero.com/icon.png"}
                   width="40"
                   height="40"
-                  alt="Inbox Zero"
+                  alt="Clarent Email Management"
                   className="mx-auto my-0"
                 />
               </Link>
               <Text className="mx-0 mb-8 mt-4 p-0 text-center text-2xl font-normal">
                 <span className="font-semibold tracking-tighter">
-                  Inbox Zero
+                  Clarent Email Management
                 </span>
               </Text>
             </Section>
@@ -50,7 +50,7 @@ const ColdEmailNotification: ColdEmailNotificationComponent = ({
               <Text className="text-[16px] text-gray-700 mb-4 mt-0">
                 The recipient uses{" "}
                 <Link href={baseUrl} className="text-blue-600 underline">
-                  Inbox Zero
+                  Clarent Email Management
                 </Link>{" "}
                 to automatically detect and filter cold emails from first-time
                 senders.
@@ -70,7 +70,7 @@ const ColdEmailNotification: ColdEmailNotificationComponent = ({
               <Text className="m-0">
                 This is an automated message from{" "}
                 <Link href={baseUrl} className="text-blue-600 underline">
-                  Inbox Zero
+                  Clarent Email Management
                 </Link>
                 .
               </Text>

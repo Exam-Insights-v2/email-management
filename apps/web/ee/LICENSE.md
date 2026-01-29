@@ -1,20 +1,20 @@
-The Inbox Zero Commercial License (the “Commercial License”)
-Copyright (c) 2025-present Inbox Zero, Inc.
+The Clarent Email Management Commercial License (the “Commercial License”)
+Copyright (c) 2025-present Clarent Email Management, Inc.
 
-With regard to the Inbox Zero Software:
+With regard to the Clarent Email Management Software:
 
 This software and associated documentation files (the "Software") may only be
 used in production, if you (and any entity that you represent) have agreed to,
 and are in compliance with, an agreement governing
-the use of the Software, as mutually agreed by you and Inbox Zero, Inc. ("Inbox Zero"),
-and otherwise have a valid Inbox Zero Enterprise Edition subscription ("Commercial Subscription").
+the use of the Software, as mutually agreed by you and Clarent Email Management, Inc. ("Clarent Email Management"),
+and otherwise have a valid Clarent Email Management Enterprise Edition subscription ("Commercial Subscription").
 Subject to the foregoing sentence, you are free to modify this Software and publish patches to the Software.
-You agree that Inbox Zero and/or its licensors (as applicable) retain all right, title and interest in
+You agree that Clarent Email Management and/or its licensors (as applicable) retain all right, title and interest in
 and to all such modifications and/or patches, and all such modifications and/or
 patches may only be used, copied, modified, displayed, distributed, or otherwise
 exploited with a valid Commercial Subscription for the correct number of hosts.
 Notwithstanding the foregoing, you may copy and modify the Software for development
-and testing purposes, without requiring a subscription. You agree that Inbox Zero and/or
+and testing purposes, without requiring a subscription. You agree that Clarent Email Management and/or
 its licensors (as applicable) retain all right, title and interest in and to all such
 modifications. You are not granted any other rights beyond what is expressly stated herein.
 Subject to the foregoing, it is forbidden to copy, merge, publish, distribute, sublicense,
@@ -35,6 +35,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-For all third party components incorporated into the Inbox Zero Software, those
+For all third party components incorporated into the Clarent Email Management Software, those
 components are licensed under the original license provided by the owner of the
 applicable component.

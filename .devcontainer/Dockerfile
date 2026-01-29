@@ -1,4 +1,4 @@
-# Inbox Zero Development Container
+# Clarent Email Management Development Container
 #
 # Extends Microsoft devcontainer with proper directory permissions for named volumes
 

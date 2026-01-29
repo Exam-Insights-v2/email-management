@@ -52,7 +52,7 @@ const GMAIL_RESERVED_LABELS = [
  * Invalid characters that cannot be used in Gmail label names
  *
  * Note: Forward slash (/) is NOT included here because it's used to create
- * nested labels (e.g., "Inbox Zero/Archived")
+ * nested labels (e.g., "Clarent Email Management/Archived")
  */
 const GMAIL_LABEL_INVALID_CHARS = [
   "\\", // Backslash

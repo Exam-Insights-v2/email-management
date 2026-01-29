@@ -20,7 +20,9 @@ export function StepExtension({ onNext }: { onNext: () => Promise<void> }) {
         </IconCircle>
 
         <div className="text-center mt-4">
-          <PageHeading>Install the Inbox Zero Tabs extension</PageHeading>
+          <PageHeading>
+            Install the Clarent Email Management Tabs extension
+          </PageHeading>
           <TypographyP className="mt-2 max-w-lg mx-auto">
             Add tabs to Gmail that show only <strong>unhandled emails</strong>{" "}
             by label.
@@ -59,7 +61,7 @@ export function StepExtension({ onNext }: { onNext: () => Promise<void> }) {
       <div className="fixed top-0 right-0 w-1/2 bg-white h-screen items-center justify-center hidden xl:flex">
         <OnboardingImagePreview
           src="/images/onboarding/extension.png"
-          alt="Inbox Zero Tabs Extension"
+          alt="Clarent Email Management Tabs Extension"
           width={672}
           height={1200}
         />

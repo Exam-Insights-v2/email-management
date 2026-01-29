@@ -23,7 +23,7 @@ const errorMessages: Record<string, { title: string; description: string }> = {
   email_already_linked: {
     title: "Email Already Linked",
     description:
-      "This email address is already linked to another Inbox Zero account. Please sign in with the original account, or use a different email address.",
+      "This email address is already linked to another Clarent Email Management account. Please sign in with the original account, or use a different email address.",
   },
 };
 

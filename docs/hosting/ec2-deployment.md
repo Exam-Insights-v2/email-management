@@ -1,6 +1,6 @@
 # AWS EC2 Deployment Guide
 
-This guide covers setting up Inbox Zero on AWS EC2 with ALB.
+This guide covers setting up Clarent Email Management on AWS EC2 with ALB.
 
 **Note:** This is a reference implementation. There are many ways to deploy on AWS (ECS, EKS, Elastic Beanstalk, etc.). Use what works best for your infrastructure and expertise.
 

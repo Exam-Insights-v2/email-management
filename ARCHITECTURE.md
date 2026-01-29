@@ -1,8 +1,8 @@
-# Inbox Zero Architecture
+# Clarent Email Management Architecture
 
 The initial version of this document was created by Google Gemini 2.0 Flash Thinking Experimental 01-21.
 
-The Inbox Zero repository is structured as a monorepo, consisting of two main applications (`apps/web`, `apps/unsubscriber`) and several packages (`packages/*`). Only the `apps/web` is currently in use in production.
+The Clarent Email Management repository is structured as a monorepo, consisting of two main applications (`apps/web`, `apps/unsubscriber`) and several packages (`packages/*`). Only the `apps/web` is currently in use in production.
 
 ```txt
 ├── apps/

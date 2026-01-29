@@ -157,7 +157,7 @@ describe("fetchMessagesAndGenerateDraft - AI content escaping", () => {
 
     // Referral signature HTML should NOT be escaped - link should work
     expect(result).toContain(
-      '<a href="https://getinboxzero.com/?ref=TEST123">Inbox Zero</a>',
+      '<a href="https://getinboxzero.com/?ref=TEST123">Clarent Email Management</a>',
     );
 
     // User signature HTML should NOT be escaped

@@ -24,7 +24,7 @@ export function ApiKeysSection() {
     <FormSection>
       <FormSectionLeft
         title="API keys"
-        description="Create an API key to access the Inbox Zero API. Do not share your API key with others, or expose it in the browser or other client-side code."
+        description="Create an API key to access the Clarent Email Management API. Do not share your API key with others, or expose it in the browser or other client-side code."
       />
 
       <LoadingContent loading={isLoading} error={error}>

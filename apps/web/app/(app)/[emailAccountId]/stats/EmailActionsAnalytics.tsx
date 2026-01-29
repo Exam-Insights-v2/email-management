@@ -22,7 +22,10 @@ export function EmailActionsAnalytics() {
   if (data?.disabled) {
     return (
       <CardBasic>
-        <p>How many emails you've archived and deleted with Inbox Zero</p>
+        <p>
+          How many emails you've archived and deleted with Clarent Email
+          Management
+        </p>
         <div className="mt-4 h-72 flex items-center justify-center text-muted-foreground">
           <p>This feature is disabled. Contact your admin to enable it.</p>
         </div>
@@ -38,7 +41,10 @@ export function EmailActionsAnalytics() {
     >
       {data && (
         <CardBasic>
-          <p>How many emails you've archived and deleted with Inbox Zero</p>
+          <p>
+            How many emails you've archived and deleted with Clarent Email
+            Management
+          </p>
           <div className="mt-4">
             <BarChart
               data={data.result}

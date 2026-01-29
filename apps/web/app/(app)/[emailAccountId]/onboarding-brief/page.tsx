@@ -6,7 +6,7 @@ import { registerUtmTracking } from "@/app/(landing)/welcome/utms";
 import { auth } from "@/utils/auth";
 
 export const metadata: Metadata = {
-  title: "Meeting Briefs Setup | Inbox Zero",
+  title: "Meeting Briefs Setup | Clarent Email Management",
   description:
     "Set up meeting briefs to receive personalized briefings before your meetings.",
   alternates: { canonical: "/onboarding-brief" },

@@ -57,19 +57,23 @@ services:
       - all
 
   web:
-    image: ghcr.io/elie222/inbox-zero:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
     env_file:
       - ./apps/web/.env
     depends_on:
       db:
         condition: service_healthy
-        required: false
+        required: true
       redis:
         condition: service_started
-        required: false
+        required: true
     ports:
       - ${WEB_PORT:-3000}:3000
+    volumes:
+      - ./apps/web:/app/apps/web:delegated
+      - web-node-modules:/app/apps/web/node_modules
     networks:
       - inbox-zero-network
     environment:
@@ -127,6 +131,7 @@ services:
 
 volumes:
   database-data:
+  web-node-modules:
 
 networks:
   inbox-zero-network:

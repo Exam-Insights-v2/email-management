@@ -150,9 +150,9 @@ describe("calculateSimilarity - integration tests with ParsedMessage", () => {
 
     it("should return 1.0 when comparing stored content with signature to Outlook HTML", () => {
       const storedContent =
-        'Hello, this is a test draft\n\nDrafted by <a href="http://localhost:3000/?ref=ABC">Inbox Zero</a>.';
+        'Hello, this is a test draft\n\nDrafted by <a href="http://localhost:3000/?ref=ABC">Clarent Email Management</a>.';
       const outlookMessage = createParsedMessage(
-        '<html><body><div dir="ltr">Hello, this is a test draft<br><br>Drafted by <a href="http://localhost:3000/?ref=ABC">Inbox Zero</a>.</div></body></html>',
+        '<html><body><div dir="ltr">Hello, this is a test draft<br><br>Drafted by <a href="http://localhost:3000/?ref=ABC">Clarent Email Management</a>.</div></body></html>',
         "html",
       );
 

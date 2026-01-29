@@ -13,7 +13,7 @@ import { env } from "@/env";
 
 const faqs = [
   {
-    question: "Which email providers does Inbox Zero support?",
+    question: "Which email providers does Clarent Email Management support?",
     answer:
       "We support Gmail, Google Workspace, and Microsoft Outlook email accounts.",
   },
@@ -30,9 +30,9 @@ const faqs = [
     ),
   },
   {
-    question: "Will Inbox Zero replace my current email client?",
+    question: "Will Clarent Email Management replace my current email client?",
     answer:
-      "No! Inbox Zero isn't an email client. It's used alongside your existing email client. You use Google or Outlook as normal.",
+      "No! Clarent Email Management isn't an email client. It's used alongside your existing email client. You use Google or Outlook as normal.",
   },
   {
     question: "Is the code open-source?",
@@ -57,7 +57,7 @@ const faqs = [
     ),
   },
   {
-    question: "Can I try Inbox Zero for free?",
+    question: "Can I try Clarent Email Management for free?",
     answer:
       "Absolutely, we have a 7 day free trial on all of our plans so you can try it out right away, no credit card needed!",
   },

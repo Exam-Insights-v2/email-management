@@ -1,5 +1,5 @@
-name: "Build Inbox Zero Docker Image"
-run-name: "Build Inbox Zero Docker Image"
+name: "Build Clarent Email Management Docker Image"
+run-name: "Build Clarent Email Management Docker Image"
 
 on:
   push:
@@ -78,5 +78,5 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ env.DOCKER_USERNAME }}/inbox-zero
-          short-description: "Inbox Zero - AI email assistant for Gmail and Outlook to reach inbox zero fast"
+          short-description: "Clarent Email Management - AI email assistant for Gmail and Outlook to reach inbox zero fast"
           readme-filepath: ./README.md

@@ -9,8 +9,8 @@ import { auth } from "@/utils/auth";
 export const maxDuration = 300;
 
 export const metadata: Metadata = {
-  title: "Onboarding | Inbox Zero",
-  description: "Learn how Inbox Zero works and get set up.",
+  title: "Onboarding | Clarent Email Management",
+  description: "Learn how Clarent Email Management works and get set up.",
   alternates: { canonical: "/onboarding" },
 };
 

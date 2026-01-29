@@ -14,7 +14,7 @@ import { auth } from "@/utils/auth";
 
 export const metadata: Metadata = {
   title: "Welcome",
-  description: "Get started with Inbox Zero",
+  description: "Get started with Clarent Email Management",
   alternates: { canonical: "/welcome" },
 };
 
@@ -44,7 +44,7 @@ export default async function WelcomePage(props: {
 
       <CardBasic className="mx-auto flex max-w-2xl flex-col justify-center space-y-6 p-10 duration-500 animate-in fade-in">
         <div className="flex flex-col text-center">
-          <PageHeading>Welcome to Inbox Zero</PageHeading>
+          <PageHeading>Welcome to Clarent Email Management</PageHeading>
           <TypographyP className="mt-2">Let{"'"}s get you set up!</TypographyP>
           <div className="mt-4">
             <Suspense>

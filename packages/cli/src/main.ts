@@ -67,24 +67,26 @@ function checkDockerCompose(): boolean {
 async function main() {
   program
     .name("inbox-zero")
-    .description("CLI tool for running Inbox Zero - AI email assistant")
+    .description(
+      "CLI tool for running Clarent Email Management - AI email assistant",
+    )
     .version("2.21.38");
 
   program
     .command("setup")
-    .description("Interactive setup for Inbox Zero")
+    .description("Interactive setup for Clarent Email Management")
     .option("-n, --name <name>", "Configuration name (creates .env.<name>)")
     .action(runSetup);
 
   program
     .command("start")
-    .description("Start Inbox Zero containers")
+    .description("Start Clarent Email Management containers")
     .option("--no-detach", "Run in foreground (default: runs in background)")
     .action(runStart);
 
   program
     .command("stop")
-    .description("Stop Inbox Zero containers")
+    .description("Stop Clarent Email Management containers")
     .action(runStop);
 
   program
@@ -96,12 +98,12 @@ async function main() {
 
   program
     .command("status")
-    .description("Show status of Inbox Zero containers")
+    .description("Show status of Clarent Email Management containers")
     .action(runStatus);
 
   program
     .command("update")
-    .description("Pull latest Inbox Zero image")
+    .description("Pull latest Clarent Email Management image")
     .action(runUpdate);
 
   program
@@ -129,7 +131,9 @@ async function main() {
 
 async function runSetup(options: { name?: string }) {
   const configName = options.name;
-  p.intro(`🚀 Inbox Zero Setup${configName ? ` (${configName})` : ""}`);
+  p.intro(
+    `🚀 Clarent Email Management Setup${configName ? ` (${configName})` : ""}`,
+  );
 
   // Ask about environment mode
   const envMode = await p.select({
@@ -746,13 +750,13 @@ http://localhost:${webPort}`;
 async function runStart(options: { detach: boolean }) {
   if (!existsSync(STANDALONE_COMPOSE_FILE)) {
     p.log.error(
-      "Inbox Zero is not configured for production mode.\n" +
+      "Clarent Email Management is not configured for production mode.\n" +
         "Run 'inbox-zero setup' and choose Production (Docker) first.",
     );
     process.exit(1);
   }
 
-  p.intro("🚀 Starting Inbox Zero");
+  p.intro("🚀 Starting Clarent Email Management");
 
   const spinner = p.spinner();
   spinner.start("Pulling latest image...");
@@ -811,11 +815,11 @@ async function runStart(options: { detach: boolean }) {
     }
 
     p.note(
-      `Inbox Zero is running at:\nhttp://localhost:${webPort}\n\nView logs: inbox-zero logs\nStop: inbox-zero stop`,
+      `Clarent Email Management is running at:\nhttp://localhost:${webPort}\n\nView logs: inbox-zero logs\nStop: inbox-zero stop`,
       "Running",
     );
 
-    p.outro("Inbox Zero started! 🎉");
+    p.outro("Clarent Email Management started! 🎉");
   }
 }
 
@@ -825,11 +829,11 @@ async function runStart(options: { detach: boolean }) {
 
 async function runStop() {
   if (!existsSync(STANDALONE_COMPOSE_FILE)) {
-    p.log.error("Inbox Zero is not configured.");
+    p.log.error("Clarent Email Management is not configured.");
     process.exit(1);
   }
 
-  p.intro("Stopping Inbox Zero");
+  p.intro("Stopping Clarent Email Management");
 
   const spinner = p.spinner();
   spinner.start("Stopping containers...");
@@ -847,7 +851,7 @@ async function runStop() {
   }
 
   spinner.stop("Containers stopped");
-  p.outro("Inbox Zero stopped");
+  p.outro("Clarent Email Management stopped");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -856,7 +860,7 @@ async function runStop() {
 
 async function runLogs(options: { follow: boolean; tail: string }) {
   if (!existsSync(STANDALONE_COMPOSE_FILE)) {
-    p.log.error("Inbox Zero is not configured.");
+    p.log.error("Clarent Email Management is not configured.");
     process.exit(1);
   }
 
@@ -892,7 +896,9 @@ async function runLogs(options: { follow: boolean; tail: string }) {
 
 async function runStatus() {
   if (!existsSync(STANDALONE_COMPOSE_FILE)) {
-    p.log.error("Inbox Zero is not configured.\nRun 'inbox-zero setup' first.");
+    p.log.error(
+      "Clarent Email Management is not configured.\nRun 'inbox-zero setup' first.",
+    );
     process.exit(1);
   }
 
@@ -907,11 +913,11 @@ async function runStatus() {
 
 async function runUpdate() {
   if (!existsSync(STANDALONE_COMPOSE_FILE)) {
-    p.log.error("Inbox Zero is not configured.");
+    p.log.error("Clarent Email Management is not configured.");
     process.exit(1);
   }
 
-  p.intro("Updating Inbox Zero");
+  p.intro("Updating Clarent Email Management");
 
   const spinner = p.spinner();
   spinner.start("Pulling latest image...");

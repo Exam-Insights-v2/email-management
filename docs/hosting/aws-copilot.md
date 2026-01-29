@@ -1,6 +1,6 @@
 # AWS Copilot Deployment Guide
 
-This guide walks you through deploying Inbox Zero to AWS using AWS Copilot, which simplifies deploying containerized applications to AWS App Runner, Amazon ECS, or AWS Fargate.
+This guide walks you through deploying Clarent Email Management to AWS using AWS Copilot, which simplifies deploying containerized applications to AWS App Runner, Amazon ECS, or AWS Fargate.
 
 ## Prerequisites
 

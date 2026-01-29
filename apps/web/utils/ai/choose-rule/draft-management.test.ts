@@ -238,7 +238,7 @@ describe("handlePreviousDraftDeletion", () => {
       id: "action-111",
       draftId: "draft-222",
       content:
-        'Hello, this is a test draft\n\nDrafted by <a href="http://localhost:3000/?ref=ABC">Inbox Zero</a>.',
+        'Hello, this is a test draft\n\nDrafted by <a href="http://localhost:3000/?ref=ABC">Clarent Email Management</a>.',
     };
 
     // Simulate real Outlook HTML output with proper structure
@@ -246,7 +246,7 @@ describe("handlePreviousDraftDeletion", () => {
       id: "msg-123",
       threadId: "thread-456",
       textPlain:
-        '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><div dir="ltr">Hello, this is a test draft<br><br>Drafted by <a href="http://localhost:3000/?ref=ABC">Inbox Zero</a>.</div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On Tue, 11 Nov 2025 at 2:18, John wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex; border-left:1px solid rgb(204,204,204); padding-left:1ex"><div dir="ltr">Previous message content</div></blockquote></div></body></html>',
+        '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><div dir="ltr">Hello, this is a test draft<br><br>Drafted by <a href="http://localhost:3000/?ref=ABC">Clarent Email Management</a>.</div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On Tue, 11 Nov 2025 at 2:18, John wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex; border-left:1px solid rgb(204,204,204); padding-left:1ex"><div dir="ltr">Previous message content</div></blockquote></div></body></html>',
       textHtml: undefined,
       subject: "subject",
       date: new Date().toISOString(),
@@ -617,13 +617,13 @@ describe("isDraftUnmodified", () => {
 
   it("should handle HTML content with links (Outlook case)", () => {
     const originalContent =
-      'My reply\n\nDrafted by <a href="http://localhost:3000/?ref=ABC">Inbox Zero</a>.';
+      'My reply\n\nDrafted by <a href="http://localhost:3000/?ref=ABC">Clarent Email Management</a>.';
     // Real Outlook HTML structure with proper gmail_quote formatting
     const currentDraft: ParsedMessage = {
       id: "msg-123",
       threadId: "thread-456",
       textPlain:
-        '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><div dir="ltr">My reply<br><br>Drafted by <a href="http://localhost:3000/?ref=ABC">Inbox Zero</a>.</div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On Tue, 11 Nov 2025 at 2:18, John wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex; border-left:1px solid rgb(204,204,204); padding-left:1ex"><div dir="ltr">Quote content</div></blockquote></div></body></html>',
+        '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><div dir="ltr">My reply<br><br>Drafted by <a href="http://localhost:3000/?ref=ABC">Clarent Email Management</a>.</div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On Tue, 11 Nov 2025 at 2:18, John wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex; border-left:1px solid rgb(204,204,204); padding-left:1ex"><div dir="ltr">Quote content</div></blockquote></div></body></html>',
       textHtml: undefined,
       subject: "subject",
       date: new Date().toISOString(),

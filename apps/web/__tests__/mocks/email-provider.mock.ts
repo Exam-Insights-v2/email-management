@@ -93,7 +93,11 @@ export function createMockEmailProvider(
     deleteLabel: vi.fn().mockResolvedValue(undefined),
     getOrCreateInboxZeroLabel: vi
       .fn()
-      .mockResolvedValue({ id: "iz-label", name: "Inbox Zero", type: "user" }),
+      .mockResolvedValue({
+        id: "iz-label",
+        name: "Clarent Email Management",
+        type: "user",
+      }),
 
     // Thread/message actions
     archiveThread: vi.fn().mockResolvedValue(undefined),

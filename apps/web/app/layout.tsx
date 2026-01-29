@@ -31,7 +31,7 @@ const geist = Geist({
   display: "swap",
 });
 
-const title = "Inbox Zero | Automate and clean your inbox";
+const title = "Clarent Email Management | Automate and clean your inbox";
 const description =
   "Your AI executive assistant to reach inbox zero fast. Automate emails, bulk unsubscribe, block cold emails, and analytics. Open-source";
 
@@ -39,7 +39,7 @@ const description =
 const jsonLd: WithContext<WebApplication> = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Inbox Zero",
+  name: "Clarent Email Management",
   url: env.NEXT_PUBLIC_BASE_URL,
   description,
   applicationCategory: "ProductivityApplication",
@@ -66,7 +66,7 @@ const jsonLd: WithContext<WebApplication> = {
   ],
   publisher: {
     "@type": "Organization",
-    name: "Inbox Zero",
+    name: "Clarent Email Management",
     url: env.NEXT_PUBLIC_BASE_URL,
     logo: {
       "@type": "ImageObject",
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    siteName: "Inbox Zero",
+    siteName: "Clarent Email Management",
     type: "website",
     url: env.NEXT_PUBLIC_BASE_URL,
   },
@@ -102,11 +102,11 @@ export const metadata: Metadata = {
     follow: true,
   },
   // pwa
-  applicationName: "Inbox Zero",
+  applicationName: "Clarent Email Management",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Inbox Zero",
+    title: "Clarent Email Management",
     startupImage,
   },
   formatDetection: {

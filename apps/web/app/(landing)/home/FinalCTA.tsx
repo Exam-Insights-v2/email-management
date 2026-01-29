@@ -18,7 +18,7 @@ export function FinalCTA() {
         <SectionHeading>
           Get back an hour a day.
           <br />
-          Start using Inbox Zero.
+          Start using Clarent Email Management.
         </SectionHeading>
         <SectionSubtitle>
           Less time in your inbox. More time for what actually matters.

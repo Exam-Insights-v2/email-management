@@ -4,7 +4,7 @@ set -e
 # This script runs at container startup.
 # It replaces the build-time placeholders with runtime environment variables.
 
-echo "🚀 Starting Inbox Zero..."
+echo "🚀 Starting Clarent Email Management..."
 
 # Define the variables to replace
 # Add more NEXT_PUBLIC_ variables here as needed

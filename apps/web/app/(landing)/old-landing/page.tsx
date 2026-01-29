@@ -30,7 +30,7 @@ function HeroHome() {
   return (
     <Hero
       title="Meet Your AI Email Assistant That Actually Works"
-      subtitle="Inbox Zero organizes your inbox, drafts replies in your voice, and helps you reach inbox zero fast. Never miss an important email again."
+      subtitle="Clarent Email Management organizes your inbox, drafts replies in your voice, and helps you reach inbox zero fast. Never miss an important email again."
     >
       <HeroVideoPlayer />
     </Hero>

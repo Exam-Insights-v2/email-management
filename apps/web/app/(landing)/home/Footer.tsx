@@ -5,7 +5,7 @@ import { EXTENSION_URL } from "@/utils/config";
 export const footerNavigation = {
   main: [
     {
-      name: "Inbox Zero Tabs (Chrome Extension)",
+      name: "Clarent Email Management Tabs (Chrome Extension)",
       href: EXTENSION_URL,
       target: "_blank",
     },
@@ -179,7 +179,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="hover:text-gray-900"
             >
-              Inbox Zero
+              Clarent Email Management
             </Link>
           </p>
         </div>
@@ -229,7 +229,8 @@ export function Footer() {
           ))}
         </div>
         <p className="mt-10 text-center text-xs leading-5 text-gray-500">
-          &copy; {new Date().getFullYear()} Inbox Zero Inc. All rights reserved.
+          &copy; {new Date().getFullYear()} Clarent Email Management Inc. All
+          rights reserved.
         </p>
       </div>
     </footer>

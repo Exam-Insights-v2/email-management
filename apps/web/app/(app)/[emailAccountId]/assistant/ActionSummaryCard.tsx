@@ -206,7 +206,7 @@ export function ActionSummaryCard({
     case ActionType.NOTIFY_SENDER:
       summaryContent = "Notify sender";
       tooltipText =
-        "Sends an automated notification from Inbox Zero (not from your email) informing the sender their email was filtered as cold outreach.";
+        "Sends an automated notification from Clarent Email Management (not from your email) informing the sender their email was filtered as cold outreach.";
       break;
 
     default:

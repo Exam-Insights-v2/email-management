@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://www.getinboxzero.com">
-    <h1 align="center">Inbox Zero - your 24/7 AI email assistant</h1>
+    <h1 align="center">Clarent Email Management - your 24/7 AI email assistant</h1>
   </a>
   <p align="center">
     Organizes your inbox, pre-drafts replies, and tracks follow‑ups - so you reach inbox zero faster. Open source alternative to Fyxer, but more customisable and secure.
@@ -59,7 +59,7 @@ Learn more in our [docs](https://docs.getinboxzero.com).
 
 ## Demo Video
 
-[![Inbox Zero demo](/video-thumbnail.png)](http://www.youtube.com/watch?v=hfvKvTHBjG0)
+[![Clarent Email Management demo](/video-thumbnail.png)](http://www.youtube.com/watch?v=hfvKvTHBjG0)
 
 ## Built with
 
@@ -81,11 +81,11 @@ To request a feature open a [GitHub issue](https://github.com/elie222/inbox-zero
 
 ## Getting Started
 
-We offer a hosted version of Inbox Zero at [https://getinboxzero.com](https://www.getinboxzero.com).
+We offer a hosted version of Clarent Email Management at [https://getinboxzero.com](https://www.getinboxzero.com).
 
 ### Self-Hosting
 
-The easiest way to self-host Inbox Zero is using our pre-built Docker image.
+The easiest way to self-host Clarent Email Management is using our pre-built Docker image.
 
 > **Prerequisites**: [Docker Desktop](https://www.docker.com/products/docker-desktop/), [Node.js](https://nodejs.org/) v22+, and [Git](https://git-scm.com/downloads)
 

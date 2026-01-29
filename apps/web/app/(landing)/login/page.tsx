@@ -13,8 +13,8 @@ import { MutedText } from "@/components/Typography";
 import { isInternalPath } from "@/utils/path";
 
 export const metadata: Metadata = {
-  title: "Log in | Inbox Zero",
-  description: "Log in to Inbox Zero.",
+  title: "Log in | Clarent Email Management",
+  description: "Log in to Clarent Email Management.",
   alternates: { canonical: "/login" },
 };
 
@@ -67,8 +67,8 @@ export default async function AuthenticationPage(props: {
         </MutedText>
 
         <MutedText className="px-4 pt-4 text-center">
-          Inbox Zero{"'"}s use and transfer of information received from Google
-          APIs to any other app will adhere to{" "}
+          Clarent Email Management{"'"}s use and transfer of information
+          received from Google APIs to any other app will adhere to{" "}
           <a
             href="https://developers.google.com/terms/api-services-user-data-policy"
             className="underline underline-offset-4 hover:text-foreground"
@@ -107,7 +107,7 @@ function ErrorAlert({ error }: { error: string }) {
       <AlertBasic
         variant="destructive"
         title="Email Already Linked"
-        description={`This email address is already linked to another Inbox Zero account. Please sign in with the original account, or use a different email address. If this error persists please contact support at ${env.NEXT_PUBLIC_SUPPORT_EMAIL}`}
+        description={`This email address is already linked to another Clarent Email Management account. Please sign in with the original account, or use a different email address. If this error persists please contact support at ${env.NEXT_PUBLIC_SUPPORT_EMAIL}`}
       />
     );
   }

@@ -1,6 +1,6 @@
-# Self-Hosting Inbox Zero with Docker on a VPS
+# Self-Hosting Clarent Email Management with Docker on a VPS
 
-This guide will walk you through self-hosting the Inbox Zero application on a VPS using Docker and Docker Compose.
+This guide will walk you through self-hosting the Clarent Email Management application on a VPS using Docker and Docker Compose.
 
 ## Prerequisites
 

@@ -1,6 +1,6 @@
 # E2E Tests
 
-End-to-end integration tests for Inbox Zero AI that test against real email provider APIs.
+End-to-end integration tests for Clarent Email Management AI that test against real email provider APIs.
 
 ## Structure
 

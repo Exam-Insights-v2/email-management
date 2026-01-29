@@ -57,7 +57,7 @@ This wireframe represents the Settings tab within the AI Assistant section.
 │                       │                                                     │
 │                       │ ┌─────────────────────────────────────────────────┐ │
 │                       │ │ **Include referral signature**          [●━━━]  │ │
-│                       │ │ Add 'Drafted by Inbox Zero' with your referral  │ │
+│                       │ │ Add 'Drafted by Clarent Email Management' with your referral  │ │
 │                       │ │ link to emails we draft for you. Earn a month   │ │
 │                       │ │ of credit for each person who signs up.         │ │
 │                       │ └─────────────────────────────────────────────────┘ │

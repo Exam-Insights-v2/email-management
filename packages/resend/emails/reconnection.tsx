@@ -43,14 +43,14 @@ const ReconnectionEmail: ReconnectionEmailComponent = ({
                   src={"https://www.getinboxzero.com/icon.png"}
                   width="40"
                   height="40"
-                  alt="Inbox Zero"
+                  alt="Clarent Email Management"
                   className="mx-auto my-0"
                 />
               </Link>
 
               <Text className="mx-0 mb-8 mt-4 p-0 text-center text-2xl font-normal">
                 <span className="font-semibold tracking-tighter">
-                  Inbox Zero
+                  Clarent Email Management
                 </span>
               </Text>
 
@@ -64,10 +64,10 @@ const ReconnectionEmail: ReconnectionEmailComponent = ({
               <Text className="text-[16px] text-gray-700 mb-6 mt-0">Hi,</Text>
 
               <Text className="text-[16px] text-gray-700 mb-6 mt-0">
-                The connection for <strong>{email}</strong> to Inbox Zero was
-                disconnected. This usually happens after a password change, if
-                access was revoked, or if your 6-month approval period has
-                expired.
+                The connection for <strong>{email}</strong> to Clarent Email
+                Management was disconnected. This usually happens after a
+                password change, if access was revoked, or if your 6-month
+                approval period has expired.
               </Text>
 
               <Text className="text-[16px] text-gray-700 mb-8 mt-0">
@@ -115,7 +115,7 @@ function Footer({
     <Section className="mt-8 text-center text-sm text-gray-500">
       <Text className="m-0">
         You're receiving this email because your email account is connected to
-        Inbox Zero.
+        Clarent Email Management.
       </Text>
       <div className="mt-2">
         <Link

@@ -1,5 +1,5 @@
 {
-  "name": "Inbox Zero Dev",
+  "name": "Clarent Email Management Dev",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/inbox-zero",

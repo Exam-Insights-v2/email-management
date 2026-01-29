@@ -31,8 +31,8 @@ export function RequestAccessDialog({
     : `Request Access: ${integrationName} Integration`;
 
   const messageBody = isGenericRequest
-    ? "Hi,\n\nI would like to request a new integration for Inbox Zero.\n\nIntegration name:\n\nUse case:\n\nThank you!"
-    : `Hi,\n\nI'm interested in using the ${integrationName} integration with Inbox Zero.\n\nCould you please let me know when this integration will be available?\n\nThank you!`;
+    ? "Hi,\n\nI would like to request a new integration for Clarent Email Management.\n\nIntegration name:\n\nUse case:\n\nThank you!"
+    : `Hi,\n\nI'm interested in using the ${integrationName} integration with Clarent Email Management.\n\nCould you please let me know when this integration will be available?\n\nThank you!`;
 
   const handleCopyEmail = async () => {
     await navigator.clipboard.writeText(env.NEXT_PUBLIC_SUPPORT_EMAIL);

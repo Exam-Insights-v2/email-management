@@ -12,7 +12,7 @@ import { Button } from "@/components/new-landing/common/Button";
 import { BlogHeader } from "@/components/layouts/BlogLayout";
 
 export const metadata: Metadata = {
-  title: "Open Source Friends | Inbox Zero",
+  title: "Open Source Friends | Clarent Email Management",
   description: "Some other great Open Source projects to follow",
   alternates: { canonical: "/oss-friends" },
 };

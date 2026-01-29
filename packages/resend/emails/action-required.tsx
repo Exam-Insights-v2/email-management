@@ -53,14 +53,14 @@ const ActionRequiredEmail: ActionRequiredEmailComponent = ({
                   src={"https://www.getinboxzero.com/icon.png"}
                   width="40"
                   height="40"
-                  alt="Inbox Zero"
+                  alt="Clarent Email Management"
                   className="mx-auto my-0"
                 />
               </Link>
 
               <Text className="mx-0 mb-8 mt-4 p-0 text-center text-2xl font-normal">
                 <span className="font-semibold tracking-tighter">
-                  Inbox Zero
+                  Clarent Email Management
                 </span>
               </Text>
 
@@ -74,8 +74,8 @@ const ActionRequiredEmail: ActionRequiredEmailComponent = ({
               <Text className="text-[16px] text-gray-700 mb-6 mt-0">Hi,</Text>
 
               <Text className="text-[16px] text-gray-700 mb-6 mt-0">
-                We encountered an issue with your Inbox Zero account (
-                <strong>{email}</strong>):
+                We encountered an issue with your Clarent Email Management
+                account (<strong>{email}</strong>):
               </Text>
 
               <Text className="text-[16px] text-gray-700 mb-6 mt-0 bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -126,7 +126,7 @@ function Footer({
     <Section className="mt-8 text-center text-sm text-gray-500">
       <Text className="m-0">
         You're receiving this email because your email account is connected to
-        Inbox Zero.
+        Clarent Email Management.
       </Text>
       <div className="mt-2">
         <Link

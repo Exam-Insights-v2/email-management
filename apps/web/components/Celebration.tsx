@@ -34,7 +34,7 @@ export function Celebration(props: { message: string }) {
           size="2xl"
           onClick={() => {
             const tweet = encodeURIComponent(
-              "I made it to Inbox Zero thanks to @inboxzero_ai!",
+              "I made it to Clarent Email Management thanks to @inboxzero_ai!",
             );
             const twitterIntentURL = `https://x.com/intent/tweet?text=${tweet}`;
             window.open(

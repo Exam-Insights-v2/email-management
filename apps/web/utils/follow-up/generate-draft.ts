@@ -117,7 +117,7 @@ export async function generateFollowUpDraft({
         emailAccount.userId,
       );
       const referralLink = generateReferralLink(referralSignature.code);
-      const htmlSignature = `Drafted by <a href="${referralLink}">Inbox Zero</a>.`;
+      const htmlSignature = `Drafted by <a href="${referralLink}">Clarent Email Management</a>.`;
       draftContent = `${draftContent}\n\n${htmlSignature}`;
     }
 
