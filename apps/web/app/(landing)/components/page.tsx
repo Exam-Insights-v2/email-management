@@ -308,22 +308,6 @@ export default function Components() {
         </div>
 
         <div>
-          <div className="underline">DismissibleVideoCard</div>
-          <div className="mt-4">
-            <DismissibleVideoCard
-              icon={<SparklesIcon className="h-5 w-5" />}
-              title="Getting started with AI Assistant"
-              description={
-                "Learn how to use the AI Assistant to automatically label, archive, and more."
-              }
-              videoSrc="https://www.youtube.com/embed/SoeNDVr7ve4"
-              thumbnailSrc="https://img.youtube.com/vi/SoeNDVr7ve4/0.jpg"
-              storageKey={`video-dismissible-${Date.now()}`}
-            />
-          </div>
-        </div>
-
-        <div>
           <div className="underline">IconCircle</div>
           <div className="mt-4">
             <IconCircle size="md" color="blue" Icon={SparklesIcon} />

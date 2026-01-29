@@ -114,17 +114,6 @@ export default async function AutomationPage({
             />
           </div>
 
-          <DismissibleVideoCard
-            className="my-4"
-            icon={<SparklesIcon className="h-5 w-5" />}
-            title="Getting started with AI Assistant"
-            description={
-              "Learn how to use the AI Assistant to automatically label, archive, and more."
-            }
-            muxPlaybackId="VwIP7UAw4MXDjkvmLjJzGsY00ee9jxIZVI952DoBBfp8"
-            storageKey="ai-assistant-onboarding-video"
-          />
-
           <Tabs defaultValue="rules">
             <TabsContent value="rules" className="mb-10">
               <RulesTab />
