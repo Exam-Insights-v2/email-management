@@ -1,0 +1,257 @@
+import os
+from datetime import datetime, timedelta
+from typing import Optional, Tuple
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+
+from accounts.models import Account, OAuthToken, Provider
+
+User = get_user_model()
+
+
+class GoogleOAuthService:
+    """Unified OAuth service for both user login and email access"""
+
+    # Scopes for user login (identity only)
+    LOGIN_SCOPES = [
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+    ]
+
+    # Scopes for Gmail email access
+    GMAIL_SCOPES = [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.modify",  # For drafts
+    ]
+
+    @staticmethod
+    def get_oauth_flow(redirect_uri: str, scopes: list = None) -> Flow:
+        """Create OAuth flow with specified scopes"""
+        if scopes is None:
+            scopes = GoogleOAuthService.LOGIN_SCOPES
+
+        client_config = {
+            "web": {
+                "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+                "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [redirect_uri],
+            }
+        }
+        flow = Flow.from_client_config(
+            client_config, scopes=scopes, redirect_uri=redirect_uri
+        )
+        return flow
+
+    @staticmethod
+    def get_authorization_url(
+        redirect_uri: str, scopes: list = None, force_reauth: bool = False
+    ) -> Tuple[str, str]:
+        """Get authorization URL and state for OAuth flow
+
+        Args:
+            redirect_uri: OAuth redirect URI
+            scopes: OAuth scopes to request (defaults to LOGIN_SCOPES)
+            force_reauth: If True, force re-authorization even if user previously granted access
+        """
+        if scopes is None:
+            scopes = GoogleOAuthService.LOGIN_SCOPES
+
+        flow = GoogleOAuthService.get_oauth_flow(redirect_uri, scopes)
+        prompt = "consent" if force_reauth else "select_account"
+        authorization_url, state = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="false",
+            prompt=prompt,
+        )
+        return authorization_url, state
+
+    @staticmethod
+    def exchange_code_for_token(code: str, redirect_uri: str, scopes: list = None) -> Credentials:
+        """Exchange authorization code for access token"""
+        if scopes is None:
+            scopes = GoogleOAuthService.LOGIN_SCOPES
+
+        flow = GoogleOAuthService.get_oauth_flow(redirect_uri, scopes)
+        # Suppress scope mismatch warnings - Google may add additional scopes like 'openid'
+        import warnings
+        # Configure oauthlib session to not treat scope mismatches as errors
+        # Set the session's scope validation to be lenient
+        if hasattr(flow.oauth2session, '_client'):
+            # Disable strict scope validation
+            flow.oauth2session._client._scope_separator = ' '
+        
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                try:
+                    flow.fetch_token(code=code)
+                except Warning as w:
+                    # If it's a scope mismatch warning, the credentials might still be valid
+                    if "scope" in str(w).lower() and hasattr(flow, 'credentials') and flow.credentials:
+                        # Credentials are available despite the warning
+                        pass
+                    else:
+                        raise
+        except Warning as w:
+            # Scope mismatch warnings are usually harmless - Google adds 'openid' automatically
+            if "scope" in str(w).lower():
+                # Check if credentials are still available
+                if hasattr(flow, 'credentials') and flow.credentials:
+                    return flow.credentials
+            raise
+        return flow.credentials
+
+    @staticmethod
+    def get_user_info(credentials: Credentials) -> dict:
+        """Get user info from Google OAuth credentials"""
+        from googleapiclient.discovery import build
+
+        service = build("oauth2", "v2", credentials=credentials)
+        user_info = service.userinfo().get().execute()
+        return user_info
+
+    @staticmethod
+    def create_or_update_user(credentials: Credentials) -> User:
+        """Create or update Django User from Google OAuth"""
+        user_info = GoogleOAuthService.get_user_info(credentials)
+        email = user_info.get("email")
+        first_name = user_info.get("given_name", "")
+        last_name = user_info.get("family_name", "")
+
+        if not email:
+            raise ValueError("Email not provided by Google")
+
+        # Get or create user
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "username": email,
+                "first_name": first_name,
+                "last_name": last_name,
+            },
+        )
+
+        # Update user info if it changed
+        if not created:
+            updated = False
+            if user.first_name != first_name:
+                user.first_name = first_name
+                updated = True
+            if user.last_name != last_name:
+                user.last_name = last_name
+                updated = True
+            if updated:
+                user.save()
+
+        return user
+
+
+class GmailOAuthService:
+    """Service for handling Gmail OAuth flow and token management"""
+
+    # Combine Gmail scopes with userinfo scopes to get email address
+    # Include 'openid' since Google automatically adds it when using userinfo scopes
+    SCOPES = [
+        "openid",  # Required when using userinfo scopes
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+    ] + GoogleOAuthService.GMAIL_SCOPES
+
+    @staticmethod
+    def get_authorization_url(redirect_uri: str, force_reauth: bool = False) -> Tuple[str, str]:
+        """Get authorization URL and state for Gmail OAuth flow"""
+        return GoogleOAuthService.get_authorization_url(
+            redirect_uri, scopes=GmailOAuthService.SCOPES, force_reauth=force_reauth
+        )
+
+    @staticmethod
+    def exchange_code_for_token(code: str, redirect_uri: str) -> Credentials:
+        """Exchange authorization code for access token"""
+        return GoogleOAuthService.exchange_code_for_token(
+            code, redirect_uri, scopes=GmailOAuthService.SCOPES
+        )
+
+    @staticmethod
+    def save_token(account: Account, credentials: Credentials) -> OAuthToken:
+        """Save OAuth token to database"""
+        expires_at = None
+        if credentials.expiry:
+            expires_at = credentials.expiry
+
+        # Get the actual scopes granted (may include more than requested)
+        granted_scopes = list(credentials.scopes) if credentials.scopes else GmailOAuthService.SCOPES
+        scopes_str = ",".join(granted_scopes)
+
+        oauth_token, created = OAuthToken.objects.update_or_create(
+            account=account,
+            defaults={
+                "access_token": credentials.token,
+                "refresh_token": credentials.refresh_token or "",
+                "expires_at": expires_at,
+                "token_type": "Bearer",
+                "scopes": scopes_str,
+            },
+        )
+        account.is_connected = True
+        account.save(update_fields=["is_connected"])
+        return oauth_token
+
+    @staticmethod
+    def get_valid_credentials(account: Account) -> Optional[Credentials]:
+        """Get valid OAuth credentials, refreshing if necessary"""
+        try:
+            oauth_token = account.oauth_token
+        except OAuthToken.DoesNotExist:
+            return None
+
+        # Use the scopes that were originally granted with this token
+        # If no scopes stored, fall back to current SCOPES (for backward compatibility)
+        token_scopes = oauth_token.get_scopes_list()
+        if not token_scopes:
+            token_scopes = GmailOAuthService.SCOPES
+
+        credentials = Credentials(
+            token=oauth_token.access_token,
+            refresh_token=oauth_token.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=settings.GOOGLE_OAUTH_CLIENT_ID,
+            client_secret=settings.GOOGLE_OAUTH_CLIENT_SECRET,
+            scopes=token_scopes,  # Use stored scopes, not current SCOPES
+        )
+
+        # Refresh token if expired
+        if credentials.expired and credentials.refresh_token:
+            try:
+                credentials.refresh(Request())
+                # Update stored token and scopes (in case they changed)
+                oauth_token.access_token = credentials.token
+                if credentials.expiry:
+                    oauth_token.expires_at = credentials.expiry
+                # Update scopes if they changed during refresh
+                if credentials.scopes:
+                    oauth_token.set_scopes_list(list(credentials.scopes))
+                oauth_token.save()
+            except Exception as e:
+                # If refresh fails due to scope mismatch, disconnect the account
+                # This forces re-authorization with correct scopes
+                if "scope" in str(e).lower() or "invalid_grant" in str(e).lower():
+                    GmailOAuthService.disconnect_account(account)
+                return None
+
+        return credentials
+
+    @staticmethod
+    def disconnect_account(account: Account):
+        """Disconnect account and remove OAuth token"""
+        OAuthToken.objects.filter(account=account).delete()
+        account.is_connected = False
+        account.save(update_fields=["is_connected"])

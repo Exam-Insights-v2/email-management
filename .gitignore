@@ -1,0 +1,54 @@
+## Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.mo
+*.pot
+
+*.log
+*.pot
+*.py[cod]
+
+celerybeat-schedule
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual envs
+.env
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*~
+# macOS
+.DS_Store
+
+# Docker
+/.docker
+
+# Node modules (if any frontend work lands here)
+node_modules/
+
+# Python test outputs
+.pytest_cache/
+
+# Django migrations cache
+*.sqlite3
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# JetBrains
+.idea/

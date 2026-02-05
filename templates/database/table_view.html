@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load db_filters %}
+
+{% block title %}{{ model_name|title|replace:"_| " }} • Database • GC Linemarking Ops{% endblock %}
+
+{% block content %}
+<div class="flex gap-6 mb-6">
+  <a href="{% url 'database_home' %}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white hover:text-cyan-400 transition-colors">
+    <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+    </svg>
+    Back to Database
+  </a>
+</div>
+
+<section class="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
+  <header class="px-8 py-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+    <div>
+      <h2 class="text-3xl font-bold text-slate-900">{{ model_name|title|replace:"_| " }}</h2>
+      <p class="text-sm text-slate-600 mt-1">{{ total_count }} total rows</p>
+    </div>
+  </header>
+  
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-slate-50 border-b border-slate-200">
+        <tr>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase">ID</th>
+          {% for field in fields|slice_filter:"|8" %}
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase">{{ field|title|replace:"_| " }}</th>
+          {% endfor %}
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for obj in page_obj %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4 text-sm font-mono text-slate-600">{{ obj.pk }}</td>
+          {% for field in fields|slice_filter:"|8" %}
+          <td class="px-6 py-4 text-sm text-slate-900">
+            {% with value=obj|getattr_filter:field %}
+              {% if value %}
+                {% if value|length > 50 %}
+                  {{ value|slice_filter:"|50" }}...
+                {% else %}
+                  {{ value }}
+                {% endif %}
+              {% else %}
+                —
+              {% endif %}
+            {% endwith %}
+          </td>
+          {% endfor %}
+          <td class="px-6 py-4 text-sm">
+            <div class="flex items-center gap-2">
+              <a href="{% url 'database_row_detail' model_name obj.pk %}" class="px-3 py-1.5 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 text-xs font-semibold transition-colors">
+                View
+              </a>
+              <form method="post" action="{% url 'database_row_delete' model_name obj.pk %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this row?');">
+                {% csrf_token %}
+                <button type="submit" class="px-3 py-1.5 bg-red-600 text-white rounded-full hover:bg-red-500 text-xs font-semibold transition-colors">
+                  Delete
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="px-6 py-12 text-center text-slate-500">
+            No rows found in this table.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  {% if page_obj.has_other_pages %}
+  <div class="px-8 py-6 border-t border-slate-200 flex items-center justify-between">
+    <div class="text-sm text-slate-600">
+      Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_count }} rows
+    </div>
+    <div class="flex gap-2">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-full hover:bg-slate-200 text-sm font-semibold">
+        Previous
+      </a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 text-sm font-semibold">
+        Next
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

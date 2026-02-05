@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard • GC Linemarking Ops{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative min-h-[30vh] flex items-center justify-center overflow-hidden mb-12">
+  <!-- Hero Content -->
+  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+    <div class="space-y-6">
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-100 border border-cyan-200 rounded-full">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+        </span>
+        <span class="text-cyan-700 text-sm font-semibold">GC Linemarking Operations</span>
+      </div>
+      <!-- Main heading -->
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight text-white">
+        Operations
+        <br>
+        <span class="text-cyan-400">
+          Dashboard
+        </span>
+      </h1>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Cards -->
+<section class="grid gap-6 md:grid-cols-3 mb-12">
+  <article class="group bg-white rounded-2xl p-8 border-2 border-slate-200 hover:border-cyan-400 transition-all duration-300">
+    <div class="w-14 h-14 bg-cyan-100 rounded-2xl flex items-center justify-center mb-6">
+      <svg width="28" height="28" class="w-7 h-7 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+      </svg>
+    </div>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Jobs in progress</h2>
+    <p class="text-4xl font-black text-cyan-600 mb-2">7</p>
+    <p class="text-sm text-slate-600">Includes quoted, won, and in-progress tickets.</p>
+  </article>
+  <article class="group bg-white rounded-2xl p-8 border-2 border-slate-200 hover:border-cyan-400 transition-all duration-300">
+    <div class="w-14 h-14 bg-cyan-100 rounded-2xl flex items-center justify-center mb-6">
+      <svg width="28" height="28" class="w-7 h-7 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+      </svg>
+    </div>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Pending email tasks</h2>
+    <p class="text-4xl font-black text-cyan-600 mb-2">12</p>
+    <p class="text-sm text-slate-600">Automated from simulated inbox data.</p>
+  </article>
+  <article class="group bg-white rounded-2xl p-8 border-2 border-slate-200 hover:border-cyan-400 transition-all duration-300">
+    <div class="w-14 h-14 bg-cyan-100 rounded-2xl flex items-center justify-center mb-6">
+      <svg width="28" height="28" class="w-7 h-7 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+      </svg>
+    </div>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Open drafts</h2>
+    <p class="text-4xl font-black text-cyan-600 mb-2">4</p>
+    <p class="text-sm text-slate-600">AI-generated drafts awaiting send.</p>
+  </article>
+</section>
+
+<!-- Recent Jobs Section -->
+<section class="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
+  <header class="px-8 py-6 border-b border-slate-200 bg-slate-50">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-100 rounded-full text-cyan-700 text-xs font-semibold mb-2">
+          Recent Activity
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900">Recent Jobs</h3>
+      </div>
+      <a href="{% url 'jobs_list' %}" class="px-6 py-2.5 text-sm font-semibold bg-cyan-600 text-white hover:bg-cyan-500 rounded-full transition-colors flex items-center gap-2">
+        View All
+        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
+  <div class="divide-y divide-slate-100">
+    {% for job in jobs %}
+    <article class="px-8 py-6 hover:bg-slate-50 transition-colors group">
+      <div class="flex justify-between items-start">
+        <div class="flex-1">
+          <h4 class="text-lg font-bold text-slate-900 mb-1 group-hover:text-cyan-600 transition-colors">{{ job.title }}</h4>
+          <p class="text-sm text-slate-500 mb-2">{{ job.site_address }}</p>
+          <p class="text-sm text-slate-600">{{ job.description }}</p>
+        </div>
+        <span class="ml-4 px-4 py-1.5 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-700 group-hover:bg-cyan-200 transition-colors">
+          {{ job.status }}
+        </span>
+      </div>
+    </article>
+    {% empty %}
+    <div class="px-8 py-12 text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-4">
+        <svg width="32" height="32" class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+      </div>
+      <p class="text-slate-500 text-base mb-4">No jobs yet. Seed demo data or create one in the admin.</p>
+      <a href="{% url 'job_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-full font-semibold hover:bg-cyan-500 transition-colors">
+        Create Your First Job
+        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

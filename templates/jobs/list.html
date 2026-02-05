@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs • GC Linemarking Ops{% endblock %}
+
+{% block content %}
+<section class="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
+  <header class="px-8 py-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-100 rounded-full text-cyan-700 text-xs font-semibold mb-2">
+        Job Management
+      </div>
+      <h2 class="text-3xl font-bold text-slate-900">All Jobs</h2>
+    </div>
+    <a href="{% url 'job_create' %}" class="px-6 py-2.5 bg-cyan-600 text-white rounded-full font-semibold hover:bg-cyan-500 transition-colors flex items-center gap-2">
+      <svg width="20" height="20" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+      Create Job
+    </a>
+  </header>
+  <div class="divide-y divide-slate-100">
+    {% for job in jobs %}
+    <article class="px-8 py-6 hover:bg-slate-50 transition-colors group">
+      <div class="flex justify-between items-start">
+        <div class="flex-1">
+          <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-cyan-600 transition-colors">
+            <a href="{% url 'job_detail' job.pk %}" class="hover:underline">{{ job.title }}</a>
+          </h3>
+          {% if job.site_address %}
+          <div class="flex items-center gap-2 mb-2">
+            <svg width="16" height="16" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <p class="text-sm text-slate-500">{{ job.site_address }}</p>
+          </div>
+          {% endif %}
+          {% if job.description %}
+          <p class="text-sm text-slate-600 mb-2">{{ job.description }}</p>
+          {% endif %}
+          {% if job.customer_name %}
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+              Customer: {{ job.customer_name|join:", " }}
+            </span>
+          </div>
+          {% endif %}
+          {% if job.tasks.all %}
+          <div class="flex items-center gap-2 mt-3">
+            <svg width="16" height="16" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span class="text-xs text-slate-500">{{ job.tasks.count }} task{{ job.tasks.count|pluralize }}</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="ml-6 flex flex-col items-end gap-3">
+          <span class="px-4 py-1.5 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-700 group-hover:bg-cyan-200 transition-colors">
+            {{ job.get_status_display }}
+          </span>
+          <span class="text-xs text-slate-500">
+            {{ job.created_at|date:"d M Y" }}
+          </span>
+          <div class="flex gap-2 mt-2">
+            <a href="{% url 'job_detail' job.pk %}" class="px-4 py-2 text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-500 rounded-full transition-colors flex items-center gap-1.5">
+              <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              View
+            </a>
+            <a href="{% url 'job_update' job.pk %}" class="px-4 py-2 text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-500 rounded-full transition-colors flex items-center gap-1.5">
+              <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+              Edit
+            </a>
+            <form method="post" action="{% url 'job_delete' job.pk %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this job?');">
+              {% csrf_token %}
+              <button type="submit" class="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-500 rounded-full transition-colors flex items-center gap-1.5">
+                <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Delete
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </article>
+    {% empty %}
+    <div class="px-8 py-16 text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-4">
+        <svg width="32" height="32" class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+      </div>
+      <p class="text-slate-500 text-base mb-4">No jobs yet.</p>
+      <a href="{% url 'job_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-full font-semibold hover:bg-cyan-500 transition-colors">
+        Create Your First Job
+        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

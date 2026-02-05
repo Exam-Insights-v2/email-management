@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Actions • GC Linemarking Ops{% endblock %}
+
+{% block content %}
+<section class="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden">
+  <header class="px-8 py-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-cyan-100 rounded-full text-cyan-700 text-xs font-semibold mb-2">
+        Action Management
+      </div>
+      <h2 class="text-3xl font-bold text-slate-900">All Actions</h2>
+    </div>
+    <a href="{% url 'action_create' %}" class="px-6 py-2.5 bg-cyan-600 text-white rounded-full font-semibold hover:bg-cyan-500 transition-colors flex items-center gap-2">
+      <svg width="20" height="20" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+      Create Action
+    </a>
+  </header>
+  <div class="divide-y divide-slate-100">
+    {% for action in actions %}
+    <article class="px-8 py-6 hover:bg-slate-50 transition-colors group">
+      <div class="flex justify-between items-start">
+        <div class="flex-1">
+          <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-cyan-600 transition-colors">
+            <a href="{% url 'action_detail' action.pk %}" class="hover:underline">{{ action.name }}</a>
+          </h3>
+          <div class="flex items-center gap-2 mb-2">
+            <svg width="16" height="16" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+            </svg>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+              {{ action.function }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <svg width="16" height="16" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <p class="text-sm text-slate-500">{{ action.account.email }}</p>
+          </div>
+          {% if action.instructions %}
+          <p class="text-sm text-slate-600">{{ action.instructions|truncatewords:30 }}</p>
+          {% endif %}
+        </div>
+        <div class="ml-6 flex flex-col items-end gap-3">
+          <span class="text-xs text-slate-500">
+            {{ action.created_at|date:"d M Y" }}
+          </span>
+          <div class="flex gap-2 mt-2">
+            <a href="{% url 'action_detail' action.pk %}" class="px-4 py-2 text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-500 rounded-full transition-colors flex items-center gap-1.5">
+              <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              View
+            </a>
+            <a href="{% url 'action_update' action.pk %}" class="px-4 py-2 text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-500 rounded-full transition-colors flex items-center gap-1.5">
+              <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+              Edit
+            </a>
+            <form method="post" action="{% url 'action_delete' action.pk %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this action?');">
+              {% csrf_token %}
+              <button type="submit" class="px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-500 rounded-full transition-colors flex items-center gap-1.5">
+                <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Delete
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </article>
+    {% empty %}
+    <div class="px-8 py-16 text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-4">
+        <svg width="32" height="32" class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+        </svg>
+      </div>
+      <p class="text-slate-500 text-base mb-4">No actions yet.</p>
+      <a href="{% url 'action_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-full font-semibold hover:bg-cyan-500 transition-colors">
+        Create Your First Action
+        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

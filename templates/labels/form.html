@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} • LineMarking Ops{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% if label %}{% url 'label_detail' label.pk %}{% else %}{% url 'labels_list' %}{% endif %}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white hover:text-cyan-400 transition-colors">
+    <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+    </svg>
+    Back
+  </a>
+</div>
+
+<section class="bg-white shadow-lg rounded-xl border border-slate-200">
+  <header class="px-6 py-5 border-b border-slate-200">
+    <h2 class="text-2xl font-bold text-slate-900">{{ title }}</h2>
+  </header>
+  
+  <form method="post" class="px-6 py-5">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+    <div class="mb-6 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    
+    <div class="space-y-6">
+      {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-1">
+          {{ field.label }}
+          {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}
+        <p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>
+        {% endif %}
+        {% if field.errors %}
+        <p class="mt-1 text-xs text-red-600">{{ field.errors }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    
+    <div class="mt-6 flex gap-3">
+      <button type="submit" class="px-6 py-2.5 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 font-semibold transition-colors">
+        Save
+      </button>
+      <a href="{% if label %}{% url 'label_detail' label.pk %}{% else %}{% url 'labels_list' %}{% endif %}" class="px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 rounded-full hover:border-cyan-400 hover:text-cyan-600 font-semibold transition-all duration-300">
+        Cancel
+      </a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,14 @@
+django>=4.2
+djangorestframework
+psycopg2-binary
+celery
+redis
+gunicorn
+django-allauth>=0.57.0
+requests
+PyJWT
+cryptography
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.1.1
+google-auth-oauthlib>=1.1.0
+openai
