@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  {% load static %}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}EmailIQ{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}" />
+    <link rel="apple-touch-icon" href="{% static 'images/logo.png' %}" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Roboto', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <script>
+      // Theme management
+      (function() {
+        // Get theme from localStorage or default to dark
+        const getTheme = () => {
+          const stored = localStorage.getItem('theme');
+          if (stored) return stored;
+          // Check system preference
+          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        };
+
+        // Apply theme
+        const applyTheme = (theme) => {
+          const html = document.documentElement;
+          if (theme === 'dark') {
+            html.classList.add('dark');
+          } else {
+            html.classList.remove('dark');
+          }
+        };
+
+        // Set initial theme before page renders to prevent flash
+        applyTheme(getTheme());
+
+        // Expose theme toggle function
+        window.toggleTheme = function() {
+          const currentTheme = getTheme();
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          localStorage.setItem('theme', newTheme);
+          applyTheme(newTheme);
+        };
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (!localStorage.getItem('theme')) {
+            applyTheme(e.matches ? 'dark' : 'light');
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body class="h-full bg-white dark:bg-gray-900">
+    {% if messages %}
+    <div class="fixed top-4 right-4 z-50 space-y-2">
+      {% for message in messages %}
+      <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-2 border-red-200 dark:border-red-800{% elif message.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200 border-2 border-emerald-200 dark:border-emerald-800{% else %}bg-cyan-50 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-200 border-2 border-cyan-200 dark:border-cyan-800{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </body>
+</html>

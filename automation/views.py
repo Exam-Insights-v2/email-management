@@ -1,11 +1,12 @@
 from rest_framework import viewsets
 
-from .models import Action, EmailLabel, Label, LabelAction
+from .models import Action, EmailLabel, Label, LabelAction, StandardOperatingProcedure
 from .serializers import (
     ActionSerializer,
     EmailLabelSerializer,
     LabelActionSerializer,
     LabelSerializer,
+    StandardOperatingProcedureSerializer,
 )
 
 
@@ -27,3 +28,8 @@ class LabelActionViewSet(viewsets.ModelViewSet):
 class EmailLabelViewSet(viewsets.ModelViewSet):
     queryset = EmailLabel.objects.all().select_related("label", "email_message")
     serializer_class = EmailLabelSerializer
+
+
+class StandardOperatingProcedureViewSet(viewsets.ModelViewSet):
+    queryset = StandardOperatingProcedure.objects.all().select_related("account")
+    serializer_class = StandardOperatingProcedureSerializer

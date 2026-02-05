@@ -1,0 +1,35 @@
+{% comment %}
+Reusable data section component
+Usage:
+  {% include 'includes/data_section.html' with title="Section Title" description="Section description" fields=field_list %}
+
+Parameters:
+  - title: Section title (required)
+  - description: Section description (optional)
+  - fields: List of field dictionaries with 'label' and 'value' keys (required)
+{% endcomment %}
+
+<div>
+  <div class="px-4 sm:px-0">
+    <h3 class="text-base/7 font-semibold text-white">{{ title }}</h3>
+    {% if description %}
+    <p class="mt-1 max-w-2xl text-sm/6 text-gray-400">{{ description }}</p>
+    {% endif %}
+  </div>
+  <div class="mt-6 border-t border-white/10">
+    <dl class="divide-y divide-white/10">
+      {% for field in fields %}
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-100">{{ field.label }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
+          {% if field.html %}
+            {{ field.value|safe }}
+          {% else %}
+            {{ field.value|default:"—" }}
+          {% endif %}
+        </dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </div>
+</div>

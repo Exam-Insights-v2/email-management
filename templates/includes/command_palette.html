@@ -1,0 +1,177 @@
+{% comment %}
+Command palette search modal
+Opens with Cmd/Ctrl+K or search icon click
+{% endcomment %}
+
+<el-dialog>
+  <dialog id="command-palette" aria-labelledby="command-palette-title" class="fixed inset-0 size-auto max-h-none max-w-none overflow-hidden bg-transparent not-open:hidden backdrop:bg-transparent">
+    <el-dialog-backdrop class="absolute inset-0 bg-gray-900/75 dark:bg-gray-900/90 transition-opacity data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out data-leave:duration-150 data-leave:ease-in"></el-dialog-backdrop>
+
+    <div tabindex="0" class="absolute inset-0 flex items-start justify-center pt-[20vh] px-4 focus:outline-none sm:pt-[15vh]">
+      <el-dialog-panel class="group/dialog-panel relative w-full max-w-2xl transform transition-all data-closed:scale-95 data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out data-leave:duration-150 data-leave:ease-in">
+        <div class="relative overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-2xl ring-1 ring-gray-900/10 dark:ring-white/10">
+          <!-- Search Input -->
+          <div class="flex items-center border-b border-gray-200 dark:border-white/10 px-3 py-2">
+            <svg class="size-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <form id="command-palette-form" method="get" class="flex-1">
+              <input 
+                type="text" 
+                id="command-palette-input" 
+                name="search" 
+                value="{{ search_query|default:'' }}" 
+                placeholder="{% if 'tasks' in request.path %}Search tasks and emails by title, description, subject, sender, or content...{% else %}Search tasks and emails...{% endif %}" 
+                autocomplete="off"
+                class="w-full bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none text-xs"
+              >
+            </form>
+            <button 
+              type="button" 
+              id="command-palette-clear"
+              class="mr-2 rounded-md p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 hidden"
+              aria-label="Clear"
+              style="display: none;"
+            >
+              <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+            <button 
+              type="button" 
+              command="close" 
+              commandfor="command-palette" 
+              class="rounded-md p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              aria-label="Close"
+            >
+              <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Keyboard shortcut hint -->
+          <div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10">
+            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>Press <kbd class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono">Esc</kbd> to close</span>
+              <span>Press <kbd class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono">Enter</kbd> to search</span>
+            </div>
+          </div>
+        </div>
+      </el-dialog-panel>
+    </div>
+  </dialog>
+</el-dialog>
+
+<script>
+  (function() {
+    const palette = document.getElementById('command-palette');
+    const input = document.getElementById('command-palette-input');
+    const form = document.getElementById('command-palette-form');
+    const clearBtn = document.getElementById('command-palette-clear');
+    
+    if (!palette || !input || !form) return;
+    
+    // Show/hide clear button based on input value
+    function toggleClearButton() {
+      if (clearBtn) {
+        if (input.value.trim()) {
+          clearBtn.style.display = 'block';
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.style.display = 'none';
+          clearBtn.classList.add('hidden');
+        }
+      }
+    }
+    
+    // Clear input
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        input.value = '';
+        input.focus();
+        toggleClearButton();
+      });
+    }
+    
+    // Update clear button on input
+    input.addEventListener('input', toggleClearButton);
+    
+    // Determine the search URL based on current path
+    function getSearchUrl() {
+      const path = window.location.pathname;
+      if (path.includes('/tasks')) {
+        return '{% url "tasks_list" %}';
+      }
+      // Default to tasks list
+      return '{% url "tasks_list" %}';
+    }
+    
+    // Open command palette
+    function openPalette() {
+      // Get current search query from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentSearch = urlParams.get('search') || '';
+      input.value = currentSearch;
+      
+      palette.showModal();
+      // Small delay to ensure modal is open before focusing
+      setTimeout(() => {
+        input.focus();
+        if (currentSearch) {
+          input.select();
+        }
+      }, 50);
+    }
+    
+    // Close command palette
+    function closePalette() {
+      palette.close();
+    }
+    
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const searchValue = input.value.trim();
+      const baseUrl = getSearchUrl();
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Build URL with parameters
+      const newParams = new URLSearchParams();
+      
+      // Add search parameter if provided
+      if (searchValue) {
+        newParams.set('search', searchValue);
+      }
+      
+      // Navigate to URL
+      const queryString = newParams.toString();
+      window.location.href = baseUrl + (queryString ? '?' + queryString : '');
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Cmd/Ctrl + K to open
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openPalette();
+      }
+      
+      // Escape to close (only if palette is open)
+      if (e.key === 'Escape' && palette.open) {
+        closePalette();
+      }
+    });
+    
+    // Close on backdrop click
+    palette.addEventListener('click', function(e) {
+      if (e.target === palette) {
+        closePalette();
+      }
+    });
+    
+    // Expose open function globally for button clicks
+    window.openCommandPalette = openPalette;
+  })();
+</script>

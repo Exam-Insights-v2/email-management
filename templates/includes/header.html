@@ -1,0 +1,115 @@
+{% load static %}
+<div class="">
+  <nav class="bg-gray-100 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200 dark:border-white/10">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-12 items-center justify-between">
+        <div class="flex items-center">
+          <div class="shrink-0">
+            <a href="{% url 'tasks_list' %}">
+              <img src="{% static 'images/logo.png' %}" alt="EmailIQ" class="h-6 w-auto" />
+            </a>
+          </div>
+          <div class="hidden md:block">
+            <div class="ml-8 flex items-center space-x-2">
+              <span class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50" aria-disabled="true" title="Jobs feature is currently disabled">Jobs</span>
+              <a href="{% url 'tasks_list' %}" class="{% if 'tasks' in request.path or request.path == '/' %}bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white{% endif %} px-3 py-1.5 rounded-md text-xs font-medium transition-colors">Tasks</a>
+            </div>
+          </div>
+        </div>
+        {% if user.is_authenticated %}
+        <div class="hidden md:block">
+          <div class="ml-4 flex items-center gap-3 md:ml-6">
+            <!-- Search Button -->
+            <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="relative rounded-full p-1 {% if search_query %}text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5{% endif %} hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors" aria-label="Search">
+              <span class="absolute -inset-1"></span>
+              <span class="sr-only">Search</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-slot="icon" aria-hidden="true" class="size-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {% if search_query %}
+              <span class="absolute top-0 right-0 block size-2 rounded-full bg-cyan-500 ring-2 ring-white dark:ring-gray-800"></span>
+              {% endif %}
+            </button>
+            <!-- Theme Toggle Button -->
+            <button type="button" onclick="toggleTheme()" class="relative rounded-full p-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors" aria-label="Toggle theme">
+              <span class="absolute -inset-1"></span>
+              <span class="sr-only">Toggle theme</span>
+              <!-- Sun icon (light mode) -->
+              <svg id="theme-toggle-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 hidden dark:block">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              </svg>
+              <!-- Moon icon (dark mode) -->
+              <svg id="theme-toggle-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 block dark:hidden">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+            <!-- Settings Button -->
+            <a href="{% url 'settings' %}" class="relative rounded-full p-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors {% if 'settings' in request.path %}bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white{% endif %}" aria-label="Settings">
+              <span class="absolute -inset-1"></span>
+              <span class="sr-only">Settings</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-slot="icon" aria-hidden="true" class="size-4">
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+        </div>
+        {% else %}
+        <div class="hidden md:block">
+          <a href="{% url 'login' %}" class="rounded-md px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">Sign In</a>
+        </div>
+        {% endif %}
+        <div class="-mr-2 flex md:hidden">
+          <!-- Theme Toggle Button (Mobile) -->
+          <button type="button" onclick="toggleTheme()" class="relative rounded-full p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors mr-2" aria-label="Toggle theme">
+            <span class="absolute -inset-1"></span>
+            <span class="sr-only">Toggle theme</span>
+            <svg id="theme-toggle-light-icon-mobile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 hidden dark:block">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+            </svg>
+            <svg id="theme-toggle-dark-icon-mobile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4 block dark:hidden">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+          <!-- Mobile menu button -->
+          <button type="button" command="--toggle" commandfor="mobile-menu" class="relative inline-flex items-center justify-center rounded-md p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500">
+            <span class="absolute -inset-0.5"></span>
+            <span class="sr-only">Open main menu</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-5 in-aria-expanded:hidden">
+              <path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-5 not-in-aria-expanded:hidden">
+              <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <el-disclosure id="mobile-menu" hidden class="block md:hidden">
+      <div class="space-y-0.5 px-2 pt-1.5 pb-2 sm:px-3">
+        <span class="block border-l-4 border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 px-2.5 py-1.5 text-sm font-medium" aria-disabled="true" title="Jobs feature is currently disabled">Jobs</span>
+        <a href="{% url 'tasks_list' %}" class="block {% if 'tasks' in request.path or request.path == '/' %}border-l-4 border-gray-400 dark:border-gray-500 bg-gray-100 dark:bg-gray-700/50 text-gray-900 dark:text-white{% else %}border-l-4 border-transparent text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white{% endif %} px-2.5 py-1.5 text-sm font-medium transition-colors">Tasks</a>
+      </div>
+      {% if user.is_authenticated %}
+      <div class="border-t border-gray-200 dark:border-white/10 pt-2 pb-2">
+        <div class="px-2 space-y-0.5">
+          <a href="{% url 'settings' %}" class="block rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white {% if 'settings' in request.path %}bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white{% endif %}">Settings</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="border-t border-gray-200 dark:border-white/10 pt-2 pb-2">
+        <div class="px-2">
+          <a href="{% url 'login' %}" class="block rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">Sign In</a>
+        </div>
+      </div>
+      {% endif %}
+    </el-disclosure>
+  </nav>
+
+  <!-- Command Palette -->
+  {% include 'includes/command_palette.html' %}
+
+</div>

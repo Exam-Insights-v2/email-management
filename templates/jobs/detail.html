@@ -1,117 +1,104 @@
 {% extends "base.html" %}
 
-{% block title %}{{ job.title }} • LineMarking Ops{% endblock %}
+{% block title %}{{ job.title }} • EmailIQ{% endblock %}
+
+{% block header_title %}{{ job.title|default:"Untitled Job" }}{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-  <a href="{% url 'jobs_list' %}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white hover:text-cyan-400 transition-colors">
-    <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-    </svg>
-    Back to Jobs
-  </a>
-</div>
-
-<section class="bg-white shadow-lg rounded-xl border border-slate-200 overflow-hidden">
-  <header class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-    <h2 class="text-2xl font-bold text-slate-900">{{ job.title }}</h2>
-    <div class="flex gap-3">
-      <a href="{% url 'job_update' job.pk %}" class="px-6 py-2.5 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 text-sm font-semibold transition-colors flex items-center gap-1.5">
-        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-        </svg>
-        Edit
-      </a>
-      <form method="post" action="{% url 'job_delete' job.pk %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this job?');">
-        {% csrf_token %}
-        <button type="submit" class="px-6 py-2.5 bg-red-600 text-white rounded-full hover:bg-red-500 text-sm font-semibold transition-colors flex items-center gap-1.5">
-          <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-          </svg>
-          Delete
-        </button>
-      </form>
-    </div>
-  </header>
-  
-  <div class="px-6 py-6 space-y-6">
-    <div class="grid grid-cols-2 gap-6">
-      <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Status</label>
-        <p>
-          <span class="px-6 py-3.5 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-800">
-            {{ job.get_status_display }}
-          </span>
-        </p>
-      </div>
-      <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Account</label>
-        <p class="text-sm font-semibold text-slate-900">{{ job.account.email }}</p>
-      </div>
-      {% if job.site_address %}
-      <div class="col-span-2">
-        <label class="text-sm font-semibold text-slate-500">Site Address</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.site_address }}</p>
-      </div>
-      {% endif %}
-      {% if job.customer_name %}
-      <div>
-        <label class="text-sm font-semibold text-slate-500">Customer Name</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.customer_name|join:", " }}</p>
-      </div>
-      {% endif %}
-      {% if job.customer_email %}
-      <div>
-        <label class="text-sm font-semibold text-slate-500">Customer Email</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.customer_email|join:", " }}</p>
-      </div>
-      {% endif %}
-      {% if job.dates %}
-      <div>
-        <label class="text-sm font-semibold text-slate-500">Dates</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.dates|join:", " }}</p>
-      </div>
-      {% endif %}
-      {% if job.completed_at %}
-      <div>
-        <label class="text-sm font-semibold text-slate-500">Completed At</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.completed_at|date:"d M Y H:i" }}</p>
-      </div>
-      {% endif %}
-      <div>
-        <label class="text-sm font-semibold text-slate-500">Created</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.created_at|date:"d M Y H:i" }}</p>
-      </div>
-      <div>
-        <label class="text-sm font-semibold text-slate-500">Updated</label>
-        <p class="mt-1 text-sm text-slate-900">{{ job.updated_at|date:"d M Y H:i" }}</p>
-      </div>
-    </div>
-    
-    {% if job.description %}
-    <div>
-      <label class="text-sm font-semibold text-slate-500">Description</label>
-      <p class="mt-1 text-sm text-slate-900 whitespace-pre-wrap">{{ job.description }}</p>
-    </div>
-    {% endif %}
-    
-    {% if job.tasks.all %}
-    <div>
-      <label class="text-sm font-semibold text-slate-500">Tasks ({{ job.tasks.count }})</label>
-      <div class="mt-2 space-y-2">
-        {% for task in job.tasks.all %}
-        <div class="px-3 py-2 bg-slate-50 rounded border border-slate-200">
-          <a href="{% url 'task_detail' task.pk %}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
-            {{ task.title|default:"Untitled Task" }}
-          </a>
-          <span class="ml-2 px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-700">
-            {{ task.get_status_display }}
-          </span>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
+<div class="bg-gray-800">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    {% url 'job_update' job.pk as job_update_url %}
+    {% include 'includes/page_header.html' with title=job.title edit_url=job_update_url %}
   </div>
-</section>
+</div>
+<div class="bg-gray-800">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div>
+      <div class="px-4 sm:px-0">
+        <h3 class="text-base/7 font-semibold text-white">Job Information</h3>
+        <p class="mt-1 max-w-2xl text-sm/6 text-gray-400">Job details and status.</p>
+      </div>
+      <div class="mt-6 border-t border-white/10">
+        <dl class="divide-y divide-white/10">
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Status</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
+              <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-1 text-xs font-medium text-cyan-400 inset-ring inset-ring-cyan-400/30">{{ job.get_status_display }}</span>
+            </dd>
+          </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Account</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.account.email }}</dd>
+          </div>
+          {% if job.site_address %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Site Address</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.site_address }}</dd>
+          </div>
+          {% endif %}
+          {% if job.customer_name %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Customer Name</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.customer_name|join:", " }}</dd>
+          </div>
+          {% endif %}
+          {% if job.customer_email %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Customer Email</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.customer_email|join:", " }}</dd>
+          </div>
+          {% endif %}
+          {% if job.dates %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Dates</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.dates|join:", " }}</dd>
+          </div>
+          {% endif %}
+          {% if job.completed_at %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Completed At</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.completed_at|date:"d M Y H:i" }}</dd>
+          </div>
+          {% endif %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Created</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.created_at|date:"d M Y H:i" }}</dd>
+          </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Updated</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ job.updated_at|date:"d M Y H:i" }}</dd>
+          </div>
+          {% if job.description %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Description</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ job.description }}</dd>
+          </div>
+          {% endif %}
+          {% if job.tasks.all %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Tasks</dt>
+            <dd class="mt-2 text-sm text-white sm:col-span-2 sm:mt-0">
+              <ul role="list" class="divide-y divide-white/5 rounded-md border border-white/10">
+                {% for task in job.tasks.all %}
+                <li class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6">
+                  <div class="flex w-0 flex-1 items-center">
+                    <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                      <a href="{% url 'task_detail' task.pk %}" class="truncate font-medium text-white hover:text-cyan-300">{{ task.title|default:"Untitled Task" }}</a>
+                      <span class="shrink-0 text-gray-500">{{ task.get_status_display }}</span>
+                    </div>
+                  </div>
+                  <div class="ml-4 shrink-0">
+                    <a href="{% url 'task_detail' task.pk %}" class="font-medium text-cyan-400 hover:text-cyan-300">View</a>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            </dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

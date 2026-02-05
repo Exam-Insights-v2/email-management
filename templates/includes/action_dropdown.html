@@ -1,0 +1,67 @@
+{% comment %}
+Reusable action dropdown component
+Usage:
+  {% include 'includes/action_dropdown.html' with view_url=object.get_absolute_url edit_url=object.get_edit_url delete_url=object.get_delete_url delete_message="Are you sure?" %}
+  
+Parameters:
+  - view_url: URL for view action (optional)
+  - edit_url: URL for edit action (optional)
+  - delete_url: URL for delete action (optional)
+  - delete_message: Confirmation message for delete (optional, defaults to "Are you sure?")
+{% endcomment %}
+
+<el-dropdown class="inline-block">
+  <button class="inline-flex items-center justify-center rounded-md text-gray-600 dark:text-gray-400 focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors" aria-label="Options">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-slot="icon" aria-hidden="true" class="size-5">
+      <circle cx="12" cy="5" r="1"></circle>
+      <circle cx="12" cy="12" r="1"></circle>
+      <circle cx="12" cy="19" r="1"></circle>
+    </svg>
+  </button>
+
+  <el-menu anchor="bottom end" popover class="w-56 origin-top-right rounded-md bg-white dark:bg-gray-800 outline-1 -outline-offset-1 outline-gray-200 dark:outline-white/10 transition transition-discrete [--anchor-gap:--spacing(0.5)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in shadow-lg">
+    <div class="py-1">
+      {% if view_url %}
+      <a href="{{ view_url }}" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 text-gray-500 dark:text-gray-400" aria-hidden="true">
+          <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+          <path d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>View</span>
+      </a>
+      {% endif %}
+      {% if edit_url %}
+      {% if '/tasks/' in edit_url and '/edit' in edit_url %}
+      <button type="button" onclick="event.stopPropagation(); const urlParts = '{{ edit_url }}'.split('/'); const pk = urlParts[urlParts.length - 2]; if (window.openEditTaskDrawer) window.openEditTaskDrawer(pk);" class="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 text-gray-500 dark:text-gray-400" aria-hidden="true">
+          <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>Edit</span>
+      </button>
+      {% else %}
+      <a href="{{ edit_url }}" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 text-gray-500 dark:text-gray-400" aria-hidden="true">
+          <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>Edit</span>
+      </a>
+      {% endif %}
+      {% endif %}
+      {% if delete_url %}
+      {% with modal_id="delete-modal-"|add:delete_url|slugify %}
+      <form action="{{ delete_url }}" method="POST" data-warning-modal="{{ modal_id }}">
+        {% csrf_token %}
+        <button type="submit" class="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 text-gray-500 dark:text-gray-400" aria-hidden="true">
+            <path d="M8.75 4.75a.75.75 0 0 0-1.5 0v.5h-3a.75.75 0 0 0 0 1.5h.5v8.5a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-8.5h.5a.75.75 0 0 0 0-1.5h-3v-.5ZM7.5 7.75a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-1.5 0v-6a.75.75 0 0 1 .75-.75Zm5 0a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-1.5 0v-6a.75.75 0 0 1 .75-.75Z" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5.5 4.75h9" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Delete</span>
+        </button>
+      </form>
+      {% include 'includes/warning_modal.html' with modal_id=modal_id title="Delete item" message=delete_message|default:"Are you sure you want to delete this item?" confirm_text="Delete" %}
+      {% endwith %}
+      {% endif %}
+    </div>
+  </el-menu>
+</el-dropdown>

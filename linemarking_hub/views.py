@@ -11,35 +11,131 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from accounts.models import Account
-from automation.models import Action, EmailLabel, Label, LabelAction
+from accounts.models import Account, OAuthToken
+from automation.models import Action, EmailLabel, Label, LabelAction, StandardOperatingProcedure
 from jobs.models import Job, Task
+from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
 from linemarking_hub.forms import (
     AccountForm,
     ActionForm,
     JobForm,
     LabelActionForm,
     LabelForm,
+    StandardOperatingProcedureForm,
     TaskForm,
 )
-from mail.models import Draft, EmailMessage, EmailThread
 
 
 # Jobs CRUD
 @login_required
 def jobs_list(request):
-    jobs = Job.objects.select_related("account").prefetch_related("tasks").order_by("-created_at")
-    return render(request, "jobs/list.html", {"jobs": jobs})
+    # Redirect to tasks list - jobs page is disabled
+    return redirect("tasks_list")
+
+
+@login_required
+def jobs_calendar(request):
+    # Redirect to tasks list - jobs page is disabled
+    return redirect("tasks_list")
+    from collections import defaultdict
+    from datetime import datetime, timedelta
+    
+    # Get search query
+    search_query = request.GET.get('search', '').strip()
+    
+    # Get all jobs
+    all_jobs = Job.objects.select_related("account").prefetch_related("tasks").all()
+    
+    # Filter jobs by search query if provided
+    if search_query:
+        from django.db.models import Q
+        all_jobs = all_jobs.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(site_address__icontains=search_query) |
+            Q(customer_name__icontains=search_query)
+        )
+    
+    # Separate scheduled and unscheduled jobs
+    unscheduled_jobs = []
+    scheduled_jobs = []
+    jobs_by_date = defaultdict(list)
+    
+    for job in all_jobs:
+        if job.dates:
+            dates = job.dates if isinstance(job.dates, list) else json.loads(job.dates) if isinstance(job.dates, str) else []
+            if dates:
+                scheduled_jobs.append(job)
+                for date_str in dates:
+                    try:
+                        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+                        jobs_by_date[date_str].append(job)
+                    except (ValueError, TypeError):
+                        continue
+            else:
+                unscheduled_jobs.append(job)
+        else:
+            unscheduled_jobs.append(job)
+    
+    # Get week parameter or default to current week
+    today = timezone.now().date()
+    week_start_param = request.GET.get('week_start')
+    
+    if week_start_param:
+        try:
+            week_start = datetime.strptime(week_start_param, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            week_start = today - timedelta(days=today.weekday())
+    else:
+        # Default to start of current week (Monday)
+        week_start = today - timedelta(days=today.weekday())
+    
+    # Calculate week end (Sunday)
+    week_end = week_start + timedelta(days=6)
+    
+    # Generate dates for the week
+    calendar_dates = []
+    current_date = week_start
+    while current_date <= week_end:
+        date_str = current_date.strftime("%Y-%m-%d")
+        calendar_dates.append({
+            "date": current_date,
+            "date_str": date_str,
+            "jobs": jobs_by_date.get(date_str, []),
+            "is_today": current_date == today,
+            "is_past": current_date < today,
+        })
+        current_date += timedelta(days=1)
+    
+    # Calculate previous and next week start dates
+    prev_week_start = week_start - timedelta(days=7)
+    next_week_start = week_start + timedelta(days=7)
+    current_week_start = today - timedelta(days=today.weekday())
+    
+    form = JobForm()
+    return render(request, "jobs/calendar.html", {
+        "calendar_dates": calendar_dates,
+        "unscheduled_jobs": unscheduled_jobs,
+        "week_start": week_start,
+        "week_end": week_end,
+        "prev_week_start": prev_week_start,
+        "next_week_start": next_week_start,
+        "current_week_start": current_week_start,
+        "search_query": search_query,
+        "form": form,
+    })
 
 
 @login_required
 def job_detail(request, pk):
-    job = get_object_or_404(Job.objects.select_related("account").prefetch_related("tasks"), pk=pk)
-    return render(request, "jobs/detail.html", {"job": job})
+    # Redirect to tasks list - jobs page is disabled
+    return redirect("tasks_list")
 
 
 @login_required
 def job_create(request):
+    # Redirect to tasks list - jobs page is disabled
+    return redirect("tasks_list")
     if request.method == "POST":
         form = JobForm(request.POST)
         if form.is_valid():
@@ -64,6 +160,8 @@ def job_create(request):
 
 @login_required
 def job_update(request, pk):
+    # Redirect to tasks list - jobs page is disabled
+    return redirect("tasks_list")
     job = get_object_or_404(Job, pk=pk)
     if request.method == "POST":
         form = JobForm(request.POST, instance=job)
@@ -96,20 +194,40 @@ def job_update(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def job_delete(request, pk):
-    job = get_object_or_404(Job, pk=pk)
-    title = job.title
-    job.delete()
-    messages.success(request, f"Job '{title}' deleted successfully.")
-    return redirect("jobs_list")
+    # Redirect to tasks list - jobs page is disabled
+    return redirect("tasks_list")
 
 
 # Tasks CRUD
 @login_required
 def tasks_list(request):
+    from django.db.models import Q
+    
+    # Get search query
+    search_query = request.GET.get('search', '').strip()
+    
+    # Get all tasks
     tasks = Task.objects.select_related("account", "job", "email_message").prefetch_related(
         "email_message__labels__label"
-    ).order_by("-created_at")
-    return render(request, "tasks/list.html", {"tasks": tasks})
+    )
+    
+    # Filter tasks by search query if provided
+    if search_query:
+        tasks = tasks.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(email_message__subject__icontains=search_query) |
+            Q(email_message__from_address__icontains=search_query) |
+            Q(email_message__from_name__icontains=search_query) |
+            Q(email_message__body_html__icontains=search_query)
+        )
+    
+    tasks = tasks.order_by("-created_at")
+    # Get first available connected account for form
+    from accounts.models import Account
+    account = Account.objects.filter(is_connected=True).first()
+    form = TaskForm(user=request.user, account=account)
+    return render(request, "tasks/list.html", {"tasks": tasks, "form": form, "search_query": search_query})
 
 
 @login_required
@@ -124,8 +242,12 @@ def task_detail(request, pk):
 
 @login_required
 def task_create(request):
+    # Get first available connected account
+    from accounts.models import Account
+    account = Account.objects.filter(is_connected=True).first()
+    
     if request.method == "POST":
-        form = TaskForm(request.POST)
+        form = TaskForm(request.POST, user=request.user, account=account)
         if form.is_valid():
             try:
                 task = form.save()
@@ -134,15 +256,21 @@ def task_create(request):
             except ValidationError as e:
                 messages.error(request, str(e))
     else:
-        form = TaskForm()
+        form = TaskForm(user=request.user, account=account)
     return render(request, "tasks/form.html", {"form": form, "title": "Create Task"})
 
 
 @login_required
 def task_update(request, pk):
     task = get_object_or_404(Task, pk=pk)
+    # Get account from task or first available
+    account = task.account if task.account else None
+    if not account:
+        from accounts.models import Account
+        account = Account.objects.filter(is_connected=True).first()
+    
     if request.method == "POST":
-        form = TaskForm(request.POST, instance=task)
+        form = TaskForm(request.POST, instance=task, user=request.user, account=account)
         if form.is_valid():
             try:
                 task = form.save()
@@ -150,9 +278,11 @@ def task_update(request, pk):
                 return redirect("task_detail", pk=task.pk)
             except ValidationError as e:
                 messages.error(request, str(e))
+                # Return form with errors for drawer
+                return render(request, "tasks/form_content.html", {"form": form, "task": task, "form_url": "task_update", "drawer_id": f"edit-task-{pk}"})
     else:
-        form = TaskForm(instance=task)
-    return render(request, "tasks/form.html", {"form": form, "task": task, "title": "Edit Task"})
+        form = TaskForm(instance=task, user=request.user, account=account)
+    return render(request, "tasks/form_content.html", {"form": form, "task": task, "form_url": "task_update", "drawer_id": f"edit-task-{pk}"})
 
 
 @login_required
@@ -392,7 +522,8 @@ def labels_list(request):
     labels = Label.objects.select_related("account").prefetch_related("actions__action").order_by(
         "name"
     )
-    return render(request, "labels/list.html", {"labels": labels})
+    form = LabelForm()
+    return render(request, "labels/list.html", {"labels": labels, "form": form})
 
 
 @login_required
@@ -451,7 +582,8 @@ def label_delete(request, pk):
 @login_required
 def accounts_list(request):
     accounts = Account.objects.all().order_by("provider", "email")
-    return render(request, "accounts/list.html", {"accounts": accounts})
+    form = AccountForm()
+    return render(request, "accounts/list.html", {"accounts": accounts, "form": form})
 
 
 @login_required
@@ -516,7 +648,9 @@ def drafts_list(request):
     drafts = Draft.objects.select_related("account", "email_message").prefetch_related(
         "attachments"
     ).order_by("-updated_at")
-    return render(request, "drafts/list.html", {"drafts": drafts})
+    accounts = Account.objects.all()
+    emails = EmailMessage.objects.all()[:100]  # Limit for dropdown
+    return render(request, "drafts/list.html", {"drafts": drafts, "accounts": accounts, "emails": emails})
 
 
 @login_required
@@ -610,7 +744,8 @@ def draft_delete(request, pk):
 @login_required
 def actions_list(request):
     actions = Action.objects.select_related("account").order_by("name")
-    return render(request, "actions/list.html", {"actions": actions})
+    form = ActionForm()
+    return render(request, "actions/list.html", {"actions": actions, "form": form})
 
 
 @login_required
@@ -706,6 +841,65 @@ def label_action_delete(request, pk):
     return redirect("label_detail", pk=label_id)
 
 
+# Standard Operating Procedures (SOPs)
+@login_required
+def sops_list(request):
+    sops = StandardOperatingProcedure.objects.select_related("account").order_by("-priority", "name")
+    form = StandardOperatingProcedureForm()
+    return render(request, "sops/list.html", {"sops": sops, "form": form})
+
+
+@login_required
+def sop_detail(request, pk):
+    sop = get_object_or_404(StandardOperatingProcedure.objects.select_related("account"), pk=pk)
+    return render(request, "sops/detail.html", {"sop": sop})
+
+
+@login_required
+def sop_create(request):
+    if request.method == "POST":
+        form = StandardOperatingProcedureForm(request.POST)
+        if form.is_valid():
+            try:
+                sop = form.save()
+                messages.success(request, f"SOP '{sop.name}' created successfully.")
+                return redirect("sop_detail", pk=sop.pk)
+            except ValidationError as e:
+                messages.error(request, str(e))
+    else:
+        form = StandardOperatingProcedureForm()
+    return render(request, "sops/form.html", {"form": form, "title": "Create SOP"})
+
+
+@login_required
+def sop_update(request, pk):
+    sop = get_object_or_404(StandardOperatingProcedure, pk=pk)
+    if request.method == "POST":
+        form = StandardOperatingProcedureForm(request.POST, instance=sop)
+        if form.is_valid():
+            try:
+                sop = form.save()
+                messages.success(request, f"SOP '{sop.name}' updated successfully.")
+                return redirect("sop_detail", pk=sop.pk)
+            except ValidationError as e:
+                messages.error(request, str(e))
+    else:
+        form = StandardOperatingProcedureForm(instance=sop)
+    return render(
+        request, "sops/form.html", {"form": form, "sop": sop, "title": "Edit SOP"}
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def sop_delete(request, pk):
+    sop = get_object_or_404(StandardOperatingProcedure, pk=pk)
+    name = sop.name
+    sop.delete()
+    messages.success(request, f"SOP '{name}' deleted successfully.")
+    return redirect("sops_list")
+
+
 # Email Labels
 @login_required
 @require_http_methods(["POST"])
@@ -727,3 +921,44 @@ def email_label_remove(request, email_id, label_id):
     EmailLabel.objects.filter(email_message=email, label=label).delete()
     messages.success(request, f"Label '{label.name}' removed from email.")
     return redirect("email_detail", pk=email.pk)
+
+
+# Settings
+@login_required
+def settings_view(request):
+    """Settings page combining database, actions, and labels"""
+    # Get data for each section
+    tab = request.GET.get('tab', 'accounts')
+    
+    # Database tables
+    tables = [
+        {"name": "Accounts", "slug": "accounts", "model": Account, "count": Account.objects.count()},
+        {"name": "OAuth Tokens", "slug": "oauth_tokens", "model": OAuthToken, "count": OAuthToken.objects.count()},
+        {"name": "Jobs", "slug": "jobs", "model": Job, "count": Job.objects.count()},
+        {"name": "Tasks", "slug": "tasks", "model": Task, "count": Task.objects.count()},
+        {"name": "Email Threads", "slug": "email_threads", "model": EmailThread, "count": EmailThread.objects.count()},
+        {"name": "Email Messages", "slug": "email_messages", "model": EmailMessage, "count": EmailMessage.objects.count()},
+        {"name": "Drafts", "slug": "drafts", "model": Draft, "count": Draft.objects.count()},
+        {"name": "Draft Attachments", "slug": "draft_attachments", "model": DraftAttachment, "count": DraftAttachment.objects.count()},
+        {"name": "Labels", "slug": "labels", "model": Label, "count": Label.objects.count()},
+        {"name": "Email Labels", "slug": "email_labels", "model": EmailLabel, "count": EmailLabel.objects.count()},
+        {"name": "Actions", "slug": "actions", "model": Action, "count": Action.objects.count()},
+        {"name": "Label Actions", "slug": "label_actions", "model": LabelAction, "count": LabelAction.objects.count()},
+    ]
+    
+    # Actions list
+    actions = Action.objects.select_related("account").order_by("name")
+    
+    # Labels list
+    labels = Label.objects.select_related("account").order_by("name")
+    
+    # Accounts list
+    accounts = Account.objects.order_by("email")
+    
+    return render(request, "settings.html", {
+        "tab": tab,
+        "tables": tables,
+        "actions": actions,
+        "labels": labels,
+        "accounts": accounts,
+    })

@@ -52,6 +52,7 @@ from linemarking_hub.views import (
     job_delete,
     job_detail,
     job_update,
+    jobs_calendar,
     jobs_list,
     label_action_create,
     label_action_delete,
@@ -60,6 +61,12 @@ from linemarking_hub.views import (
     label_detail,
     label_update,
     labels_list,
+    settings_view,
+    sop_create,
+    sop_delete,
+    sop_detail,
+    sop_update,
+    sops_list,
     task_create,
     task_delete,
     task_detail,
@@ -82,9 +89,10 @@ router.register("email-labels", EmailLabelViewSet, basename="emaillabel")
 
 urlpatterns = [
     # Home
-    path("", jobs_list, name="home"),
+    path("", tasks_list, name="home"),
     # Jobs
     path("jobs/", jobs_list, name="jobs_list"),
+    path("jobs/calendar/", jobs_calendar, name="jobs_calendar"),
     path("jobs/create/", job_create, name="job_create"),
     path("jobs/<int:pk>/", job_detail, name="job_detail"),
     path("jobs/<int:pk>/edit/", job_update, name="job_update"),
@@ -136,11 +144,19 @@ urlpatterns = [
     path("actions/<int:pk>/", action_detail, name="action_detail"),
     path("actions/<int:pk>/edit/", action_update, name="action_update"),
     path("actions/<int:pk>/delete/", action_delete, name="action_delete"),
+    # Standard Operating Procedures (SOPs)
+    path("sops/", sops_list, name="sops_list"),
+    path("sops/create/", sop_create, name="sop_create"),
+    path("sops/<int:pk>/", sop_detail, name="sop_detail"),
+    path("sops/<int:pk>/edit/", sop_update, name="sop_update"),
+    path("sops/<int:pk>/delete/", sop_delete, name="sop_delete"),
     # Authentication
     path("auth/login/", login_view, name="login"),
     path("auth/logout/", logout_view, name="logout"),
     path("auth/google/login/", google_oauth_login, name="google_oauth_login"),
     path("auth/google/callback/", google_oauth_callback, name="google_oauth_callback"),
+    # Settings
+    path("settings/", settings_view, name="settings"),
     # Database Admin
     path("database/", database_home, name="database_home"),
     path("database/<str:model_name>/", database_table_view, name="database_table_view"),

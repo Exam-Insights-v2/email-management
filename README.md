@@ -13,6 +13,10 @@ Minimal Django project scaffolding for the LineMarking email operations tool.
 3. Run `make build` — it runs migrations and collects static files.
 4. Start the development server with `make run` or use the Docker command above.
 
+## Docker run commands
+
+- `docker compose up
+
 ## Structure
 
 - `accounts`: account metadata for Gmail/Microsoft connectors.

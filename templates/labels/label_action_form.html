@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }} • LineMarking Ops{% endblock %}
+{% block title %}{{ title }} • EmailIQ{% endblock %}
+
+{% block header_title %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="mb-6">
-  <a href="{% url 'label_detail' label.pk %}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white hover:text-cyan-400 transition-colors">
+  <a href="{% url 'label_detail' label.pk %}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-cyan-400 transition-colors">
     <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
     </svg>
@@ -12,45 +14,53 @@
   </a>
 </div>
 
-<section class="bg-white shadow-lg rounded-xl border border-slate-200">
-  <header class="px-6 py-5 border-b border-slate-200">
-    <h2 class="text-2xl font-bold text-slate-900">{{ title }}</h2>
-    <p class="text-sm text-slate-500 mt-1">Label: {{ label.name }}</p>
-  </header>
-  
-  <form method="post" class="px-6 py-5">
+<section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden mt-6">
+  <form method="post" class="px-6 py-6">
     {% csrf_token %}
     
     {% if form.non_field_errors %}
-    <div class="mb-6 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+    <div class="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-400">
       {{ form.non_field_errors }}
     </div>
     {% endif %}
     
-    <div class="space-y-6">
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-1">Action <span class="text-red-500">*</span></label>
-        <select name="action" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
-          <option value="">Select an action...</option>
-          {% for action in actions %}
-          <option value="{{ action.pk }}">{{ action.name }} ({{ action.function }})</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-1">Order <span class="text-red-500">*</span></label>
-        <input type="number" name="order" value="1" min="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg" required>
-        <p class="mt-1 text-xs text-slate-500">Lower numbers run first</p>
+    <div class="space-y-12">
+      <div class="border-b border-gray-200 dark:border-white/10 pb-12">
+        <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">Link Action to Label</h2>
+        <p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">Link an action to the label "{{ label.name }}".</p>
+
+        <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+          <div class="sm:col-span-4">
+            <label for="action" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Action <span class="text-red-400">*</span></label>
+            <div class="mt-2">
+              <div class="grid grid-cols-1">
+                <select id="action" name="action" required class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-gray-50 dark:bg-white/5 py-1.5 pr-8 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 *:bg-white dark:*:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600 sm:text-sm/6">
+                  <option value="">Select an action...</option>
+                  {% for action in actions %}
+                  <option value="{{ action.pk }}">{{ action.name }} ({{ action.function }})</option>
+                  {% endfor %}
+                </select>
+                <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4">
+                  <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label for="order" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Order <span class="text-red-400">*</span></label>
+            <div class="mt-2">
+              <input id="order" type="number" name="order" value="1" min="1" required class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600 sm:text-sm/6" />
+            </div>
+            <p class="mt-3 text-sm/6 text-gray-600 dark:text-gray-400">Lower numbers run first</p>
+          </div>
+        </div>
       </div>
     </div>
-    
-    <div class="mt-6 flex gap-3">
-      <button type="submit" class="px-6 py-2.5 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 font-semibold transition-colors">
-        Link Action
-      </button>
-      <a href="{% url 'label_detail' label.pk %}" class="px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 rounded-full hover:border-cyan-400 hover:text-cyan-600 font-semibold transition-all duration-300">
-        Cancel
-      </a>
+
+    <div class="mt-6 flex items-center justify-end gap-x-6">
+      <a href="{% url 'label_detail' label.pk %}" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Cancel</a>
+      <button type="submit" class="rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Link Action</button>
     </div>
   </form>
 </section>

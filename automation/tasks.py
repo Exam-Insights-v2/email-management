@@ -109,17 +109,55 @@ def process_email(email_message_id: int):
 
 @shared_task
 def trigger_label_actions(label_id: int, email_message_id: int):
+    """
+    Trigger actions for a label. Supports both MCP (dynamic) and sequential (legacy) modes.
+    """
     client = OpenAIClient()
     try:
         label = Label.objects.get(pk=label_id)
         email = EmailMessage.objects.select_related("account").get(pk=email_message_id)
     except (Label.DoesNotExist, EmailMessage.DoesNotExist):
+        logger.warning(
+            f"Label {label_id} or email {email_message_id} not found"
+        )
         return
 
-    label_actions = LabelAction.objects.filter(label=label).select_related("action").order_by("order")
-    for label_action in label_actions:
-        if label_action.action.function == "draft_reply":
-            run_draft_action(email, label_action.action, client)
+    # Check if label uses MCP orchestration
+    if label.use_mcp:
+        # New MCP-based dynamic orchestration
+        from automation.mcp_orchestrator import orchestrate_label_actions
+        result = orchestrate_label_actions(label, email, client)
+        logger.info(
+            f"MCP orchestration for label {label.name} (email {email_message_id}): "
+            f"{result.get('message', 'completed')}"
+        )
+    else:
+        # Legacy sequential execution (backward compatible)
+        from automation.action_executors import execute_action
+        
+        label_actions = LabelAction.objects.filter(
+            label=label
+        ).select_related("action").order_by("order")
+        
+        execution_context = {}  # Context passed between actions
+        
+        for label_action in label_actions:
+            action = label_action.action
+            logger.info(
+                f"Executing action '{action.name}' ({action.function}) "
+                f"for email {email_message_id} in legacy mode"
+            )
+            
+            # Use the same action executor as MCP mode for consistency
+            result = execute_action(action, email, client, execution_context)
+            
+            # Update context for next actions
+            if result.get("success") and result.get("data"):
+                execution_context.update(result["data"])
+            
+            logger.info(
+                f"Action '{action.name}' result: {result.get('message', 'completed')}"
+            )
 
 
 def run_draft_action(email: EmailMessage, action: Action, client: OpenAIClient):

@@ -1,0 +1,80 @@
+<form method="post" action="{% url form_url %}" class="space-y-6">
+  {% csrf_token %}
+  
+  <div class="space-y-6">
+    <div class="border-b border-gray-200 dark:border-white/10 pb-6">
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Draft Information</h3>
+      <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Enter the details for this email draft.</p>
+
+      <div class="mt-4 space-y-4">
+        <div class="sm:col-span-3">
+          <label for="account" class="block text-sm font-medium text-gray-900 dark:text-white">Account <span class="text-red-400">*</span></label>
+          <div class="mt-1">
+            <div class="grid grid-cols-1">
+              <select id="account" name="account" required class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-gray-50 dark:bg-white/5 py-1.5 pr-8 pl-3 text-sm text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 *:bg-white dark:*:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600">
+                <option value="">Select an account...</option>
+                {% for account in accounts %}
+                <option value="{{ account.pk }}">{{ account.email }}</option>
+                {% endfor %}
+              </select>
+              <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-600 dark:text-gray-400">
+                <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="sm:col-span-3">
+          <label for="email_message" class="block text-sm font-medium text-gray-900 dark:text-white">Replying To (optional)</label>
+          <div class="mt-1">
+            <div class="grid grid-cols-1">
+              <select id="email_message" name="email_message" class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-gray-50 dark:bg-white/5 py-1.5 pr-8 pl-3 text-sm text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 *:bg-white dark:*:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600">
+                <option value="">None</option>
+                {% for email in emails %}
+                <option value="{{ email.pk }}">{{ email.subject|default:"No subject" }}</option>
+                {% endfor %}
+              </select>
+              <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-600 dark:text-gray-400">
+                <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-full">
+          <label for="to_addresses" class="block text-sm font-medium text-gray-900 dark:text-white">To (JSON array)</label>
+          <div class="mt-1">
+            <textarea id="to_addresses" name="to_addresses" rows="2" placeholder='["email@example.com"]' class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-sm text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600"></textarea>
+          </div>
+          <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Enter as JSON array, e.g. ["email@example.com"]</p>
+        </div>
+
+        <div class="col-span-full">
+          <label for="cc_addresses" class="block text-sm font-medium text-gray-900 dark:text-white">CC (JSON array, optional)</label>
+          <div class="mt-1">
+            <textarea id="cc_addresses" name="cc_addresses" rows="2" placeholder='["cc@example.com"]' class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-sm text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600"></textarea>
+          </div>
+        </div>
+
+        <div class="col-span-full">
+          <label for="subject" class="block text-sm font-medium text-gray-900 dark:text-white">Subject</label>
+          <div class="mt-1">
+            <input id="subject" type="text" name="subject" class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-sm text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600" />
+          </div>
+        </div>
+
+        <div class="col-span-full">
+          <label for="body_html" class="block text-sm font-medium text-gray-900 dark:text-white">Body (HTML)</label>
+          <div class="mt-1">
+            <textarea id="body_html" name="body_html" rows="8" class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-sm text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-x-3 pt-4 border-t border-gray-200 dark:border-white/10">
+    <button type="button" command="close" commandfor="{{ drawer_id }}" class="text-sm font-semibold text-gray-900 dark:text-white">Cancel</button>
+    <button type="submit" class="rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Save</button>
+  </div>
+</form>

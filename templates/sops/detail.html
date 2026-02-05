@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{{ sop.name }} • EmailIQ{% endblock %}
+
+{% block header_title %}{{ sop.name }}{% endblock %}
+
+{% block content %}
+<div class="bg-gray-800">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    {% url 'sop_update' sop.pk as sop_update_url %}
+    {% include 'includes/page_header.html' with title=sop.name edit_url=sop_update_url %}
+  </div>
+</div>
+<div class="bg-gray-800">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div>
+      <div class="px-4 sm:px-0">
+        <h3 class="text-base/7 font-semibold text-white">SOP Information</h3>
+        <p class="mt-1 max-w-2xl text-sm/6 text-gray-400">Standard Operating Procedure details and configuration.</p>
+      </div>
+      <div class="mt-6 border-t border-white/10">
+        <dl class="divide-y divide-white/10">
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Account</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ sop.account.email }}</dd>
+          </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Status</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
+              {% if sop.is_active %}
+              <span class="inline-flex items-center rounded-md bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400">Active</span>
+              {% else %}
+              <span class="inline-flex items-center rounded-md bg-gray-400/10 px-2 py-1 text-xs font-medium text-gray-400">Inactive</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Priority</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ sop.priority }} (higher priority SOPs are considered first)</dd>
+          </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Created</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ sop.created_at|date:"d M Y H:i" }}</dd>
+          </div>
+          {% if sop.description %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">When This SOP Applies</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ sop.description }}</dd>
+          </div>
+          {% endif %}
+          {% if sop.instructions %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Instructions</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ sop.instructions }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
