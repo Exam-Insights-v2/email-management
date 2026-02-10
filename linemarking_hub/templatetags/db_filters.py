@@ -91,3 +91,49 @@ def slice_filter(value, arg):
                 return value
     except Exception:
         return value
+
+
+@register.filter
+def label_color_bg(label_name):
+    """Get consistent background/text color classes for a label based on its name"""
+    if not label_name:
+        return 'bg-gray-400/10 text-gray-600'
+    
+    # Color options for background and text
+    colors = [
+        'bg-red-400/10 text-red-600',
+        'bg-blue-400/10 text-blue-600',
+        'bg-yellow-400/10 text-yellow-600',
+        'bg-green-400/10 text-green-600',
+        'bg-purple-400/10 text-purple-600',
+        'bg-pink-400/10 text-pink-600',
+        'bg-indigo-400/10 text-indigo-600',
+        'bg-orange-400/10 text-orange-600',
+    ]
+    
+    # Simple hash function to consistently map label name to color
+    hash_value = hash(str(label_name).lower()) % len(colors)
+    return colors[hash_value]
+
+
+@register.filter
+def label_color_dot(label_name):
+    """Get consistent dot color class for a label based on its name"""
+    if not label_name:
+        return 'bg-gray-400'
+    
+    # Color options for dot
+    colors = [
+        'bg-red-400',
+        'bg-blue-400',
+        'bg-yellow-400',
+        'bg-green-400',
+        'bg-purple-400',
+        'bg-pink-400',
+        'bg-indigo-400',
+        'bg-orange-400',
+    ]
+    
+    # Simple hash function to consistently map label name to color
+    hash_value = hash(str(label_name).lower()) % len(colors)
+    return colors[hash_value]

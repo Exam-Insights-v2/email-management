@@ -1,0 +1,47 @@
+{% comment %}
+Reusable modal component (XL size) for creating new items
+Usage:
+  {% include 'includes/create_modal.html' with modal_id="create-task" title="Create Task" form_template="tasks/form_content.html" form_url="task_create" button_text="Create" form=form %}
+
+Parameters:
+  - modal_id: Unique ID for the modal (required)
+  - title: Title for the modal (required)
+  - form_template: Template path for the form content (required)
+  - form_url: URL name to submit the form to (required)
+  - button_text: Text for the button (optional, default: "Create New")
+  - form: Form instance (required)
+{% endcomment %}
+
+<button type="button" onclick="document.getElementById('{{ modal_id }}').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm">
+  <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+  {{ button_text|default:"Create New" }}
+</button>
+
+<el-dialog>
+  <dialog id="{{ modal_id }}" aria-labelledby="{{ modal_id }}-title" class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
+    <el-dialog-backdrop class="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/50 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
+
+    <div tabindex="0" class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center focus:outline-none sm:p-6">
+      <el-dialog-panel class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 w-full sm:w-full sm:max-w-5xl data-closed:sm:translate-y-0 data-closed:sm:scale-95 max-h-[95vh] overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 px-3 pt-4 pb-3 sm:px-4 sm:pt-5 sm:pb-4 sm:p-6">
+          <!-- Header -->
+          <div class="flex items-start sm:items-center justify-between gap-2 mb-4 sm:mb-6">
+            <h2 id="{{ modal_id }}-title" class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 pr-2">{{ title }}</h2>
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <button type="button" command="close" commandfor="{{ modal_id }}" class="relative rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
+                <span class="absolute -inset-2.5"></span>
+                <span class="sr-only">Close</span>
+                <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Form Content -->
+          <div>
+            {% include form_template with form_url=form_url modal_id=modal_id drawer_id=modal_id form=form accounts=accounts emails=emails %}
+          </div>
+        </div>
+      </el-dialog-panel>
+    </div>
+  </dialog>
+</el-dialog>

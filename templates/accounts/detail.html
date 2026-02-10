@@ -38,25 +38,95 @@
             <dt class="text-sm/6 font-medium text-gray-100">Email</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ account.email }}</dd>
           </div>
-          {% if account.signature_html %}
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Signature</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
-              <div class="prose prose-invert max-w-none">
+              {% if account.signature_html %}
+              <div class="prose prose-invert max-w-none mb-3 border border-white/10 rounded-lg p-3 bg-white/5">
                 {{ account.signature_html|safe }}
+              </div>
+              {% else %}
+              <p class="text-sm text-gray-500 dark:text-gray-400 italic mb-3">No signature set</p>
+              {% endif %}
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="if (window.openEditAccountDrawer) window.openEditAccountDrawer({{ account.pk }});" class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-white/10 px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+                  <i class="ti ti-pencil size-3.5" aria-hidden="true"></i>
+                  {% if account.signature_html %}Edit{% else %}Add{% endif %}
+                </button>
+                {% if account.signature_html %}
+                <form method="post" action="{% url 'account_clear_signature' account.pk %}" class="inline" onsubmit="return confirm('Are you sure you want to delete the signature?');">
+                  {% csrf_token %}
+                  <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-red-500/10 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors">
+                    <i class="ti ti-trash size-3.5" aria-hidden="true"></i>
+                    Delete
+                  </button>
+                </form>
+                {% endif %}
               </div>
             </dd>
           </div>
-          {% endif %}
-          {% if account.writing_style %}
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Writing Style</dt>
-            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ account.writing_style }}</dd>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
+              {% if account.writing_style %}
+              <div class="whitespace-pre-wrap mb-3 border border-white/10 rounded-lg p-3 bg-white/5">{{ account.writing_style }}</div>
+              {% else %}
+              <p class="text-sm text-gray-500 dark:text-gray-400 italic mb-3">No writing style set</p>
+              {% endif %}
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="if (window.openEditAccountDrawer) window.openEditAccountDrawer({{ account.pk }});" class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-white/10 px-2.5 py-1.5 text-xs font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+                  <i class="ti ti-pencil size-3.5" aria-hidden="true"></i>
+                  {% if account.writing_style %}Edit{% else %}Add{% endif %}
+                </button>
+                {% if account.writing_style %}
+                <form method="post" action="{% url 'account_clear_writing_style' account.pk %}" class="inline" onsubmit="return confirm('Are you sure you want to delete the writing style?');">
+                  {% csrf_token %}
+                  <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-red-500/10 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors">
+                    <i class="ti ti-trash size-3.5" aria-hidden="true"></i>
+                    Delete
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </dd>
           </div>
-          {% endif %}
         </dl>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Edit Drawer -->
+{% include 'includes/edit_drawer.html' with drawer_id="edit-account-"|add:account.pk|stringformat:"s" title="Edit Account" form_template="accounts/form_content.html" form_url="account_update" object_pk=account.pk %}
+
+<script>
+  // Global function to open edit account drawer
+  window.openEditAccountDrawer = function(accountPk) {
+    const drawerId = 'edit-account-' + accountPk;
+    const drawer = document.getElementById(drawerId);
+    const contentDiv = document.getElementById(drawerId + '-content');
+    
+    if (!drawer || !contentDiv) return;
+    
+    drawer.showModal();
+    
+    // Load form content if not already loaded
+    if (!contentDiv.hasAttribute('data-loaded')) {
+      fetch('{% url "account_update" 0 %}?drawer=true'.replace('0', accountPk), {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+        .then(response => response.text())
+        .then(html => {
+          contentDiv.innerHTML = html;
+          contentDiv.setAttribute('data-loaded', 'true');
+        })
+        .catch(error => {
+          console.error('Error loading form:', error);
+          contentDiv.innerHTML = '<p class="text-red-400">Error loading form. Please refresh the page.</p>';
+        });
+    }
+  };
+</script>
 {% endblock %}

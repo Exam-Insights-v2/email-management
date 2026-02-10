@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Include @tailwindplus/elements for header components -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
@@ -27,6 +28,13 @@
       }
     </script>
     <style>
+      /* Tabler Icons alignment */
+      .ti {
+        display: inline-block;
+        vertical-align: middle;
+        line-height: 1;
+      }
+      
       /* Email body styling to look like a real email client */
       .email-body {
         font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -320,28 +328,50 @@
         document.querySelectorAll('form[data-warning-modal]').forEach(function(form) {
           const modalId = form.getAttribute('data-warning-modal');
           const confirmButton = document.getElementById(modalId + '-confirm');
+          const modal = document.getElementById(modalId);
           
-          if (confirmButton) {
-            // Prevent default form submission
-            form.addEventListener('submit', function(e) {
-              e.preventDefault();
-              // Show the modal
-              const modal = document.getElementById(modalId);
-              if (modal) {
-                modal.showModal();
-              }
-            });
-            
-            // Handle confirm button click
-            confirmButton.addEventListener('click', function() {
-              // Close modal and submit form
-              const modal = document.getElementById(modalId);
-              if (modal) {
-                modal.close();
-              }
-              form.submit();
-            });
+          if (!modal) {
+            console.warn('Modal not found:', modalId);
+            return;
           }
+          
+          if (!confirmButton) {
+            console.warn('Confirm button not found for modal:', modalId);
+            return;
+          }
+          
+          // Prevent default form submission
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Show the modal using native dialog API
+            if (modal && typeof modal.showModal === 'function') {
+              modal.showModal();
+            } else {
+              console.error('Modal showModal method not available:', modalId, modal);
+            }
+            return false;
+          });
+          
+          // Handle confirm button click
+          confirmButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Close modal first
+            if (modal && typeof modal.close === 'function') {
+              modal.close();
+            }
+            // Submit the form after a short delay to ensure modal closes
+            setTimeout(function() {
+              // Create a hidden submit button and click it to ensure proper form submission
+              const submitBtn = document.createElement('button');
+              submitBtn.type = 'submit';
+              submitBtn.style.display = 'none';
+              form.appendChild(submitBtn);
+              submitBtn.click();
+            }, 150);
+            return false;
+          });
         });
       });
     </script>
@@ -350,10 +380,10 @@
     {% block header %}
     {% include 'includes/header.html' %}
     {% endblock %}
-    <header class="relative bg-white dark:bg-gray-800 after:pointer-events-none after:absolute after:inset-x-0 after:inset-y-0 after:border-y after:border-gray-200 dark:after:border-white/10">
-      <div class="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between py-2">
-          <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{% block header_title %}Jobs{% endblock %}</h1>
+    <header class="sticky top-[48px] z-40 relative bg-white dark:bg-gray-900 after:pointer-events-none after:absolute after:inset-x-0 after:inset-y-0">
+      <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-4">
+        <div class="flex items-center justify-between py-1 sm:py-2">
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate pr-2">{% block header_title %}Jobs{% endblock %}</h1>
           <div class="flex items-center">
             {% block header_action %}{% endblock %}
           </div>
@@ -361,7 +391,7 @@
       </div>
     </header>
     <main>
-      <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
         {% if messages %}
         <div class="mb-3 space-y-2">
           {% for message in messages %}

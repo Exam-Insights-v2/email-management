@@ -100,7 +100,7 @@ def account_gmail_oauth_callback(request):
     
     if not credentials:
         messages.error(request, "Failed to obtain OAuth credentials.")
-        return redirect("accounts_list")
+        return redirect("settings?tab=accounts")
     
     try:
         # Get email from Gmail API profile (this works with Gmail scopes)
@@ -127,11 +127,11 @@ def account_gmail_oauth_callback(request):
                     request, 
                     f"Could not retrieve email address. Gmail API: {str(gmail_error)}. Userinfo API: {str(userinfo_error)}. Please try connecting again."
                 )
-                return redirect("accounts_list")
+                return redirect("settings?tab=accounts")
         
         if not email:
             messages.error(request, "Could not retrieve email address from Google.")
-            return redirect("accounts_list")
+            return redirect("settings?tab=accounts")
         
         # Get or create account with the email from OAuth
         account, created = Account.objects.get_or_create(
@@ -148,10 +148,10 @@ def account_gmail_oauth_callback(request):
                 request, f"Successfully connected new Gmail account: {account.email}"
             )
         else:
-            messages.success(
-                request, f"Successfully reconnected Gmail account: {account.email}"
+            messages.info(
+                request, f"Gmail account {account.email} was already connected."
             )
-        return redirect("account_detail", pk=account.pk)
+        return redirect("settings?tab=accounts")
     except Exception as e:
         import traceback
         error_msg = str(e)

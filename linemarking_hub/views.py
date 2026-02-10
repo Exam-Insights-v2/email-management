@@ -12,16 +12,14 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from accounts.models import Account, OAuthToken
-from automation.models import Action, EmailLabel, Label, LabelAction, StandardOperatingProcedure
+from automation.models import Action, EmailLabel, Label
 from jobs.models import Job, Task
 from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
 from linemarking_hub.forms import (
     AccountForm,
     ActionForm,
     JobForm,
-    LabelActionForm,
     LabelForm,
-    StandardOperatingProcedureForm,
     TaskForm,
 )
 
@@ -202,6 +200,7 @@ def job_delete(request, pk):
 @login_required
 def tasks_list(request):
     from django.db.models import Q
+    from collections import defaultdict
     
     # Get search query
     search_query = request.GET.get('search', '').strip()
@@ -222,22 +221,34 @@ def tasks_list(request):
             Q(email_message__body_html__icontains=search_query)
         )
     
-    tasks = tasks.order_by("-created_at")
+    # Group tasks by priority (5=Urgent, 4=High, 3=Medium, 2=Low, 1=Lowest)
+    tasks_by_priority = defaultdict(list)
+    all_tasks = list(tasks.order_by("-created_at"))
+    
+    for task in all_tasks:
+        # Ensure priority is between 1-5
+        priority = max(1, min(5, task.priority or 1))
+        tasks_by_priority[priority].append(task)
+    
     # Get first available connected account for form
     from accounts.models import Account
     account = Account.objects.filter(is_connected=True).first()
     form = TaskForm(user=request.user, account=account)
-    return render(request, "tasks/list.html", {"tasks": tasks, "form": form, "search_query": search_query})
+    
+    return render(request, "tasks/list.html", {
+        "tasks_by_priority": dict(tasks_by_priority),
+        "all_tasks": all_tasks,
+        "form": form,
+        "search_query": search_query
+    })
 
 
 @login_required
 def task_detail(request, pk):
-    task = get_object_or_404(
-        Task.objects.select_related("account", "job", "email_message", "thread").prefetch_related(
-            "email_message__labels__label"
-        ), pk=pk
-    )
-    return render(request, "tasks/detail.html", {"task": task})
+    # Redirect to tasks list with task parameter to open modal
+    from django.shortcuts import redirect
+    from django.urls import reverse
+    return redirect(reverse("tasks_list") + f"?task={pk}", permanent=False)
 
 
 @login_required
@@ -543,12 +554,18 @@ def label_create(request):
             try:
                 label = form.save()
                 messages.success(request, f"Label '{label.name}' created successfully.")
-                return redirect("label_detail", pk=label.pk)
+                return redirect("settings?tab=labels")
             except ValidationError as e:
                 messages.error(request, str(e))
+        else:
+            # Form has errors - show them and redirect back
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+        return redirect("settings?tab=labels")
     else:
-        form = LabelForm()
-    return render(request, "labels/form.html", {"form": form, "title": "Create Label"})
+        # If accessed directly (not via drawer), redirect to settings
+        return redirect("settings?tab=labels")
 
 
 @login_required
@@ -610,7 +627,7 @@ def account_create(request):
         return redirect(auth_url)
     except Exception as e:
         messages.error(request, f"Error initiating OAuth: {str(e)}")
-        return redirect("accounts_list")
+        return redirect("settings?tab=accounts")
 
 
 @login_required
@@ -627,6 +644,11 @@ def account_update(request, pk):
                 messages.error(request, str(e))
     else:
         form = AccountForm(instance=account)
+    
+    # If it's an AJAX request (for drawer), return just the form content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('drawer') == 'true':
+        return render(request, "accounts/form_content.html", {"form": form, "form_url": "account_update", "drawer_id": f"edit-account-{pk}", "object_pk": pk})
+    
     return render(
         request, "accounts/form.html", {"form": form, "account": account, "title": "Edit Account"}
     )
@@ -639,7 +661,27 @@ def account_delete(request, pk):
     email = account.email
     account.delete()
     messages.success(request, f"Account '{email}' deleted successfully.")
-    return redirect("accounts_list")
+    return redirect("settings?tab=accounts")
+
+
+@login_required
+@require_http_methods(["POST"])
+def account_clear_signature(request, pk):
+    account = get_object_or_404(Account, pk=pk)
+    account.signature_html = None
+    account.save()
+    messages.success(request, "Signature deleted successfully.")
+    return redirect("account_detail", pk=account.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def account_clear_writing_style(request, pk):
+    account = get_object_or_404(Account, pk=pk)
+    account.writing_style = None
+    account.save()
+    messages.success(request, "Writing style deleted successfully.")
+    return redirect("account_detail", pk=account.pk)
 
 
 # Drafts CRUD
@@ -751,10 +793,9 @@ def actions_list(request):
 @login_required
 def action_detail(request, pk):
     action = get_object_or_404(Action.objects.select_related("account"), pk=pk)
-    label_links = LabelAction.objects.filter(action=action).select_related("label").order_by(
-        "order"
-    )
-    return render(request, "actions/detail.html", {"action": action, "label_links": label_links})
+    # Get labels that use this action (now direct ManyToMany)
+    labels = action.labels.all().order_by("-priority", "name")
+    return render(request, "actions/detail.html", {"action": action, "labels": labels})
 
 
 @login_required
@@ -765,12 +806,18 @@ def action_create(request):
             try:
                 action = form.save()
                 messages.success(request, f"Action '{action.name}' created successfully.")
-                return redirect("action_detail", pk=action.pk)
+                return redirect("settings?tab=actions")
             except ValidationError as e:
                 messages.error(request, str(e))
+        else:
+            # Form has errors - show them and redirect back
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+        return redirect("settings?tab=actions")
     else:
-        form = ActionForm()
-    return render(request, "actions/form.html", {"form": form, "title": "Create Action"})
+        # If accessed directly (not via drawer), redirect to settings
+        return redirect("settings?tab=actions")
 
 
 @login_required
@@ -802,102 +849,6 @@ def action_delete(request, pk):
     return redirect("actions_list")
 
 
-# Label-Action Linking
-@login_required
-def label_action_create(request, label_id):
-    label = get_object_or_404(Label, pk=label_id)
-    if request.method == "POST":
-        form = LabelActionForm(request.POST)
-        if form.is_valid():
-            try:
-                label_action = form.save(commit=False)
-                label_action.label = label
-                label_action.save()
-                messages.success(
-                    request,
-                    f"Action '{label_action.action.name}' linked to label '{label.name}' successfully.",
-                )
-                return redirect("label_detail", pk=label.pk)
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = LabelActionForm(initial={"label": label})
-    actions = Action.objects.filter(account=label.account)
-    return render(
-        request,
-        "labels/label_action_form.html",
-        {"form": form, "label": label, "actions": actions, "title": "Link Action to Label"},
-    )
-
-
-@login_required
-@require_http_methods(["POST"])
-def label_action_delete(request, pk):
-    label_action = get_object_or_404(LabelAction, pk=pk)
-    label_id = label_action.label.pk
-    action_name = label_action.action.name
-    label_action.delete()
-    messages.success(request, f"Action '{action_name}' unlinked successfully.")
-    return redirect("label_detail", pk=label_id)
-
-
-# Standard Operating Procedures (SOPs)
-@login_required
-def sops_list(request):
-    sops = StandardOperatingProcedure.objects.select_related("account").order_by("-priority", "name")
-    form = StandardOperatingProcedureForm()
-    return render(request, "sops/list.html", {"sops": sops, "form": form})
-
-
-@login_required
-def sop_detail(request, pk):
-    sop = get_object_or_404(StandardOperatingProcedure.objects.select_related("account"), pk=pk)
-    return render(request, "sops/detail.html", {"sop": sop})
-
-
-@login_required
-def sop_create(request):
-    if request.method == "POST":
-        form = StandardOperatingProcedureForm(request.POST)
-        if form.is_valid():
-            try:
-                sop = form.save()
-                messages.success(request, f"SOP '{sop.name}' created successfully.")
-                return redirect("sop_detail", pk=sop.pk)
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = StandardOperatingProcedureForm()
-    return render(request, "sops/form.html", {"form": form, "title": "Create SOP"})
-
-
-@login_required
-def sop_update(request, pk):
-    sop = get_object_or_404(StandardOperatingProcedure, pk=pk)
-    if request.method == "POST":
-        form = StandardOperatingProcedureForm(request.POST, instance=sop)
-        if form.is_valid():
-            try:
-                sop = form.save()
-                messages.success(request, f"SOP '{sop.name}' updated successfully.")
-                return redirect("sop_detail", pk=sop.pk)
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = StandardOperatingProcedureForm(instance=sop)
-    return render(
-        request, "sops/form.html", {"form": form, "sop": sop, "title": "Edit SOP"}
-    )
-
-
-@login_required
-@require_http_methods(["POST"])
-def sop_delete(request, pk):
-    sop = get_object_or_404(StandardOperatingProcedure, pk=pk)
-    name = sop.name
-    sop.delete()
-    messages.success(request, f"SOP '{name}' deleted successfully.")
-    return redirect("sops_list")
 
 
 # Email Labels
@@ -926,39 +877,28 @@ def email_label_remove(request, email_id, label_id):
 # Settings
 @login_required
 def settings_view(request):
-    """Settings page combining database, actions, and labels"""
+    """Settings page combining accounts, actions, and labels"""
     # Get data for each section
     tab = request.GET.get('tab', 'accounts')
-    
-    # Database tables
-    tables = [
-        {"name": "Accounts", "slug": "accounts", "model": Account, "count": Account.objects.count()},
-        {"name": "OAuth Tokens", "slug": "oauth_tokens", "model": OAuthToken, "count": OAuthToken.objects.count()},
-        {"name": "Jobs", "slug": "jobs", "model": Job, "count": Job.objects.count()},
-        {"name": "Tasks", "slug": "tasks", "model": Task, "count": Task.objects.count()},
-        {"name": "Email Threads", "slug": "email_threads", "model": EmailThread, "count": EmailThread.objects.count()},
-        {"name": "Email Messages", "slug": "email_messages", "model": EmailMessage, "count": EmailMessage.objects.count()},
-        {"name": "Drafts", "slug": "drafts", "model": Draft, "count": Draft.objects.count()},
-        {"name": "Draft Attachments", "slug": "draft_attachments", "model": DraftAttachment, "count": DraftAttachment.objects.count()},
-        {"name": "Labels", "slug": "labels", "model": Label, "count": Label.objects.count()},
-        {"name": "Email Labels", "slug": "email_labels", "model": EmailLabel, "count": EmailLabel.objects.count()},
-        {"name": "Actions", "slug": "actions", "model": Action, "count": Action.objects.count()},
-        {"name": "Label Actions", "slug": "label_actions", "model": LabelAction, "count": LabelAction.objects.count()},
-    ]
     
     # Actions list
     actions = Action.objects.select_related("account").order_by("name")
     
-    # Labels list
-    labels = Label.objects.select_related("account").order_by("name")
+    # Labels list (now includes all SOP functionality)
+    labels = Label.objects.select_related("account").prefetch_related("actions").order_by("-priority", "name")
     
     # Accounts list
     accounts = Account.objects.order_by("email")
     
+    # Forms for drawers
+    action_form = ActionForm()
+    label_form = LabelForm()
+    
     return render(request, "settings.html", {
         "tab": tab,
-        "tables": tables,
         "actions": actions,
         "labels": labels,
         "accounts": accounts,
+        "action_form": action_form,
+        "label_form": label_form,
     })

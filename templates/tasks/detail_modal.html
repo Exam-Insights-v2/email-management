@@ -1,0 +1,119 @@
+{% comment %}
+Task detail modal component (XL size)
+Usage:
+  {% include 'tasks/detail_modal.html' with task=task %}
+{% endcomment %}
+
+<el-dialog>
+  <dialog id="task-detail-{{ task.pk }}" aria-labelledby="task-detail-{{ task.pk }}-title" class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
+    <el-dialog-backdrop class="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/50 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
+
+    <div tabindex="0" class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center focus:outline-none sm:p-6">
+      <el-dialog-panel class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 w-full sm:w-full sm:max-w-5xl data-closed:sm:translate-y-0 data-closed:sm:scale-95 max-h-[95vh] overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 px-3 pt-4 pb-3 sm:px-4 sm:pt-5 sm:pb-4 sm:p-6">
+          <!-- Header -->
+          <div class="flex items-start sm:items-center justify-between gap-2 mb-4 sm:mb-6">
+            <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 pr-2 truncate">{{ task.title|default:"Untitled Task" }}</h2>
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <button type="button" onclick="if (window.openEditTaskDrawer) window.openEditTaskDrawer({{ task.pk }});" class="inline-flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
+                <i class="ti ti-pencil mr-1 -ml-0.5 size-3.5 sm:size-4 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true"></i>
+                <span class="hidden sm:inline">Edit</span>
+              </button>
+              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="relative rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
+                <span class="absolute -inset-2.5"></span>
+                <span class="sr-only">Close</span>
+                <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Task Information -->
+          <div>
+            <div class="border-t border-gray-200 dark:border-white/10">
+              <dl class="divide-y divide-gray-200 dark:divide-white/10">
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Status</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
+                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
+                      {% if task.status == 'done' %}bg-green-400/10 text-green-400
+                      {% elif task.status == 'in_progress' %}bg-blue-400/10 text-blue-400
+                      {% elif task.status == 'cancelled' %}bg-red-400/10 text-red-400
+                      {% else %}bg-yellow-400/10 text-yellow-500{% endif %}">
+                      {{ task.get_status_display }}
+                    </span>
+                  </dd>
+                </div>
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Priority</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.priority|default:"—" }}</dd>
+                </div>
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Account</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 break-words">{{ task.account.email }}</dd>
+                </div>
+                {% if task.job %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Job</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
+                    <a href="{% url 'job_detail' task.job.pk %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 break-words">{{ task.job.title }}</a>
+                  </dd>
+                </div>
+                {% endif %}
+                {% if task.email_message %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Email</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
+                    <a href="{% url 'email_detail' task.email_message.pk %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 break-words">{{ task.email_message.subject|default:"No subject" }}</a>
+                  </dd>
+                </div>
+                {% endif %}
+                {% if task.email_message and task.email_message.labels.all %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Labels</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
+                    <div class="flex flex-wrap gap-2">
+                      {% load db_filters %}
+                      {% for email_label in task.email_message.labels.all %}
+                      <span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium {{ email_label.label.name|label_color_bg }}">
+                        <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
+                        {{ email_label.label.name }}
+                      </span>
+                      {% endfor %}
+                    </div>
+                  </dd>
+                </div>
+                {% endif %}
+                {% if task.due_at %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Due At</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.due_at|date:"d M Y H:i" }}</dd>
+                </div>
+                {% endif %}
+                {% if task.completed_at %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Completed At</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.completed_at|date:"d M Y H:i" }}</dd>
+                </div>
+                {% endif %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Created</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.created_at|date:"d M Y H:i" }}</dd>
+                </div>
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Updated</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.updated_at|date:"d M Y H:i" }}</dd>
+                </div>
+                {% if task.description %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Description</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 whitespace-pre-wrap break-words">{{ task.description }}</dd>
+                </div>
+                {% endif %}
+              </dl>
+            </div>
+          </div>
+        </div>
+      </el-dialog-panel>
+    </div>
+  </dialog>
+</el-dialog>

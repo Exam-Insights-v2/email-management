@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import datetime
 import logging
 
-from automation.models import Action, EmailLabel, Label, LabelAction
+from automation.models import Action, EmailLabel, Label
 from automation.services import OpenAIClient
 from jobs.models import Task, TaskStatus
 from mail.models import Draft, EmailMessage
@@ -57,8 +57,39 @@ def process_email(email_message_id: int):
     # Parse due date if provided
     due_at = parse_due_date(classification.get("due_date"))
 
+    # Apply labels from AI response first to validate
+    labels_to_apply = []
+    for label_name in classification.get("labels", []):
+        # Find matching label (case-insensitive) - improved validation
+        if not isinstance(label_name, str) or not label_name.strip():
+            logger.warning(f"Invalid label name in classification: {label_name}")
+            continue
+            
+        label = next(
+            (
+                l
+                for l in available_labels
+                if l.name.lower() == label_name.lower().strip()
+            ),
+            None,
+        )
+        if label:
+            labels_to_apply.append(label)
+        else:
+            logger.warning(
+                f"Label '{label_name}' from AI classification not found in available labels. "
+                f"Available: {[l.name for l in available_labels]}"
+            )
+
+    # Only create task if at least one valid label was matched
+    if not labels_to_apply:
+        logger.info(
+            f"No valid labels matched for email {email_message_id}, skipping task creation"
+        )
+        return
+
     with transaction.atomic():
-        # ALWAYS create task with AI-generated data
+        # Create or update task with AI-generated data (only if labels matched)
         task, created = Task.objects.get_or_create(
             account=email.account,
             email_message=email,
@@ -81,25 +112,13 @@ def process_email(email_message_id: int):
                 task.due_at = due_at
             task.save()
 
-        # Apply labels from AI response
-        labels_to_apply = []
-        for label_name in classification.get("labels", []):
-            # Find matching label (case-insensitive)
-            label = next(
-                (
-                    l
-                    for l in available_labels
-                    if l.name.lower() == label_name.lower()
-                ),
-                None,
+        # Apply labels to email
+        for label in labels_to_apply:
+            EmailLabel.objects.get_or_create(
+                email_message=email, label=label
             )
-            if label:
-                labels_to_apply.append(label)
-                EmailLabel.objects.get_or_create(
-                    email_message=email, label=label
-                )
-                # Trigger label actions
-                trigger_label_actions.delay(label.id, email.id)
+            # Trigger label actions
+            trigger_label_actions.delay(label.id, email.id)
 
         logger.info(
             f"Created/updated task {task.pk} for email {email_message_id} "
@@ -108,56 +127,60 @@ def process_email(email_message_id: int):
 
 
 @shared_task
-def trigger_label_actions(label_id: int, email_message_id: int):
+def trigger_label_actions(label_id: int, email_message_id: int, triggered_by_action: bool = False):
     """
-    Trigger actions for a label. Supports both MCP (dynamic) and sequential (legacy) modes.
+    Trigger actions for a label using AI-driven orchestration.
+    
+    Args:
+        label_id: The label to trigger actions for
+        email_message_id: The email message
+        triggered_by_action: If True, this was triggered by an add_label action (prevents circular loops)
     """
     client = OpenAIClient()
     try:
-        label = Label.objects.get(pk=label_id)
+        label = Label.objects.prefetch_related("actions").get(pk=label_id)
         email = EmailMessage.objects.select_related("account").get(pk=email_message_id)
     except (Label.DoesNotExist, EmailMessage.DoesNotExist):
         logger.warning(
             f"Label {label_id} or email {email_message_id} not found"
         )
         return
-
-    # Check if label uses MCP orchestration
-    if label.use_mcp:
-        # New MCP-based dynamic orchestration
-        from automation.mcp_orchestrator import orchestrate_label_actions
-        result = orchestrate_label_actions(label, email, client)
+    
+    # Check if label is active
+    if not label.is_active:
+        logger.info(f"Label {label.name} is inactive, skipping action execution")
+        return
+    
+    # Prevent circular triggering: if this was triggered by an action adding a label,
+    # check if this label was already processed for this email
+    if triggered_by_action:
+        # Check if this label was already applied to this email (to prevent loops)
+        existing_email_label = EmailLabel.objects.filter(
+            email_message=email,
+            label=label
+        ).first()
+        
+        if not existing_email_label:
+            logger.warning(
+                f"Label {label.name} triggered by action but not yet applied to email {email_message_id}, "
+                f"skipping to prevent circular trigger"
+            )
+            return
+    
+    # AI-driven orchestration
+    from automation.mcp_orchestrator import orchestrate_label_actions
+    result = orchestrate_label_actions(label, email, client)
+    
+    if result.get("success"):
         logger.info(
-            f"MCP orchestration for label {label.name} (email {email_message_id}): "
+            f"AI orchestration for label {label.name} (email {email_message_id}): "
             f"{result.get('message', 'completed')}"
         )
     else:
-        # Legacy sequential execution (backward compatible)
-        from automation.action_executors import execute_action
-        
-        label_actions = LabelAction.objects.filter(
-            label=label
-        ).select_related("action").order_by("order")
-        
-        execution_context = {}  # Context passed between actions
-        
-        for label_action in label_actions:
-            action = label_action.action
-            logger.info(
-                f"Executing action '{action.name}' ({action.function}) "
-                f"for email {email_message_id} in legacy mode"
-            )
-            
-            # Use the same action executor as MCP mode for consistency
-            result = execute_action(action, email, client, execution_context)
-            
-            # Update context for next actions
-            if result.get("success") and result.get("data"):
-                execution_context.update(result["data"])
-            
-            logger.info(
-                f"Action '{action.name}' result: {result.get('message', 'completed')}"
-            )
+        logger.error(
+            f"AI orchestration failed for label {label.name} (email {email_message_id}): "
+            f"{result.get('message', 'unknown error')}"
+        )
 
 
 def run_draft_action(email: EmailMessage, action: Action, client: OpenAIClient):

@@ -1,54 +1,68 @@
-<form method="post" action="{% if task %}{% url form_url task.pk %}{% else %}{% url form_url %}{% endif %}" class="space-y-6">
+<form method="post" action="{% if task %}{% url form_url task.pk %}{% else %}{% url form_url %}{% endif %}">
   {% csrf_token %}
   
   {% if form.non_field_errors %}
-  <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-400">
+  <div class="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-400">
     {{ form.non_field_errors }}
   </div>
   {% endif %}
   
-  <div class="space-y-6">
-    <div class="border-b border-gray-200 dark:border-white/10 pb-6">
-      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Task Information</h3>
-      <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Enter the details for this task.</p>
-
-      <div class="mt-4 space-y-4">
-        {% for field in form %}
-        {% if field.field.widget.input_type != 'hidden' %}
-        <div class="{% if field.name == 'title' %}sm:col-span-4{% else %}col-span-full{% endif %}">
-          <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-900 dark:text-white">
-            {{ field.label }}
-            {% if field.field.required %}<span class="text-red-400">*</span>{% endif %}
-          </label>
-          <div class="mt-1 [&_input]:block [&_input]:w-full [&_input]:rounded-md [&_input]:bg-gray-50 [&_input]:dark:bg-white/5 [&_input]:px-3 [&_input]:py-1.5 [&_input]:text-sm [&_input]:text-gray-900 [&_input]:dark:text-white [&_input]:outline-1 [&_input]:-outline-offset-1 [&_input]:outline-gray-300 [&_input]:dark:outline-white/10 [&_input]:placeholder:text-gray-500 [&_input]:focus:outline-2 [&_input]:focus:-outline-offset-2 [&_input]:focus:outline-cyan-600 [&_textarea]:block [&_textarea]:w-full [&_textarea]:rounded-md [&_textarea]:bg-gray-50 [&_textarea]:dark:bg-white/5 [&_textarea]:px-3 [&_textarea]:py-1.5 [&_textarea]:text-sm [&_textarea]:text-gray-900 [&_textarea]:dark:text-white [&_textarea]:outline-1 [&_textarea]:-outline-offset-1 [&_textarea]:outline-gray-300 [&_textarea]:dark:outline-white/10 [&_textarea]:placeholder:text-gray-500 [&_textarea]:focus:outline-2 [&_textarea]:focus:-outline-offset-2 [&_textarea]:focus:outline-cyan-600 [&_select]:block [&_select]:w-full [&_select]:rounded-md [&_select]:bg-gray-50 [&_select]:dark:bg-white/5 [&_select]:px-3 [&_select]:py-1.5 [&_select]:text-sm [&_select]:text-gray-900 [&_select]:dark:text-white [&_select]:outline-1 [&_select]:-outline-offset-1 [&_select]:outline-gray-300 [&_select]:dark:outline-white/10 [&_select]:focus:outline-2 [&_select]:focus:-outline-offset-2 [&_select]:focus:outline-cyan-600 [&_select]:appearance-none [&_select]:*:bg-white [&_select]:dark:*:bg-gray-800">
+  <div class="border-t border-gray-200 dark:border-white/10">
+    <dl class="divide-y divide-gray-200 dark:divide-white/10">
+      {% for field in form %}
+      {% if field.field.widget.input_type != 'hidden' %}
+      <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+        <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">
+          {{ field.label }}
+          {% if field.field.required %}<span class="text-red-400">*</span>{% endif %}
+        </dt>
+        <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
+          {% if field.name == 'priority' %}
+            {% include 'includes/priority_slider.html' with field=field %}
+          {% elif field.field.widget.input_type == 'datetime-local' or field.field.widget.input_type == 'date' %}
+            {% include 'includes/custom_date_picker.html' with field=field %}
+          {% else %}
+            <div class="[&_input]:block [&_input]:w-full [&_input]:rounded-md [&_input]:bg-gray-100 [&_input]:dark:bg-white/5 [&_input]:px-3 [&_input]:py-1.5 [&_input]:text-sm [&_input]:text-gray-900 [&_input]:dark:text-white [&_input]:border-0 [&_input]:placeholder:text-gray-500 [&_input]:focus:ring-2 [&_input]:focus:ring-cyan-600 [&_textarea]:block [&_textarea]:w-full [&_textarea]:rounded-md [&_textarea]:bg-gray-100 [&_textarea]:dark:bg-white/5 [&_textarea]:px-3 [&_textarea]:py-1.5 [&_textarea]:text-sm [&_textarea]:text-gray-900 [&_textarea]:dark:text-white [&_textarea]:border-0 [&_textarea]:placeholder:text-gray-500 [&_textarea]:focus:ring-2 [&_textarea]:focus:ring-cyan-600 [&_select]:block [&_select]:w-full [&_select]:rounded-md [&_select]:bg-gray-100 [&_select]:dark:bg-white/5 [&_select]:px-3 [&_select]:py-1.5 [&_select]:text-sm [&_select]:text-gray-900 [&_select]:dark:text-white [&_select]:border-0 [&_select]:focus:ring-2 [&_select]:focus:ring-cyan-600 [&_select]:appearance-none [&_select]:*:bg-white [&_select]:dark:*:bg-gray-800">
             {% if field.field.widget.input_type == 'select' %}
-              <div class="grid grid-cols-1">
+              <div class="grid grid-cols-1 select-wrapper">
                 {{ field }}
-                <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-600 dark:text-gray-400">
-                  <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-                </svg>
+                <i class="ti ti-chevron-down pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
               </div>
             {% else %}
               {{ field }}
             {% endif %}
-          </div>
+            </div>
+          {% endif %}
           {% if field.help_text %}
           <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">{{ field.help_text }}</p>
           {% endif %}
           {% if field.errors %}
           <p class="mt-1 text-xs text-red-400">{{ field.errors }}</p>
           {% endif %}
-        </div>
-        {% else %}
-        {{ field }}
-        {% endif %}
-        {% endfor %}
+        </dd>
       </div>
-    </div>
+      {% else %}
+      {{ field }}
+      {% endif %}
+      {% endfor %}
+    </dl>
   </div>
 
-  <div class="flex items-center justify-end gap-x-3 pt-4 border-t border-gray-200 dark:border-white/10">
+  <div class="flex items-center justify-end gap-x-3 pt-4 mt-4 border-t border-gray-200 dark:border-white/10">
     <button type="button" command="close" commandfor="{{ drawer_id }}" class="text-sm font-semibold text-gray-900 dark:text-white">Cancel</button>
     <button type="submit" class="rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Save</button>
   </div>
 </form>
+
+<script>
+  // Apply styles to select elements in this form
+  (function() {
+    const form = document.currentScript.closest('form');
+    if (form) {
+      const selects = form.querySelectorAll('.select-wrapper select');
+      selects.forEach(select => {
+        select.classList.add('col-start-1', 'row-start-1', 'block', 'w-full', 'rounded-md', 'bg-gray-100', 'dark:bg-white/5', 'px-3', 'py-1.5', 'text-sm', 'text-gray-900', 'dark:text-white', 'border-0', 'focus:ring-2', 'focus:ring-cyan-600', 'appearance-none');
+      });
+    }
+  })();
+</script>

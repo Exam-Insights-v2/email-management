@@ -50,21 +50,21 @@
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ action.tool_description }}</dd>
           </div>
           {% endif %}
-          {% if label_links %}
+          {% if labels %}
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Linked Labels</dt>
             <dd class="mt-2 text-sm text-white sm:col-span-2 sm:mt-0">
               <ul role="list" class="divide-y divide-white/5 rounded-md border border-white/10">
-                {% for label_link in label_links %}
+                {% for label in labels %}
                 <li class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6">
                   <div class="flex w-0 flex-1 items-center">
                     <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                      <a href="{% url 'label_detail' label_link.label.pk %}" class="truncate font-medium text-white hover:text-cyan-300">{{ label_link.label.name }}</a>
-                      <span class="shrink-0 text-gray-500">Order: {{ label_link.order }}</span>
+                      <a href="{% url 'label_detail' label.pk %}" class="truncate font-medium text-white hover:text-cyan-300">{{ label.name }}</a>
+                      <span class="shrink-0 text-gray-500">Priority: {{ label.priority }}</span>
                     </div>
                   </div>
                   <div class="ml-4 shrink-0">
-                    <a href="{% url 'label_detail' label_link.label.pk %}" class="font-medium text-cyan-400 hover:text-cyan-300">View</a>
+                    <a href="{% url 'label_detail' label.pk %}" class="font-medium text-cyan-400 hover:text-cyan-300">View</a>
                   </div>
                 </li>
                 {% endfor %}

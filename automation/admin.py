@@ -1,18 +1,32 @@
 from django.contrib import admin
 
-from .models import Action, EmailLabel, Label, LabelAction, StandardOperatingProcedure
+from .models import Action, EmailLabel, Label
 
 
 @admin.register(Label)
 class LabelAdmin(admin.ModelAdmin):
-    list_display = ("name", "account", "use_mcp")
-    list_filter = ("use_mcp", "account")
-    search_fields = ("name",)
+    list_display = ("name", "account", "priority", "is_active")
+    list_filter = ("is_active", "account", "priority")
+    search_fields = ("name", "prompt", "instructions")
+    filter_horizontal = ("actions",)
     fieldsets = (
         (None, {
-            "fields": ("account", "name", "prompt", "sop_context", "use_mcp")
+            "fields": ("account", "name", "is_active", "priority")
+        }),
+        ("Classification", {
+            "fields": ("prompt",),
+            "description": "When this label applies (classification criteria)"
+        }),
+        ("Business Logic", {
+            "fields": ("instructions",),
+            "description": "What the AI should do when this label applies"
+        }),
+        ("Actions", {
+            "fields": ("actions",),
+            "description": "Actions that can be executed when this label is applied"
         }),
     )
+    ordering = ("-priority", "name")
 
 
 @admin.register(Action)
@@ -31,28 +45,6 @@ class ActionAdmin(admin.ModelAdmin):
             "fields": ("instructions",),
         }),
     )
-
-
-@admin.register(StandardOperatingProcedure)
-class StandardOperatingProcedureAdmin(admin.ModelAdmin):
-    list_display = ("name", "account", "priority", "is_active")
-    list_filter = ("is_active", "account", "priority")
-    search_fields = ("name", "description")
-    fieldsets = (
-        (None, {
-            "fields": ("account", "name", "is_active", "priority")
-        }),
-        ("Content", {
-            "fields": ("description", "instructions")
-        }),
-    )
-    ordering = ("-priority", "name")
-
-
-@admin.register(LabelAction)
-class LabelActionAdmin(admin.ModelAdmin):
-    list_display = ("label", "action", "order")
-    ordering = ("label", "order")
 
 
 @admin.register(EmailLabel)

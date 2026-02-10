@@ -28,44 +28,53 @@
             <dt class="text-sm/6 font-medium text-gray-100">Created</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ label.created_at|date:"d M Y H:i" }}</dd>
           </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Status</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
+              {% if label.is_active %}
+              <span class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-400">Active</span>
+              {% else %}
+              <span class="inline-flex items-center rounded-md bg-gray-400/10 px-2 py-1 text-xs font-medium text-gray-400">Inactive</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Priority</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ label.priority }} (higher priority labels are considered first)</dd>
+          </div>
           {% if label.prompt %}
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-            <dt class="text-sm/6 font-medium text-gray-100">Prompt</dt>
+            <dt class="text-sm/6 font-medium text-gray-100">When This Label Applies</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ label.prompt }}</dd>
+          </div>
+          {% endif %}
+          {% if label.instructions %}
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-100">Business Logic</dt>
+            <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ label.instructions }}</dd>
           </div>
           {% endif %}
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Actions</dt>
             <dd class="mt-2 text-sm text-white sm:col-span-2 sm:mt-0">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-sm/6 text-gray-400">{{ label.actions.count }} linked action{{ label.actions.count|pluralize }}</span>
-                <a href="{% url 'label_action_create' label.pk %}" class="text-sm font-medium text-cyan-400 hover:text-cyan-300">Link Action</a>
-              </div>
+              <span class="text-sm/6 text-gray-400">{{ label.actions.count }} linked action{{ label.actions.count|pluralize }}</span>
               {% if label.actions.all %}
-              <ul role="list" class="divide-y divide-white/5 rounded-md border border-white/10">
-                {% for label_action in label.actions.all %}
+              <ul role="list" class="mt-3 divide-y divide-white/5 rounded-md border border-white/10">
+                {% for action in label.actions.all %}
                 <li class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6">
                   <div class="flex w-0 flex-1 items-center">
-                    <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                      <span class="truncate font-medium text-white">{{ label_action.action.name }}</span>
-                      <span class="shrink-0 text-gray-500">Order: {{ label_action.order }}</span>
+                    <div class="ml-4 flex min-w-0 flex-1">
+                      <span class="truncate font-medium text-white">{{ action.name }}</span>
                     </div>
                   </div>
-                  <div class="ml-4 shrink-0 flex gap-2">
-                    <a href="{% url 'action_detail' label_action.action.pk %}" class="font-medium text-cyan-400 hover:text-cyan-300">View</a>
-                    {% with modal_id="unlink-action-modal"|add:label_action.pk %}
-                    <form method="post" action="{% url 'label_action_delete' label_action.pk %}" class="inline" data-warning-modal="{{ modal_id }}">
-                      {% csrf_token %}
-                      <button type="submit" class="font-medium text-red-400 hover:text-red-300">Unlink</button>
-                    </form>
-                    {% include 'includes/warning_modal.html' with modal_id=modal_id title="Unlink action" message="Are you sure you want to unlink this action?" confirm_text="Unlink" %}
-                    {% endwith %}
+                  <div class="ml-4 shrink-0">
+                    <a href="{% url 'action_detail' action.pk %}" class="font-medium text-cyan-400 hover:text-cyan-300">View</a>
                   </div>
                 </li>
                 {% endfor %}
               </ul>
               {% else %}
-              <p class="text-sm/6 text-gray-400">No actions linked to this label.</p>
+              <p class="mt-2 text-sm/6 text-gray-400">No actions linked to this label. Edit the label to add actions.</p>
               {% endif %}
             </dd>
           </div>

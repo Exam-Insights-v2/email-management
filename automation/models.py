@@ -2,26 +2,41 @@ from django.db import models
 
 
 class Label(models.Model):
+    """Smart Rules: Combine email classification with business logic and actions"""
     account = models.ForeignKey(
         "accounts.Account", on_delete=models.CASCADE, related_name="labels"
     )
     name = models.CharField(max_length=255)
-    prompt = models.TextField(blank=True, null=True)
-    sop_context = models.TextField(
+    prompt = models.TextField(
         blank=True,
         null=True,
-        help_text="Additional SOP context specific to this label"
+        help_text="When this label applies (classification criteria)"
     )
-    use_mcp = models.BooleanField(
-        default=False,
-        help_text="Use MCP for dynamic action orchestration instead of sequential execution"
+    instructions = models.TextField(
+        blank=True,
+        null=True,
+        help_text="What the AI should do when this label applies (business logic)"
+    )
+    priority = models.PositiveIntegerField(
+        default=1,
+        help_text="Higher priority labels are considered first when multiple labels match"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Only active labels will trigger actions"
+    )
+    actions = models.ManyToManyField(
+        "Action",
+        related_name="labels",
+        blank=True,
+        help_text="Actions that can be executed when this label is applied"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = (("account", "name"),)
-        ordering = ["name"]
+        ordering = ["-priority", "name"]
 
     def __str__(self):
         return self.name
@@ -78,44 +93,3 @@ class Action(models.Model):
         return self.mcp_tool_name or self.function
 
 
-class LabelAction(models.Model):
-    label = models.ForeignKey(
-        Label, on_delete=models.CASCADE, related_name="actions"
-    )
-    action = models.ForeignKey(
-        Action, on_delete=models.CASCADE, related_name="label_links"
-    )
-    order = models.PositiveIntegerField(default=1)
-
-    class Meta:
-        unique_together = (("label", "action"),)
-        ordering = ["order"]
-        indexes = [models.Index(fields=["label", "order"])]
-
-    def __str__(self):
-        return f"{self.label.name} → {self.action.name} ({self.order})"
-
-
-class StandardOperatingProcedure(models.Model):
-    """SOPs that guide AI decision-making for actions"""
-    account = models.ForeignKey(
-        "accounts.Account", on_delete=models.CASCADE, related_name="sops"
-    )
-    name = models.CharField(max_length=255)
-    description = models.TextField(help_text="When this SOP applies")
-    instructions = models.TextField(help_text="What the AI should do when this SOP applies")
-    priority = models.PositiveIntegerField(
-        default=1,
-        help_text="Higher priority SOPs are considered first"
-    )
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-priority", "name"]
-        verbose_name = "Standard Operating Procedure"
-        verbose_name_plural = "Standard Operating Procedures"
-
-    def __str__(self):
-        return self.name

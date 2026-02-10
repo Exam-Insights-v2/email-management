@@ -1,0 +1,443 @@
+{% comment %}
+Custom Date/DateTime Picker Component
+Usage:
+  {% include 'includes/custom_date_picker.html' with field=form.due_at %}
+{% endcomment %}
+
+<div class="relative" data-date-picker-wrapper>
+  <!-- Hidden input for form submission -->
+  <input 
+    type="hidden" 
+    id="{{ field.id_for_label }}" 
+    name="{{ field.name }}" 
+    value="{{ field.value|default:'' }}"
+    data-date-picker-hidden-input
+    {% if field.field.required %}required{% endif %}
+  />
+  <!-- Visible input for display -->
+  <input 
+    type="text" 
+    data-date-picker-input
+    data-input-type="{{ field.field.widget.input_type }}"
+    class="block w-full rounded-md bg-gray-100 dark:bg-white/5 px-3 py-1.5 text-sm text-gray-900 dark:text-white border-0 placeholder:text-gray-500 focus:ring-2 focus:ring-cyan-600 outline-none cursor-pointer"
+    placeholder="Select date{% if field.field.widget.input_type == 'datetime-local' %} and time{% endif %}"
+    readonly
+  />
+  <button 
+    type="button" 
+    data-date-picker-toggle
+    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+    aria-label="Open calendar"
+  >
+    <i class="ti ti-calendar size-4" aria-hidden="true"></i>
+  </button>
+  
+  <!-- Calendar Popup -->
+  <div 
+    data-date-picker-popup
+    class="hidden fixed z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 p-4 min-w-[280px]"
+  >
+    <!-- Calendar Header -->
+    <div class="flex items-center justify-center gap-2 mb-4">
+      <button 
+        type="button" 
+        data-date-picker-prev-month
+        class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400"
+        aria-label="Previous month"
+      >
+        <i class="ti ti-chevron-left size-4" aria-hidden="true"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <select 
+          data-date-picker-month
+          class="text-sm font-medium text-gray-900 dark:text-white bg-transparent border-0 focus:ring-0 cursor-pointer appearance-none"
+        >
+          <option value="0">January</option>
+          <option value="1">February</option>
+          <option value="2">March</option>
+          <option value="3">April</option>
+          <option value="4">May</option>
+          <option value="5">June</option>
+          <option value="6">July</option>
+          <option value="7">August</option>
+          <option value="8">September</option>
+          <option value="9">October</option>
+          <option value="10">November</option>
+          <option value="11">December</option>
+        </select>
+        <select 
+          data-date-picker-year
+          class="text-sm font-medium text-gray-900 dark:text-white bg-transparent border-0 focus:ring-0 cursor-pointer appearance-none"
+        >
+        </select>
+      </div>
+      <button 
+        type="button" 
+        data-date-picker-next-month
+        class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400"
+        aria-label="Next month"
+      >
+        <i class="ti ti-chevron-right size-4" aria-hidden="true"></i>
+      </button>
+    </div>
+    
+    <!-- Calendar Grid -->
+    <div class="grid grid-cols-7 gap-1 mb-2">
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Sun</div>
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Mon</div>
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Tue</div>
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Wed</div>
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Thu</div>
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Fri</div>
+      <div class="text-xs font-medium text-gray-500 dark:text-gray-400 text-center py-1">Sat</div>
+    </div>
+    <div 
+      data-date-picker-grid
+      class="grid grid-cols-7 gap-1"
+    >
+      <!-- Days will be populated by JavaScript -->
+    </div>
+    
+    <!-- Time Picker (for datetime-local) -->
+    {% if field.field.widget.input_type == 'datetime-local' %}
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Time:</label>
+        <input 
+          type="time" 
+          data-date-picker-time
+          class="flex-1 rounded-md bg-gray-100 dark:bg-white/5 px-3 py-1.5 text-sm text-gray-900 dark:text-white border-0 focus:ring-2 focus:ring-cyan-600 outline-none"
+        />
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Actions -->
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-end gap-2">
+      <button 
+        type="button" 
+        data-date-picker-clear
+        class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+      >
+        Clear
+      </button>
+      <button 
+        type="button" 
+        data-date-picker-apply
+        class="text-xs font-medium text-white bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 rounded-md"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Initialize date pickers on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const wrappers = document.querySelectorAll('[data-date-picker-wrapper]');
+    wrappers.forEach(wrapper => {
+      new CustomDatePicker(wrapper);
+    });
+  });
+  
+  // Also initialize for dynamically loaded content
+  if (window.initDatePickers) {
+    window.initDatePickers();
+  } else {
+    window.initDatePickers = function() {
+      const wrappers = document.querySelectorAll('[data-date-picker-wrapper]:not([data-initialized])');
+      wrappers.forEach(wrapper => {
+        wrapper.setAttribute('data-initialized', 'true');
+        new CustomDatePicker(wrapper);
+      });
+    };
+  }
+  
+  class CustomDatePicker {
+    constructor(wrapper) {
+      this.wrapper = wrapper;
+      this.hiddenInput = wrapper.querySelector('[data-date-picker-hidden-input]');
+      this.displayInput = wrapper.querySelector('[data-date-picker-input]');
+      this.toggle = wrapper.querySelector('[data-date-picker-toggle]');
+      this.popup = wrapper.querySelector('[data-date-picker-popup]');
+      this.monthSelect = wrapper.querySelector('[data-date-picker-month]');
+      this.yearSelect = wrapper.querySelector('[data-date-picker-year]');
+      this.grid = wrapper.querySelector('[data-date-picker-grid]');
+      this.timeInput = wrapper.querySelector('[data-date-picker-time]');
+      this.isDateTime = this.displayInput.dataset.inputType === 'datetime-local';
+      
+      this.currentDate = new Date();
+      this.selectedDate = null;
+      this.selectedTime = '00:00';
+      
+      // Parse existing value if present
+      if (this.hiddenInput.value) {
+        this.parseValue(this.hiddenInput.value);
+      }
+      
+      this.init();
+    }
+    
+    init() {
+      // Populate year select
+      this.populateYears();
+      
+      // Set current month/year
+      this.monthSelect.value = this.currentDate.getMonth();
+      this.yearSelect.value = this.currentDate.getFullYear();
+      
+      // Render calendar
+      this.renderCalendar();
+      
+      // Event listeners
+      // Make entire input field clickable
+      this.displayInput.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openPopup();
+      });
+      
+      this.toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.togglePopup();
+      });
+      
+      this.monthSelect.addEventListener('change', () => {
+        this.currentDate.setMonth(parseInt(this.monthSelect.value));
+        this.renderCalendar();
+      });
+      
+      this.yearSelect.addEventListener('change', () => {
+        this.currentDate.setFullYear(parseInt(this.yearSelect.value));
+        this.renderCalendar();
+      });
+      
+      this.wrapper.querySelector('[data-date-picker-prev-month]').addEventListener('click', () => {
+        this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+        this.monthSelect.value = this.currentDate.getMonth();
+        this.yearSelect.value = this.currentDate.getFullYear();
+        this.renderCalendar();
+      });
+      
+      this.wrapper.querySelector('[data-date-picker-next-month]').addEventListener('click', () => {
+        this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+        this.monthSelect.value = this.currentDate.getMonth();
+        this.yearSelect.value = this.currentDate.getFullYear();
+        this.renderCalendar();
+      });
+      
+      this.wrapper.querySelector('[data-date-picker-clear]').addEventListener('click', () => {
+        this.selectedDate = null;
+        this.selectedTime = '00:00';
+        if (this.timeInput) {
+          this.timeInput.value = '';
+        }
+        this.hiddenInput.value = '';
+        this.displayInput.value = '';
+        this.renderCalendar();
+        this.closePopup();
+      });
+      
+      this.wrapper.querySelector('[data-date-picker-apply]').addEventListener('click', () => {
+        if (this.timeInput) {
+          this.selectedTime = this.timeInput.value || '00:00';
+        }
+        this.updateInput();
+        this.closePopup();
+      });
+      
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        // Don't close if clicking inside the wrapper or popup
+        if (!this.wrapper.contains(e.target) && !this.popup.contains(e.target)) {
+          this.closePopup();
+        }
+      });
+    }
+    
+    parseValue(value) {
+      try {
+        if (this.isDateTime) {
+          // Parse datetime-local format: YYYY-MM-DDTHH:mm
+          const [datePart, timePart] = value.split('T');
+          const [year, month, day] = datePart.split('-').map(Number);
+          this.selectedDate = new Date(year, month - 1, day);
+          this.selectedTime = timePart || '00:00';
+          if (this.timeInput) {
+            this.timeInput.value = this.selectedTime;
+          }
+          this.currentDate = new Date(this.selectedDate);
+          // Update display
+          this.displayInput.value = this.formatDateDisplay(this.selectedDate, this.selectedTime);
+        } else {
+          // Parse date format: YYYY-MM-DD
+          const [year, month, day] = value.split('-').map(Number);
+          this.selectedDate = new Date(year, month - 1, day);
+          this.currentDate = new Date(this.selectedDate);
+          // Update display
+          this.displayInput.value = this.formatDateDisplay(this.selectedDate);
+        }
+      } catch (e) {
+        console.error('Error parsing date:', e);
+      }
+    }
+    
+    populateYears() {
+      const currentYear = new Date().getFullYear();
+      const startYear = currentYear - 10;
+      const endYear = currentYear + 10;
+      
+      this.yearSelect.innerHTML = '';
+      for (let year = startYear; year <= endYear; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        this.yearSelect.appendChild(option);
+      }
+    }
+    
+    renderCalendar() {
+      const year = parseInt(this.yearSelect.value);
+      const month = parseInt(this.monthSelect.value);
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startingDayOfWeek = firstDay.getDay();
+      
+      this.grid.innerHTML = '';
+      
+      // Empty cells for days before month starts
+      for (let i = 0; i < startingDayOfWeek; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'aspect-square';
+        this.grid.appendChild(cell);
+      }
+      
+      // Days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'aspect-square flex items-center justify-center text-sm rounded-md hover:bg-gray-100 dark:hover:bg-white/5 transition-colors';
+        
+        const cellDate = new Date(year, month, day);
+        const isToday = this.isToday(cellDate);
+        const isSelected = this.isSelected(cellDate);
+        
+        if (isToday) {
+          cell.className += ' font-semibold text-cyan-600 dark:text-cyan-400';
+        } else {
+          cell.className += ' text-gray-900 dark:text-white';
+        }
+        
+        if (isSelected) {
+          cell.className += ' bg-cyan-600 text-white hover:bg-cyan-500';
+        }
+        
+        cell.textContent = day;
+        cell.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.selectedDate = cellDate;
+          this.renderCalendar();
+          // Don't close - wait for Apply button to be clicked
+        });
+        
+        this.grid.appendChild(cell);
+      }
+    }
+    
+    isToday(date) {
+      const today = new Date();
+      return date.getDate() === today.getDate() &&
+             date.getMonth() === today.getMonth() &&
+             date.getFullYear() === today.getFullYear();
+    }
+    
+    isSelected(date) {
+      if (!this.selectedDate) return false;
+      return date.getDate() === this.selectedDate.getDate() &&
+             date.getMonth() === this.selectedDate.getMonth() &&
+             date.getFullYear() === this.selectedDate.getFullYear();
+    }
+    
+    formatTime(date) {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
+    formatDateDisplay(date, time = null) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      
+      if (time && this.isDateTime) {
+        // Format time (HH:mm to 12-hour format)
+        const [hours, minutes] = time.split(':');
+        const hour12 = parseInt(hours) % 12 || 12;
+        const ampm = parseInt(hours) >= 12 ? 'PM' : 'AM';
+        return `${day} ${month} ${year}, ${hour12}:${minutes} ${ampm}`;
+      }
+      
+      return `${day} ${month} ${year}`;
+    }
+    
+    updateInput() {
+      if (!this.selectedDate) {
+        this.hiddenInput.value = '';
+        this.displayInput.value = '';
+        return;
+      }
+      
+      // Update hidden input with proper format for form submission
+      if (this.isDateTime) {
+        const dateStr = this.formatDate(this.selectedDate);
+        this.hiddenInput.value = `${dateStr}T${this.selectedTime}`;
+        // Update display with user-friendly format
+        this.displayInput.value = this.formatDateDisplay(this.selectedDate, this.selectedTime);
+      } else {
+        this.hiddenInput.value = this.formatDate(this.selectedDate);
+        // Update display with user-friendly format
+        this.displayInput.value = this.formatDateDisplay(this.selectedDate);
+      }
+      
+      // Trigger change event on hidden input
+      this.hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    togglePopup() {
+      if (this.popup.classList.contains('hidden')) {
+        this.openPopup();
+      } else {
+        this.closePopup();
+      }
+    }
+    
+    openPopup() {
+      this.popup.classList.remove('hidden');
+      
+      // Center the popup vertically and horizontally on the screen
+      // Use transform to center it properly
+      this.popup.style.top = '50%';
+      this.popup.style.left = '50%';
+      this.popup.style.right = 'auto';
+      this.popup.style.transform = 'translate(-50%, -50%)';
+    }
+    
+    closePopup() {
+      this.popup.classList.add('hidden');
+    }
+  }
+})();
+</script>

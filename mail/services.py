@@ -226,6 +226,97 @@ class GmailService(EmailProviderService):
         except Exception as e:
             raise ValueError(f"Error archiving Gmail message: {str(e)}")
 
+    def mark_as_spam(self, account: Account, external_message_id: str):
+        """Mark a message as spam"""
+        service = self._get_service(account)
+        try:
+            service.users().messages().modify(
+                userId="me",
+                id=external_message_id,
+                body={"addLabelIds": ["SPAM"]}
+            ).execute()
+        except Exception as e:
+            raise ValueError(f"Error marking Gmail message as spam: {str(e)}")
+
+    def add_gmail_label(self, account: Account, external_message_id: str, label_id: str):
+        """Add a Gmail label to a message"""
+        service = self._get_service(account)
+        try:
+            service.users().messages().modify(
+                userId="me",
+                id=external_message_id,
+                body={"addLabelIds": [label_id]}
+            ).execute()
+        except Exception as e:
+            raise ValueError(f"Error adding Gmail label: {str(e)}")
+
+    def remove_gmail_label(self, account: Account, external_message_id: str, label_id: str):
+        """Remove a Gmail label from a message"""
+        service = self._get_service(account)
+        try:
+            service.users().messages().modify(
+                userId="me",
+                id=external_message_id,
+                body={"removeLabelIds": [label_id]}
+            ).execute()
+        except Exception as e:
+            raise ValueError(f"Error removing Gmail label: {str(e)}")
+
+    def forward_message(
+        self,
+        account: Account,
+        external_message_id: str,
+        to_addresses: List[str],
+        cc_addresses: List[str] = None,
+        bcc_addresses: List[str] = None,
+        note: str = None
+    ) -> dict:
+        """Forward an email message"""
+        service = self._get_service(account)
+        
+        # Get the original message
+        try:
+            original = service.users().messages().get(
+                userId="me", id=external_message_id, format="full"
+            ).execute()
+        except Exception as e:
+            raise ValueError(f"Error fetching original message: {str(e)}")
+        
+        # Parse original message
+        payload = original.get("payload", {})
+        headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
+        
+        # Build forward subject
+        original_subject = headers.get("subject", "")
+        if not original_subject.startswith("Fwd:") and not original_subject.startswith("Fw:"):
+            subject = f"Fwd: {original_subject}"
+        else:
+            subject = original_subject
+        
+        # Get original body
+        body_html = ""
+        if "parts" in payload:
+            for part in payload["parts"]:
+                if part.get("mimeType") == "text/html":
+                    body_data = part.get("body", {}).get("data", "")
+                    if body_data:
+                        body_html = base64.urlsafe_b64decode(body_data).decode("utf-8")
+                        break
+        
+        # Add forward note if provided
+        if note:
+            body_html = f"<p>{note}</p><hr>{body_html}"
+        
+        # Send as new message
+        return self.send_message(
+            account=account,
+            to_addresses=to_addresses,
+            subject=subject,
+            body_html=body_html,
+            cc_addresses=cc_addresses,
+            bcc_addresses=bcc_addresses,
+        )
+
     def send_message(
         self,
         account: Account,

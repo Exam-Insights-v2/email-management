@@ -23,9 +23,7 @@ Parameters:
       {% for item in metadata %}
       <div class="mt-2 flex items-center text-sm text-gray-600 dark:text-gray-400">
         {% if item.icon %}
-        <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 size-5 shrink-0 text-gray-500 dark:text-gray-400">
-          {{ item.icon|safe }}
-        </svg>
+        <i class="ti {{ item.icon }} mr-1.5 size-5 shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true"></i>
         {% endif %}
         {{ item.text }}
       </div>
@@ -36,10 +34,8 @@ Parameters:
   <div class="mt-5 flex lg:mt-0 lg:ml-4">
     {% if edit_url %}
     <span class="hidden sm:block">
-      <a href="{{ edit_url }}" class="inline-flex items-center rounded-md bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
-        <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 -ml-0.5 size-5 text-gray-900 dark:text-white">
-          <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" />
-        </svg>
+      <a href="{{ edit_url }}" class="inline-flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
+        <i class="ti ti-pencil mr-1.5 -ml-0.5 size-5 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true"></i>
         Edit
       </a>
     </span>
@@ -47,11 +43,8 @@ Parameters:
 
     {% if view_url %}
     <span class="ml-3 hidden sm:block">
-      <a href="{{ view_url }}" class="inline-flex items-center rounded-md bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
-        <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 -ml-0.5 size-5 text-gray-900 dark:text-white">
-          <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
-          <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
-        </svg>
+      <a href="{{ view_url }}" class="inline-flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
+        <i class="ti ti-eye mr-1.5 -ml-0.5 size-5 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true"></i>
         View
       </a>
     </span>
@@ -59,15 +52,11 @@ Parameters:
 
     {% if primary_action_url or create_url %}
     <span class="sm:ml-3">
-      <a href="{{ primary_action_url|default:create_url }}" class="inline-flex items-center rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">
+      <a href="{{ primary_action_url|default:create_url }}" class="inline-flex items-center justify-center rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">
         {% if primary_action_icon %}
-        <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 -ml-0.5 size-5">
-          {{ primary_action_icon|safe }}
-        </svg>
+        <i class="ti {{ primary_action_icon }} mr-1.5 -ml-0.5 size-5 flex-shrink-0" aria-hidden="true"></i>
         {% else %}
-        <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 -ml-0.5 size-5">
-          <path d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" fill-rule="evenodd" />
-        </svg>
+        <i class="ti ti-check mr-1.5 -ml-0.5 size-5 flex-shrink-0" aria-hidden="true"></i>
         {% endif %}
         {{ primary_action_text|default:"Publish" }}
       </a>
@@ -79,9 +68,7 @@ Parameters:
     <el-dropdown class="relative ml-3 sm:hidden">
       <button class="inline-flex items-center rounded-md bg-gray-100 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
         More
-        <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="-mr-1 ml-1.5 size-5 text-gray-900 dark:text-white">
-          <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-        </svg>
+        <i class="ti ti-chevron-down -mr-1 ml-1.5 size-5 text-gray-900 dark:text-white" aria-hidden="true"></i>
       </button>
 
       <el-menu anchor="bottom start" popover class="-mr-1 w-24 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition transition-discrete [--anchor-gap:--spacing(2)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-200 data-enter:ease-out data-leave:duration-75 data-leave:ease-in shadow-lg">

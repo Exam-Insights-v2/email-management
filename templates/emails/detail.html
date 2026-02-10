@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="mt-2 space-y-2">
         {% for task in email.tasks.all %}
         <div class="px-4 py-3 bg-slate-50 rounded-lg border border-slate-200">
-          <a href="{% url 'task_detail' task.pk %}" class="text-sm font-semibold text-cyan-600 hover:text-cyan-800">
+          <a href="{% url 'tasks_list' %}?task={{ task.pk }}" class="text-sm font-semibold text-cyan-600 hover:text-cyan-800">
             {{ task.title|default:"Untitled Task" }}
           </a>
           <span class="ml-2 text-xs text-slate-500">Status: {{ task.get_status_display }}</span>

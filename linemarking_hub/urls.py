@@ -9,7 +9,7 @@ from accounts.views import (
     account_gmail_oauth_callback,
     account_sync,
 )
-from automation.views import ActionViewSet, EmailLabelViewSet, LabelActionViewSet, LabelViewSet
+from automation.views import ActionViewSet, EmailLabelViewSet, LabelViewSet
 from jobs.views import JobViewSet, TaskViewSet
 from linemarking_hub.auth_views import (
     google_oauth_callback,
@@ -17,18 +17,13 @@ from linemarking_hub.auth_views import (
     login_view,
     logout_view,
 )
-from linemarking_hub.db_views import (
-    database_home,
-    database_row_delete,
-    database_row_detail,
-    database_table_view,
-)
 from linemarking_hub.views import (
+    account_clear_signature,
+    account_clear_writing_style,
     account_create,
     account_delete,
     account_detail,
     account_update,
-    accounts_list,
     action_create,
     action_delete,
     action_detail,
@@ -54,19 +49,12 @@ from linemarking_hub.views import (
     job_update,
     jobs_calendar,
     jobs_list,
-    label_action_create,
-    label_action_delete,
     label_create,
     label_delete,
     label_detail,
     label_update,
     labels_list,
     settings_view,
-    sop_create,
-    sop_delete,
-    sop_detail,
-    sop_update,
-    sops_list,
     task_create,
     task_delete,
     task_detail,
@@ -84,7 +72,6 @@ router.register("emails", EmailMessageViewSet, basename="emailmessage")
 router.register("drafts", DraftViewSet, basename="draft")
 router.register("labels", LabelViewSet, basename="label")
 router.register("actions", ActionViewSet, basename="action")
-router.register("label-actions", LabelActionViewSet, basename="labelaction")
 router.register("email-labels", EmailLabelViewSet, basename="emaillabel")
 
 urlpatterns = [
@@ -119,14 +106,13 @@ urlpatterns = [
     path("labels/<int:pk>/", label_detail, name="label_detail"),
     path("labels/<int:pk>/edit/", label_update, name="label_update"),
     path("labels/<int:pk>/delete/", label_delete, name="label_delete"),
-    path("labels/<int:label_id>/actions/create/", label_action_create, name="label_action_create"),
-    path("label-actions/<int:pk>/delete/", label_action_delete, name="label_action_delete"),
     # Accounts
-    path("accounts/", accounts_list, name="accounts_list"),
     path("accounts/create/", account_create, name="account_create"),
     path("accounts/<int:pk>/", account_detail, name="account_detail"),
     path("accounts/<int:pk>/edit/", account_update, name="account_update"),
     path("accounts/<int:pk>/delete/", account_delete, name="account_delete"),
+    path("accounts/<int:pk>/clear-signature/", account_clear_signature, name="account_clear_signature"),
+    path("accounts/<int:pk>/clear-writing-style/", account_clear_writing_style, name="account_clear_writing_style"),
     path("accounts/connect/gmail/", account_connect_gmail, name="connect_gmail"),
     path("accounts/gmail/callback/", account_gmail_oauth_callback, name="gmail_oauth_callback"),
     path("accounts/<int:pk>/disconnect/", account_disconnect, name="disconnect_account"),
@@ -144,12 +130,6 @@ urlpatterns = [
     path("actions/<int:pk>/", action_detail, name="action_detail"),
     path("actions/<int:pk>/edit/", action_update, name="action_update"),
     path("actions/<int:pk>/delete/", action_delete, name="action_delete"),
-    # Standard Operating Procedures (SOPs)
-    path("sops/", sops_list, name="sops_list"),
-    path("sops/create/", sop_create, name="sop_create"),
-    path("sops/<int:pk>/", sop_detail, name="sop_detail"),
-    path("sops/<int:pk>/edit/", sop_update, name="sop_update"),
-    path("sops/<int:pk>/delete/", sop_delete, name="sop_delete"),
     # Authentication
     path("auth/login/", login_view, name="login"),
     path("auth/logout/", logout_view, name="logout"),
@@ -157,11 +137,6 @@ urlpatterns = [
     path("auth/google/callback/", google_oauth_callback, name="google_oauth_callback"),
     # Settings
     path("settings/", settings_view, name="settings"),
-    # Database Admin
-    path("database/", database_home, name="database_home"),
-    path("database/<str:model_name>/", database_table_view, name="database_table_view"),
-    path("database/<str:model_name>/<int:pk>/", database_row_detail, name="database_row_detail"),
-    path("database/<str:model_name>/<int:pk>/delete/", database_row_delete, name="database_row_delete"),
     # Admin & API
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),

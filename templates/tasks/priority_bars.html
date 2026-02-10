@@ -1,0 +1,37 @@
+{% comment %}
+Priority bars component - reusable across views
+Usage: {% include 'tasks/priority_bars.html' with priority=task.priority %}
+Shows 3 bars for priorities 2-4, "---" for priority 1, and "!" for priority 5
+{% endcomment %}
+{% with priority=priority|default:1 %}
+  {% if priority >= 5 %}
+    <!-- Priority 5: Red exclamation mark with background -->
+    <div class="flex items-center justify-center w-5 h-5 rounded bg-red-500/20">
+      <span class="text-red-600 dark:text-red-400 font-bold text-xs">!</span>
+    </div>
+  {% elif priority >= 4 %}
+    <!-- Priority 4: 3 bars -->
+    <div class="flex items-end gap-0.5 h-4">
+      <div class="w-0.5 bg-orange-500 rounded-full" style="height: 16px;"></div>
+      <div class="w-0.5 bg-orange-500 rounded-full" style="height: 14px;"></div>
+      <div class="w-0.5 bg-orange-500 rounded-full" style="height: 12px;"></div>
+    </div>
+  {% elif priority >= 3 %}
+    <!-- Priority 3: 2 bars -->
+    <div class="flex items-end gap-0.5 h-4">
+      <div class="w-0.5 bg-yellow-500 rounded-full" style="height: 16px;"></div>
+      <div class="w-0.5 bg-yellow-500 rounded-full" style="height: 14px;"></div>
+      <div class="w-0.5 bg-gray-300 dark:bg-gray-600 rounded-full" style="height: 4px;"></div>
+    </div>
+  {% elif priority >= 2 %}
+    <!-- Priority 2: 1 bar -->
+    <div class="flex items-end gap-0.5 h-4">
+      <div class="w-0.5 bg-gray-400 rounded-full" style="height: 16px;"></div>
+      <div class="w-0.5 bg-gray-300 dark:bg-gray-600 rounded-full" style="height: 4px;"></div>
+      <div class="w-0.5 bg-gray-300 dark:bg-gray-600 rounded-full" style="height: 4px;"></div>
+    </div>
+  {% else %}
+    <!-- Priority 1: Dashes -->
+    <span class="text-gray-400 dark:text-gray-500 text-xs font-medium">---</span>
+  {% endif %}
+{% endwith %}

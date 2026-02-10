@@ -15,24 +15,20 @@ Parameters:
   </label>
   <div class="mt-2">
     {% if field.field.widget.input_type == 'textarea' %}
-      <textarea id="{{ field.id_for_label }}" name="{{ field.name }}" rows="3" class="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-500 sm:text-sm/6{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
+      <textarea id="{{ field.id_for_label }}" name="{{ field.name }}" rows="3" class="block w-full rounded-md bg-gray-100 dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white border-0 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-600 sm:text-sm/6{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
     {% elif field.field.widget.input_type == 'select' or field.field.widget.input_type == 'selectmultiple' %}
       <div class="grid grid-cols-1">
-        <select id="{{ field.id_for_label }}" name="{{ field.name }}" {% if field.field.widget.attrs.multiple %}multiple{% endif %} class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-8 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 *:bg-white dark:*:bg-gray-800 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-500 sm:text-sm/6{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %}>
+        <select id="{{ field.id_for_label }}" name="{{ field.name }}" {% if field.field.widget.attrs.multiple %}multiple{% endif %} class="col-start-1 row-start-1 w-full appearance-none rounded-md bg-gray-100 dark:bg-white/5 py-1.5 pr-8 pl-3 text-base text-gray-900 dark:text-white border-0 *:bg-white dark:*:bg-gray-800 focus:ring-2 focus:ring-cyan-600 sm:text-sm/6{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %}>
           {{ field }}
         </select>
-        <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4">
-          <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-        </svg>
+        <i class="ti ti-chevron-down pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4" aria-hidden="true"></i>
       </div>
     {% elif field.field.widget.input_type == 'checkbox' %}
       <div class="flex gap-3">
         <div class="flex h-6 shrink-0 items-center">
           <div class="group grid size-4 grid-cols-1">
             <input id="{{ field.id_for_label }}" type="checkbox" name="{{ field.name }}" {% if field.value %}checked{% endif %} class="col-start-1 row-start-1 appearance-none rounded-sm border border-white/10 bg-white/5 checked:border-cyan-600 checked:bg-cyan-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %} />
-            <svg viewBox="0 0 14 14" fill="none" class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white">
-              <path d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-has-checked:opacity-100" />
-            </svg>
+            <i class="ti ti-check pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center text-white opacity-0 group-has-checked:opacity-100" aria-hidden="true"></i>
           </div>
         </div>
         {% if field.help_text %}
@@ -42,7 +38,7 @@ Parameters:
         {% endif %}
       </div>
     {% else %}
-      <input id="{{ field.id_for_label }}" type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}" value="{{ field.value|default:'' }}" {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %} class="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-500 sm:text-sm/6{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %} />
+      <input id="{{ field.id_for_label }}" type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}" value="{{ field.value|default:'' }}" {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %} class="block w-full rounded-md bg-gray-100 dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white border-0 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-600 sm:text-sm/6{% if field.errors %} border-red-500{% endif %}" {% if field.field.required %}required{% endif %} />
     {% endif %}
   </div>
   {% if field.help_text and field.field.widget.input_type != 'checkbox' %}

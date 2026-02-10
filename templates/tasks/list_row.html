@@ -1,0 +1,53 @@
+{% comment %}
+List row component for tasks - reusable across priority sections
+{% endcomment %}
+<li class="grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_60px_1fr_auto_120px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="if (window.openTaskDetailModal) window.openTaskDetailModal({{ task.pk }});">
+  <!-- Priority Bars Column -->
+  <div class="flex items-center justify-center">
+    <div class="flex items-end gap-0.5 h-4">
+      {% include 'tasks/priority_bars.html' with priority=task.priority %}
+    </div>
+  </div>
+  
+  <!-- Mobile Layout: Title and ID together -->
+  <div class="flex items-center min-w-0 sm:hidden">
+    <div class="flex-1 min-w-0">
+      <p class="text-xs font-normal text-gray-700 dark:text-gray-100 truncate">{{ task.title|default:"Untitled Task" }}</p>
+      <div class="flex items-center gap-1.5 mt-0.5">
+        <span class="text-xs font-light text-gray-500 dark:text-gray-400">TASK-{{ task.pk }}</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">•</span>
+        <time datetime="{{ task.created_at|date:'Y-m-d' }}" class="text-xs text-gray-500 dark:text-gray-400">{{ task.created_at|date:"d M" }}</time>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Desktop Layout -->
+  <!-- ID Column (Desktop) -->
+  <div class="hidden sm:flex items-center">
+    <span class="text-xs font-light text-gray-500 dark:text-gray-200">TASK-{{ task.pk }}</span>
+  </div>
+  
+  <!-- Name Column (Desktop) -->
+  <div class="hidden sm:flex items-center min-w-0">
+    <p class="text-xs font-normal text-gray-700 dark:text-gray-100 truncate">{{ task.title|default:"Untitled Task" }}</p>
+  </div>
+  
+  <!-- Labels Column (Desktop) -->
+  <div class="hidden sm:flex items-center gap-1.5 flex-wrap justify-end">
+    {% if task.email_message and task.email_message.labels.all %}
+      {% load db_filters %}
+      {% for email_label in task.email_message.labels.all %}
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium {{ email_label.label.name|label_color_bg }}">
+          <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
+          <span class="hidden lg:inline">{{ email_label.label.name }}</span>
+        </span>
+      {% endfor %}
+    {% endif %}
+  </div>
+  
+  <!-- Date Added Column (Desktop) -->
+  <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 justify-end">
+    <i class="ti ti-calendar size-3" aria-hidden="true"></i>
+    <time datetime="{{ task.created_at|date:'Y-m-d' }}">{{ task.created_at|date:"d M" }}</time>
+  </div>
+</li>

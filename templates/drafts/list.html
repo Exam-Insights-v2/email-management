@@ -16,9 +16,7 @@
     <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="window.location.href='{% url 'draft_detail' draft.pk %}'">
       <div class="flex min-w-0 gap-x-4 flex-1">
         <div class="size-12 flex-none rounded-full bg-gray-100 dark:bg-gray-700 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 flex items-center justify-center">
-          <svg class="size-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
+          <i class="ti ti-file-text size-6 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
         </div>
         <div class="min-w-0 flex-auto">
           <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ draft.subject|default:"(No subject)" }}</p>
@@ -52,11 +50,9 @@
         </svg>
       </div>
       <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No drafts yet.</p>
-      <a href="{% url 'draft_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
+      <a href="{% url 'draft_create' %}" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
         Create Your First Draft
-        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
+        <i class="ti ti-plus w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
       </a>
     </li>
     {% endfor %}

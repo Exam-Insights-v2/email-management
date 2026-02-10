@@ -6,21 +6,18 @@
 {% block header_title %}Settings{% endblock %}
 
 {% block content %}
-<div class="bg-white dark:bg-gray-800">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+<div class="bg-white dark:bg-gray-900">
+  <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
     <!-- Tabs -->
-    <div class="border-b border-gray-200 dark:border-white/10">
-      <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-        <a href="?tab=accounts" class="{% if tab == 'accounts' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+    <div class="border-b border-gray-300 dark:border-white/10">
+      <nav class="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+        <a href="?tab=accounts" class="{% if tab == 'accounts' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-3 sm:py-4 px-1 text-xs sm:text-sm font-medium">
           Accounts
         </a>
-        <a href="?tab=database" class="{% if tab == 'database' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
-          Database
-        </a>
-        <a href="?tab=actions" class="{% if tab == 'actions' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+        <a href="?tab=actions" class="{% if tab == 'actions' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-3 sm:py-4 px-1 text-xs sm:text-sm font-medium">
           Actions
         </a>
-        <a href="?tab=labels" class="{% if tab == 'labels' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium">
+        <a href="?tab=labels" class="{% if tab == 'labels' %}border-cyan-500 text-cyan-600 dark:text-cyan-400{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-700 dark:hover:text-gray-300{% endif %} whitespace-nowrap border-b-2 py-3 sm:py-4 px-1 text-xs sm:text-sm font-medium">
           Labels
         </a>
       </nav>
@@ -30,69 +27,64 @@
 
 <!-- Accounts Tab -->
 {% if tab == 'accounts' %}
-<div class="bg-white dark:bg-gray-800">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center mb-6">
+<div class="bg-white dark:bg-gray-900">
+  <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
       <div>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Accounts</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage email accounts</p>
+        <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Accounts</h2>
+        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage email accounts</p>
       </div>
-      <a href="{% url 'account_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
-        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-        </svg>
-        Connect New Account
+      <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+        <i class="ti ti-bolt w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Connect</span>
+        <span class="sm:hidden">Connect</span>
       </a>
     </div>
-    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
-      <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5">
+    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-white/10 shadow-sm dark:shadow-none overflow-hidden">
+      <ul role="list" class="divide-y divide-gray-300 dark:divide-white/5">
         {% for account in accounts %}
-        <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="window.location.href='{% url 'account_detail' account.pk %}'">
-          <div class="flex min-w-0 gap-x-4 flex-1">
-            <div class="size-12 flex-none rounded-full bg-gray-100 dark:bg-gray-700 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 flex items-center justify-center">
-              <svg class="size-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
+        <li class="flex justify-between gap-x-3 sm:gap-x-6 py-4 sm:py-5 px-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-200 dark:border-white/5 last:border-b-0 transition-colors">
+          <div class="flex min-w-0 gap-x-3 sm:gap-x-4 flex-1">
+            <div class="size-10 sm:size-12 flex-none rounded-full bg-gray-100 dark:bg-gray-700 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 flex items-center justify-center">
+              <i class="ti ti-mail size-5 sm:size-6 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
             </div>
             <div class="min-w-0 flex-auto">
-              <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ account.email }}</p>
-              <p class="mt-1 truncate text-xs/5 text-gray-600 dark:text-gray-400">{{ account.get_provider_display }}</p>
+              <p class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white break-words">{{ account.email }}</p>
+              <p class="mt-1 truncate text-xs text-gray-600 dark:text-gray-400">{{ account.get_provider_display }}</p>
             </div>
           </div>
-          <div class="hidden shrink-0 sm:flex sm:flex-col sm:items-end sm:gap-2">
-            <div class="flex items-center gap-2">
-              {% if account.is_connected %}
-              <div class="flex items-center gap-x-1.5">
-                <div class="flex-none rounded-full bg-emerald-500/30 p-1">
-                  <div class="size-1.5 rounded-full bg-emerald-500"></div>
-                </div>
-                <p class="text-xs/5 text-gray-600 dark:text-gray-400">Connected</p>
+          <div class="hidden shrink-0 sm:flex sm:items-center sm:gap-3">
+            {% if account.is_connected %}
+            <div class="flex items-center gap-x-1.5">
+              <div class="flex-none rounded-full bg-emerald-500/30 p-1">
+                <div class="size-1.5 rounded-full bg-emerald-500"></div>
               </div>
-              {% else %}
-              <p class="text-xs/5 text-gray-600 dark:text-gray-400">Not Connected</p>
-              {% endif %}
-              <div onclick="event.stopPropagation();">
-                {% url 'account_detail' account.pk as account_detail_url %}
-                {% url 'account_update' account.pk as account_update_url %}
-                {% url 'account_delete' account.pk as account_delete_url %}
-                {% include 'includes/action_dropdown.html' with view_url=account_detail_url edit_url=account_update_url delete_url=account_delete_url delete_message="Are you sure you want to delete this account?" %}
-              </div>
+              <p class="text-xs/5 text-gray-600 dark:text-gray-400">Connected</p>
             </div>
+            {% else %}
+            <p class="text-xs/5 text-gray-600 dark:text-gray-400">Not Connected</p>
+            {% endif %}
+            {% with modal_id="delete-account-"|add:account.pk %}
+            <form action="{% url 'account_delete' account.pk %}" method="POST" data-warning-modal="{{ modal_id }}" id="delete-form-{{ account.pk }}" class="inline-block">
+              {% csrf_token %}
+              <button type="button" onclick="event.preventDefault(); event.stopPropagation(); const modal = document.getElementById('{{ modal_id }}'); if (modal && typeof modal.showModal === 'function') { modal.showModal(); }" class="relative inline-flex items-center justify-center rounded-full p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-2 focus:outline-offset-2 focus:outline-red-500 transition-colors" aria-label="Delete account">
+                <span class="absolute -inset-1"></span>
+                <i class="ti ti-trash size-4" aria-hidden="true"></i>
+              </button>
+            </form>
+            {% include 'includes/warning_modal.html' with modal_id=modal_id title="Delete Account" message="Are you sure you want to delete this account? This action cannot be undone." confirm_text="Delete" %}
+            {% endwith %}
           </div>
         </li>
         {% empty %}
         <li class="px-6 py-16 text-center">
           <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4">
-            <svg width="32" height="32" class="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-            </svg>
+            <i class="ti ti-mail w-8 h-8 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
           </div>
           <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No accounts yet.</p>
-          <a href="{% url 'account_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
+          <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
             Connect Your First Account
-            <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
+            <i class="ti ti-bolt w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
           </a>
         </li>
         {% endfor %}
@@ -102,67 +94,28 @@
 </div>
 {% endif %}
 
-<!-- Database Tab -->
-{% if tab == 'database' %}
-<div class="bg-white dark:bg-gray-800">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden mt-6">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-white/10">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Database Tables</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">View and manage all database tables and records</p>
-      </div>
-      <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {% for table in tables %}
-          <a href="{% url 'database_table_view' table.slug %}" 
-             class="block p-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-white/10 hover:border-cyan-400 dark:hover:border-cyan-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all group">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                {{ table.name }}
-              </h3>
-              <svg width="20" height="20" class="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center rounded-md bg-gray-400/10 dark:bg-gray-600/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400">
-                {{ table.count }} rows
-              </span>
-            </div>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
-{% endif %}
-
 <!-- Actions Tab -->
 {% if tab == 'actions' %}
-<div class="bg-white dark:bg-gray-800">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center mb-6">
+<div class="bg-white dark:bg-gray-900">
+  <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
       <div>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Actions</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage automation actions</p>
+        <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Actions</h2>
+        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage automation actions</p>
       </div>
-      <a href="{% url 'action_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
-        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        Create Action
-      </a>
+      <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+        <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Create</span>
+        <span class="sm:hidden">Create</span>
+      </button>
     </div>
-    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
-      <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5">
+    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-white/10 shadow-sm dark:shadow-none overflow-hidden">
+      <ul role="list" class="divide-y divide-gray-300 dark:divide-white/5">
         {% for action in actions %}
-        <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="window.location.href='{% url 'action_detail' action.pk %}'">
+        <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-200 dark:border-white/5 last:border-b-0 transition-colors cursor-pointer" onclick="window.location.href='{% url 'action_detail' action.pk %}'">
           <div class="flex min-w-0 gap-x-4 flex-1">
             <div class="size-12 flex-none rounded-full bg-gray-100 dark:bg-gray-700 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 flex items-center justify-center">
-              <svg class="size-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-              </svg>
+              <i class="ti ti-bulb size-6 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
             </div>
             <div class="min-w-0 flex-auto">
               <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ action.name }}</p>
@@ -188,50 +141,44 @@
         {% empty %}
         <li class="px-6 py-16 text-center">
           <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4">
-            <svg width="32" height="32" class="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-            </svg>
+            <i class="ti ti-bulb w-8 h-8 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
           </div>
           <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No actions yet.</p>
-          <a href="{% url 'action_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
+          <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
             Create Your First Action
-            <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-          </a>
+            <i class="ti ti-plus w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
+          </button>
         </li>
         {% endfor %}
       </ul>
     </section>
+    {% include 'includes/create_modal_dialog.html' with modal_id="create-action" title="Create Action" form_template="actions/form_content.html" form_url="action_create" form=action_form %}
   </div>
 </div>
 {% endif %}
 
 <!-- Labels Tab -->
 {% if tab == 'labels' %}
-<div class="bg-white dark:bg-gray-800">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center mb-6">
+<div class="bg-white dark:bg-gray-900">
+  <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
       <div>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Labels</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage email labels</p>
+        <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Labels</h2>
+        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Smart rules that combine email classification with business logic and actions</p>
       </div>
-      <a href="{% url 'label_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
-        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        Create Label
-      </a>
+      <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+        <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Create</span>
+        <span class="sm:hidden">Create</span>
+      </button>
     </div>
-    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
-      <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5">
+    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-white/10 shadow-sm dark:shadow-none overflow-hidden">
+      <ul role="list" class="divide-y divide-gray-300 dark:divide-white/5">
         {% for label in labels %}
-        <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="window.location.href='{% url 'label_detail' label.pk %}'">
+        <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-200 dark:border-white/5 last:border-b-0 transition-colors cursor-pointer" onclick="window.location.href='{% url 'label_detail' label.pk %}'">
           <div class="flex min-w-0 gap-x-4 flex-1">
             <div class="size-12 flex-none rounded-full bg-gray-100 dark:bg-gray-700 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 flex items-center justify-center">
-              <svg class="size-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-              </svg>
+              <i class="ti ti-tag size-6 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
             </div>
             <div class="min-w-0 flex-auto">
               <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ label.name }}</p>
@@ -242,6 +189,18 @@
           </div>
           <div class="hidden shrink-0 sm:flex sm:flex-col sm:items-end sm:gap-2">
             <div class="flex items-center gap-2">
+              {% if label.is_active %}
+              <span class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-400">
+                Active
+              </span>
+              {% else %}
+              <span class="inline-flex items-center rounded-md bg-gray-400/10 px-2 py-1 text-xs font-medium text-gray-400">
+                Inactive
+              </span>
+              {% endif %}
+              <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-1 text-xs font-medium text-cyan-400">
+                Priority: {{ label.priority }}
+              </span>
               {% if label.actions.all %}
               <span class="text-xs/5 text-gray-600 dark:text-gray-400">{{ label.actions.count }} action{{ label.actions.count|pluralize }}</span>
               {% endif %}
@@ -260,22 +219,20 @@
         {% empty %}
         <li class="px-6 py-16 text-center">
           <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4">
-            <svg width="32" height="32" class="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-            </svg>
+            <i class="ti ti-tag w-8 h-8 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
           </div>
           <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No labels yet.</p>
-          <a href="{% url 'label_create' %}" class="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
+          <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
             Create Your First Label
-            <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-          </a>
+            <i class="ti ti-plus w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
+          </button>
         </li>
         {% endfor %}
       </ul>
     </section>
+    {% include 'includes/create_modal_dialog.html' with modal_id="create-label" title="Create" form_template="labels/form_content.html" form_url="label_create" form=label_form %}
   </div>
 </div>
 {% endif %}
+
 {% endblock %}

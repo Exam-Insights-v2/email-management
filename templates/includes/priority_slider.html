@@ -1,0 +1,166 @@
+{% comment %}
+Priority Slider Component
+Usage:
+  {% include 'includes/priority_slider.html' with field=form.priority %}
+{% endcomment %}
+
+<div class="priority-slider-wrapper" data-priority-slider>
+  <input 
+    type="hidden" 
+    id="{{ field.id_for_label }}" 
+    name="{{ field.name }}" 
+    value="{{ field.value|default:1 }}"
+    data-priority-input
+    {% if field.field.required %}required{% endif %}
+  />
+  
+  <!-- Slider Track -->
+  <div class="relative mt-2">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Lowest</span>
+      <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Low</span>
+      <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Medium</span>
+      <span class="text-xs font-medium text-gray-600 dark:text-gray-400">High</span>
+      <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Urgent</span>
+    </div>
+    
+    <!-- Slider Track Background -->
+    <div class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+      <!-- Colored segments -->
+      <div class="absolute inset-0 flex">
+        <div class="flex-1 bg-gray-300 dark:bg-gray-600 rounded-l-full" data-priority-segment="1"></div>
+        <div class="flex-1 bg-gray-400 dark:bg-gray-500" data-priority-segment="2"></div>
+        <div class="flex-1 bg-yellow-400 dark:bg-yellow-500" data-priority-segment="3"></div>
+        <div class="flex-1 bg-orange-400 dark:bg-orange-500" data-priority-segment="4"></div>
+        <div class="flex-1 bg-red-500 dark:bg-red-500 rounded-r-full" data-priority-segment="5"></div>
+      </div>
+      
+      <!-- Slider Thumb -->
+      <input 
+        type="range" 
+        min="1" 
+        max="5" 
+        step="1"
+        value="{{ field.value|default:1 }}"
+        data-priority-slider-input
+        class="absolute inset-0 w-full h-2 opacity-0 cursor-pointer z-10"
+        aria-label="Priority"
+      />
+      
+      <!-- Active Indicator -->
+      <div 
+        class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 shadow-lg transition-all duration-200 z-20 pointer-events-none"
+        data-priority-thumb
+      ></div>
+    </div>
+    
+    <!-- Current Priority Label -->
+    <div class="mt-3 text-center">
+      <span 
+        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors duration-200"
+        data-priority-label
+      >
+        <span data-priority-label-text>Lowest</span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function initPrioritySlider(wrapper) {
+    const input = wrapper.querySelector('[data-priority-input]');
+    const slider = wrapper.querySelector('[data-priority-slider-input]');
+    const thumb = wrapper.querySelector('[data-priority-thumb]');
+    const label = wrapper.querySelector('[data-priority-label]');
+    const labelText = wrapper.querySelector('[data-priority-label-text]');
+    
+    const priorityConfig = {
+      1: { 
+        name: 'Lowest', 
+        color: 'bg-gray-400 dark:bg-gray-500 text-gray-700 dark:text-gray-300',
+        thumbColor: 'bg-gray-400 dark:bg-gray-500'
+      },
+      2: { 
+        name: 'Low', 
+        color: 'bg-gray-500 dark:bg-gray-400 text-gray-700 dark:text-gray-300',
+        thumbColor: 'bg-gray-500 dark:bg-gray-400'
+      },
+      3: { 
+        name: 'Medium', 
+        color: 'bg-yellow-400 dark:bg-yellow-500 text-yellow-900 dark:text-yellow-900',
+        thumbColor: 'bg-yellow-400 dark:bg-yellow-500'
+      },
+      4: { 
+        name: 'High', 
+        color: 'bg-orange-400 dark:bg-orange-500 text-orange-900 dark:text-orange-900',
+        thumbColor: 'bg-orange-400 dark:bg-orange-500'
+      },
+      5: { 
+        name: 'Urgent', 
+        color: 'bg-red-500 dark:bg-red-500 text-white dark:text-white',
+        thumbColor: 'bg-red-500 dark:bg-red-500'
+      }
+    };
+    
+    function updatePriority(value) {
+      const priority = parseInt(value);
+      const config = priorityConfig[priority];
+      
+      // Update hidden input
+      input.value = priority;
+      
+      // Update thumb position
+      // For 5 positions: 0%, 25%, 50%, 75%, 100%
+      // Thumb is 16px wide, so we need to center it
+      let position;
+      if (priority === 1) {
+        position = '0%';
+      } else if (priority === 5) {
+        position = 'calc(100% - 16px)';
+      } else {
+        // For positions 2, 3, 4: center the thumb
+        position = `calc(${((priority - 1) / 4) * 100}% - 8px)`;
+      }
+      thumb.style.left = position;
+      thumb.className = `absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 shadow-lg transition-all duration-200 z-20 pointer-events-none ${config.thumbColor}`;
+      
+      // Update label
+      labelText.textContent = config.name;
+      label.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors duration-200 ${config.color}`;
+      
+      // Trigger change event
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    // Initialize with current value
+    updatePriority(slider.value);
+    
+    // Update on slider change
+    slider.addEventListener('input', (e) => {
+      updatePriority(e.target.value);
+    });
+  }
+  
+  // Initialize all priority sliders on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const wrappers = document.querySelectorAll('[data-priority-slider]');
+    wrappers.forEach(wrapper => {
+      initPrioritySlider(wrapper);
+    });
+  });
+  
+  // Also initialize for dynamically loaded content
+  if (window.initPrioritySliders) {
+    window.initPrioritySliders();
+  } else {
+    window.initPrioritySliders = function() {
+      const wrappers = document.querySelectorAll('[data-priority-slider]:not([data-initialized])');
+      wrappers.forEach(wrapper => {
+        wrapper.setAttribute('data-initialized', 'true');
+        initPrioritySlider(wrapper);
+      });
+    };
+  }
+})();
+</script>

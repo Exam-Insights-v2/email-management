@@ -1,7 +1,7 @@
 from django import forms
 
 from accounts.models import Account
-from automation.models import Action, Label, LabelAction, StandardOperatingProcedure
+from automation.models import Action, Label
 from jobs.models import Job, Task, JobStatus, TaskStatus
 
 
@@ -139,7 +139,7 @@ class TaskForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Task title"}),
             "description": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 4, "placeholder": "Task description"}),
             "due_at": forms.DateTimeInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "type": "datetime-local"}),
-            "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 4, "value": 1}),
+            "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 5, "value": 1}),
             "status": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
             "job": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
         }
@@ -209,15 +209,30 @@ class TaskForm(forms.ModelForm):
 
 
 class LabelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter actions by account if account is set
+        if self.instance and self.instance.pk and self.instance.account:
+            self.fields['actions'].queryset = Action.objects.filter(account=self.instance.account)
+        elif 'account' in self.data:
+            try:
+                account_id = self.data.get('account')
+                if account_id:
+                    self.fields['actions'].queryset = Action.objects.filter(account_id=account_id)
+            except (ValueError, TypeError):
+                pass
+    
     class Meta:
         model = Label
-        fields = ["account", "name", "prompt", "sop_context", "use_mcp"]
+        fields = ["account", "name", "prompt", "instructions", "priority", "is_active", "actions"]
         widgets = {
             "account": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
             "name": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
-            "prompt": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 4}),
-            "sop_context": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 3, "placeholder": "Additional SOP context specific to this label"}),
-            "use_mcp": forms.CheckboxInput(attrs={"class": "h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"}),
+            "prompt": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 4, "placeholder": "When this label applies (classification criteria)"}),
+            "instructions": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 5, "placeholder": "What the AI should do when this label applies (business logic)"}),
+            "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 100, "value": 1}),
+            "is_active": forms.CheckboxInput(attrs={"class": "h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"}),
+            "actions": forms.SelectMultiple(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "size": 5}),
         }
 
 
@@ -259,26 +274,3 @@ class ActionForm(forms.ModelForm):
         ], attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"})
 
 
-class LabelActionForm(forms.ModelForm):
-    class Meta:
-        model = LabelAction
-        fields = ["label", "action", "order"]
-        widgets = {
-            "label": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
-            "action": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
-            "order": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1}),
-        }
-
-
-class StandardOperatingProcedureForm(forms.ModelForm):
-    class Meta:
-        model = StandardOperatingProcedure
-        fields = ["account", "name", "description", "instructions", "priority", "is_active"]
-        widgets = {
-            "account": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
-            "name": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
-            "description": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 3, "placeholder": "When this SOP applies (e.g., 'Urgent customer emails', 'After hours requests')"}),
-            "instructions": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 5, "placeholder": "What the AI should do when this SOP applies"}),
-            "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 100, "value": 1}),
-            "is_active": forms.CheckboxInput(attrs={"class": "h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"}),
-        }
