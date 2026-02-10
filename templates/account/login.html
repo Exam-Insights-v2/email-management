@@ -7,55 +7,11 @@
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
   <div class="sm:mx-auto sm:w-full sm:max-w-sm">
     <img src="{% static 'images/logo.png' %}" alt="EmailIQ" class="mx-auto h-10 w-auto" />
-    <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-white">Sign in to your account</h2>
+    <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-white">Welcome to EmailIQ</h2>
   </div>
 
   <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-    {% if form.errors %}
-    <div class="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-md text-sm text-red-800">
-      {% for error in form.non_field_errors %}
-      <p>{{ error }}</p>
-      {% endfor %}
-    </div>
-    {% endif %}
-    
-    <form action="{% url 'login' %}" method="POST" class="space-y-6">
-      {% csrf_token %}
-      <div>
-        <label for="email" class="block text-sm/6 font-medium text-gray-100">Email address</label>
-        <div class="mt-2">
-          <input id="email" type="email" name="email" required autocomplete="email" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600 sm:text-sm/6" placeholder="you@example.com" />
-        </div>
-      </div>
-
-      <div>
-        <div class="flex items-center justify-between">
-          <label for="password" class="block text-sm/6 font-medium text-gray-100">Password</label>
-          <div class="text-sm">
-            <a href="#" class="font-semibold text-cyan-400 hover:text-cyan-300">Forgot password?</a>
-          </div>
-        </div>
-        <div class="mt-2">
-          <input id="password" type="password" name="password" required autocomplete="current-password" class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-cyan-600 sm:text-sm/6" placeholder="••••••••" />
-        </div>
-      </div>
-
-      <div>
-        <button type="submit" class="flex w-full justify-center rounded-md bg-cyan-600 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Sign in</button>
-      </div>
-    </form>
-
-    <div class="mt-6">
-      <div class="relative">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-white/10"></div>
-        </div>
-        <div class="relative flex justify-center text-sm/6">
-          <span class="px-2 bg-gray-900 text-gray-400">Or continue with</span>
-        </div>
-      </div>
-
-      <div class="mt-6 grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-2 gap-3">
         <a href="{% url 'google_oauth_login' %}" class="flex w-full justify-center items-center gap-3 rounded-md bg-white/5 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">
           <svg class="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -75,12 +31,6 @@
           Continue with Microsoft
         </a>
       </div>
-    </div>
-
-    <p class="mt-10 text-center text-sm/6 text-gray-400">
-      Not a member?
-      <a href="#" class="font-semibold text-cyan-400 hover:text-cyan-300">Start a 14 day free trial</a>
-    </p>
   </div>
 </div>
 {% endblock %}
