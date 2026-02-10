@@ -32,25 +32,27 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
       <div>
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Accounts</h2>
-        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage email accounts</p>
       </div>
-      <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
-        <i class="ti ti-bolt w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
-        <span class="hidden sm:inline">Connect</span>
-        <span class="sm:hidden">Connect</span>
-      </a>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <a href="{% url 'logout' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+          <i class="ti ti-logout w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+          <span class="hidden sm:inline">Logout</span>
+          <span class="sm:hidden">Logout</span>
+        </a>
+        <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+          <i class="ti ti-bolt w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+          <span class="hidden sm:inline">Connect</span>
+          <span class="sm:hidden">Connect</span>
+        </a>
+      </div>
     </div>
     <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-white/10 shadow-sm dark:shadow-none overflow-hidden">
       <ul role="list" class="divide-y divide-gray-300 dark:divide-white/5">
         {% for account in accounts %}
         <li class="flex justify-between gap-x-3 sm:gap-x-6 py-4 sm:py-5 px-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-200 dark:border-white/5 last:border-b-0 transition-colors">
           <div class="flex min-w-0 gap-x-3 sm:gap-x-4 flex-1">
-            <div class="size-10 sm:size-12 flex-none rounded-full bg-gray-100 dark:bg-gray-700 outline -outline-offset-1 outline-gray-200 dark:outline-white/10 flex items-center justify-center">
-              <i class="ti ti-mail size-5 sm:size-6 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
-            </div>
             <div class="min-w-0 flex-auto">
               <p class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white break-words">{{ account.email }}</p>
-              <p class="mt-1 truncate text-xs text-gray-600 dark:text-gray-400">{{ account.get_provider_display }}</p>
             </div>
           </div>
           <div class="hidden shrink-0 sm:flex sm:items-center sm:gap-3">
@@ -64,28 +66,11 @@
             {% else %}
             <p class="text-xs/5 text-gray-600 dark:text-gray-400">Not Connected</p>
             {% endif %}
-            {% with modal_id="delete-account-"|add:account.pk %}
-            <form action="{% url 'account_delete' account.pk %}" method="POST" data-warning-modal="{{ modal_id }}" id="delete-form-{{ account.pk }}" class="inline-block">
-              {% csrf_token %}
-              <button type="button" onclick="event.preventDefault(); event.stopPropagation(); const modal = document.getElementById('{{ modal_id }}'); if (modal && typeof modal.showModal === 'function') { modal.showModal(); }" class="relative inline-flex items-center justify-center rounded-full p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-2 focus:outline-offset-2 focus:outline-red-500 transition-colors" aria-label="Delete account">
-                <span class="absolute -inset-1"></span>
-                <i class="ti ti-trash size-4" aria-hidden="true"></i>
-              </button>
-            </form>
-            {% include 'includes/warning_modal.html' with modal_id=modal_id title="Delete Account" message="Are you sure you want to delete this account? This action cannot be undone." confirm_text="Delete" %}
-            {% endwith %}
           </div>
         </li>
         {% empty %}
         <li class="px-6 py-16 text-center">
-          <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4">
-            <i class="ti ti-mail w-8 h-8 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No accounts yet.</p>
-          <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
-            Connect Your First Account
-            <i class="ti ti-bolt w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
-          </a>
+          <p class="text-gray-600 dark:text-gray-400 text-sm my-4">No accounts yet.</p>
         </li>
         {% endfor %}
       </ul>
@@ -101,7 +86,6 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
       <div>
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Actions</h2>
-        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Manage automation actions</p>
       </div>
       <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
         <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
@@ -140,14 +124,7 @@
         </li>
         {% empty %}
         <li class="px-6 py-16 text-center">
-          <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4">
-            <i class="ti ti-bulb w-8 h-8 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No actions yet.</p>
-          <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
-            Create Your First Action
-            <i class="ti ti-plus w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
-          </button>
+          <p class="text-gray-600 dark:text-gray-400 text-sm my-4">No actions yet.</p>
         </li>
         {% endfor %}
       </ul>
@@ -164,7 +141,6 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
       <div>
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Labels</h2>
-        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Smart rules that combine email classification with business logic and actions</p>
       </div>
       <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
         <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
@@ -218,14 +194,7 @@
         </li>
         {% empty %}
         <li class="px-6 py-16 text-center">
-          <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4">
-            <i class="ti ti-tag w-8 h-8 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 text-base mb-4">No labels yet.</p>
-          <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-sm">
-            Create Your First Label
-            <i class="ti ti-plus w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
-          </button>
+          <p class="text-gray-600 dark:text-gray-400 text-sm my-4">No labels yet.</p>
         </li>
         {% endfor %}
       </ul>

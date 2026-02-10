@@ -21,7 +21,7 @@ def account_connect_gmail(request):
         email = request.POST.get("email", "").strip()
         if not email:
             messages.error(request, "Email address is required.")
-            return redirect("accounts_list")
+            return redirect(f"{reverse('settings')}?tab=accounts")
 
         # Get or create account
         account, created = Account.objects.get_or_create(
@@ -42,9 +42,9 @@ def account_connect_gmail(request):
             return redirect(auth_url)
         except Exception as e:
             messages.error(request, f"Error initiating OAuth: {str(e)}")
-            return redirect("accounts_list")
+            return redirect(f"{reverse('settings')}?tab=accounts")
 
-    return redirect("accounts_list")
+    return redirect(f"{reverse('settings')}?tab=accounts")
 
 
 @login_required
@@ -55,11 +55,11 @@ def account_gmail_oauth_callback(request):
 
     if error:
         messages.error(request, f"OAuth error: {error}")
-        return redirect("accounts_list")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
     if not code:
         messages.error(request, "No authorization code received.")
-        return redirect("accounts_list")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
     # Exchange code for token
     redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
@@ -88,19 +88,40 @@ def account_gmail_oauth_callback(request):
                     flow.fetch_token(code=code)
                 credentials = flow.credentials
             except Exception as e2:
-                messages.error(
-                    request,
-                    f"OAuth error after scope warning: {str(e2)}. Please try connecting again.",
-                )
-                return redirect("accounts_list")
+                error_msg2 = str(e2)
+                if "invalid_grant" in error_msg2.lower():
+                    messages.error(
+                        request,
+                        "The authorization code has expired or has already been used. Please try connecting your Gmail account again.",
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f"OAuth error after scope warning: {error_msg2}. Please try connecting again.",
+                    )
+                return redirect(f"{reverse('settings')}?tab=accounts")
         else:
             # Non-scope warnings should be treated as errors
             messages.error(request, f"OAuth warning: {error_msg}")
-            return redirect("accounts_list")
+            return redirect(f"{reverse('settings')}?tab=accounts")
+    except Exception as e:
+        # Catch any other exceptions (like InvalidGrantError)
+        error_msg = str(e)
+        if "invalid_grant" in error_msg.lower() or "InvalidGrantError" in str(type(e).__name__):
+            messages.error(
+                request,
+                "The authorization code has expired or has already been used. Please try connecting your Gmail account again.",
+            )
+        else:
+            messages.error(
+                request,
+                f"OAuth error: {error_msg}. Please try connecting again.",
+            )
+        return redirect(f"{reverse('settings')}?tab=accounts")
     
     if not credentials:
         messages.error(request, "Failed to obtain OAuth credentials.")
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
     
     try:
         # Get email from Gmail API profile (this works with Gmail scopes)
@@ -127,11 +148,11 @@ def account_gmail_oauth_callback(request):
                     request, 
                     f"Could not retrieve email address. Gmail API: {str(gmail_error)}. Userinfo API: {str(userinfo_error)}. Please try connecting again."
                 )
-                return redirect("settings?tab=accounts")
+                return redirect(f"{reverse('settings')}?tab=accounts")
         
         if not email:
             messages.error(request, "Could not retrieve email address from Google.")
-            return redirect("settings?tab=accounts")
+            return redirect(f"{reverse('settings')}?tab=accounts")
         
         # Get or create account with the email from OAuth
         account, created = Account.objects.get_or_create(
@@ -151,7 +172,7 @@ def account_gmail_oauth_callback(request):
             messages.info(
                 request, f"Gmail account {account.email} was already connected."
             )
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
         import traceback
         error_msg = str(e)
@@ -170,7 +191,15 @@ def account_gmail_oauth_callback(request):
             )
         else:
             messages.error(request, f"Error connecting account: {error_msg}")
-        return redirect("accounts_list")
+        
+        # Safe redirect - handle any potential reverse errors
+        try:
+            settings_url = reverse('settings')
+            return redirect(f"{settings_url}?tab=accounts")
+        except Exception as redirect_error:
+            # Fallback to simple redirect if reverse fails
+            logger.error(f"Redirect error: {redirect_error}")
+            return redirect('/settings?tab=accounts')
     finally:
         # Clean up session
         request.session.pop("oauth_state", None)
@@ -184,7 +213,7 @@ def account_connect_microsoft(request):
         email = request.POST.get("email", "").strip()
         if not email:
             messages.error(request, "Email address is required.")
-            return redirect("accounts_list")
+            return redirect(f"{reverse('settings')}?tab=accounts")
 
         # Get or create account
         account, created = Account.objects.get_or_create(
@@ -205,9 +234,9 @@ def account_connect_microsoft(request):
             return redirect(auth_url)
         except Exception as e:
             messages.error(request, f"Error initiating OAuth: {str(e)}")
-            return redirect("accounts_list")
+            return redirect(f"{reverse('settings')}?tab=accounts")
 
-    return redirect("accounts_list")
+    return redirect(f"{reverse('settings')}?tab=accounts")
 
 
 @login_required
@@ -219,17 +248,17 @@ def account_microsoft_oauth_callback(request):
 
     if error:
         messages.error(request, f"OAuth error: {error}")
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
     if not code:
         messages.error(request, "No authorization code received.")
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
     # Verify state
     session_state = request.session.get("oauth_state")
     if not session_state or state != session_state:
         messages.error(request, "Invalid OAuth state.")
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
     # Exchange code for token
     redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
@@ -239,11 +268,11 @@ def account_microsoft_oauth_callback(request):
         token_dict = MicrosoftEmailOAuthService.exchange_code_for_token(code, redirect_uri)
     except Exception as e:
         messages.error(request, f"OAuth error: {str(e)}. Please try connecting again.")
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
     
     if not token_dict:
         messages.error(request, "Failed to obtain OAuth credentials.")
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
     
     try:
         # Get email from Microsoft Graph API
@@ -260,11 +289,11 @@ def account_microsoft_oauth_callback(request):
                 request, 
                 f"Could not retrieve email address from Microsoft: {str(e)}. Please try connecting again."
             )
-            return redirect("settings?tab=accounts")
+            return redirect(f"{reverse('settings')}?tab=accounts")
         
         if not email:
             messages.error(request, "Could not retrieve email address from Microsoft.")
-            return redirect("settings?tab=accounts")
+            return redirect(f"{reverse('settings')}?tab=accounts")
         
         # Get or create account with the email from OAuth
         account, created = Account.objects.get_or_create(
@@ -284,7 +313,7 @@ def account_microsoft_oauth_callback(request):
             messages.info(
                 request, f"Microsoft account {account.email} was already connected."
             )
-        return redirect("settings?tab=accounts")
+        return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
         import traceback
         error_msg = str(e)
@@ -303,7 +332,15 @@ def account_microsoft_oauth_callback(request):
             )
         else:
             messages.error(request, f"Error connecting account: {error_msg}")
-        return redirect("settings?tab=accounts")
+        
+        # Safe redirect - handle any potential reverse errors
+        try:
+            settings_url = reverse('settings')
+            return redirect(f"{settings_url}?tab=accounts")
+        except Exception as redirect_error:
+            # Fallback to simple redirect if reverse fails
+            logger.error(f"Redirect error: {redirect_error}")
+            return redirect('/settings?tab=accounts')
     finally:
         # Clean up session
         request.session.pop("oauth_state", None)

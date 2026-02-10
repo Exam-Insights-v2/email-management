@@ -66,15 +66,121 @@
     </script>
   </head>
   <body class="h-full bg-white dark:bg-gray-900">
-    {% if messages %}
-    <div class="fixed top-4 right-4 z-50 space-y-2">
-      {% for message in messages %}
-      <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-2 border-red-200 dark:border-red-800{% elif message.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200 border-2 border-emerald-200 dark:border-emerald-800{% else %}bg-cyan-50 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-200 border-2 border-cyan-200 dark:border-cyan-800{% endif %}">
-        {{ message }}
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
     {% block content %}{% endblock %}
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-0 right-0 z-50 flex flex-col gap-2 p-4 pointer-events-none" style="max-width: 420px;"></div>
+
+    <script>
+      // Toast System (Sonner-style)
+      (function() {
+        const toastContainer = document.getElementById('toast-container');
+        let toastIdCounter = 0;
+        const toasts = new Map();
+
+        function createToast(message, type = 'info', duration = 5000) {
+          const toastId = `toast-${toastIdCounter++}`;
+          const toast = document.createElement('div');
+          toast.id = toastId;
+          toast.className = `pointer-events-auto flex items-start gap-3 rounded-lg border p-4 shadow-lg transition-all duration-300 animate-in slide-in-from-bottom-2 ${
+            type === 'success' 
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-emerald-200 dark:border-emerald-800' 
+              : type === 'error'
+              ? 'bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 border-red-200 dark:border-red-800'
+              : 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-900 dark:text-cyan-100 border-cyan-200 dark:border-cyan-800'
+          }`;
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(20px)';
+
+          // Icon
+          const icon = document.createElement('div');
+          icon.className = 'flex-shrink-0 mt-0.5';
+          if (type === 'success') {
+            icon.innerHTML = '<i class="ti ti-circle-check size-5 text-emerald-600 dark:text-emerald-400"></i>';
+          } else if (type === 'error') {
+            icon.innerHTML = '<i class="ti ti-circle-x size-5 text-red-600 dark:text-red-400"></i>';
+          } else {
+            icon.innerHTML = '<i class="ti ti-info-circle size-5 text-cyan-600 dark:text-cyan-400"></i>';
+          }
+
+          // Content
+          const content = document.createElement('div');
+          content.className = 'flex-1 text-sm font-medium';
+          content.textContent = message;
+
+          // Close button
+          const closeBtn = document.createElement('button');
+          closeBtn.className = 'flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors';
+          closeBtn.innerHTML = '<i class="ti ti-x size-4"></i>';
+          closeBtn.onclick = () => removeToast(toastId);
+
+          toast.appendChild(icon);
+          toast.appendChild(content);
+          toast.appendChild(closeBtn);
+          toastContainer.appendChild(toast);
+
+          // Animate in
+          requestAnimationFrame(() => {
+            toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+          });
+
+          toasts.set(toastId, { element: toast, timeout: null });
+
+          // Auto remove after duration
+          if (duration > 0) {
+            const timeout = setTimeout(() => {
+              removeToast(toastId);
+            }, duration);
+            toasts.get(toastId).timeout = timeout;
+          }
+
+          return toastId;
+        }
+
+        function removeToast(toastId) {
+          const toastData = toasts.get(toastId);
+          if (!toastData) return;
+
+          if (toastData.timeout) {
+            clearTimeout(toastData.timeout);
+          }
+
+          const toast = toastData.element;
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(-20px)';
+
+          setTimeout(() => {
+            if (toast.parentNode) {
+              toast.parentNode.removeChild(toast);
+            }
+            toasts.delete(toastId);
+          }, 300);
+        }
+
+        // Toast API
+        window.toast = {
+          success: (message, duration) => createToast(message, 'success', duration),
+          error: (message, duration) => createToast(message, 'error', duration),
+          info: (message, duration) => createToast(message, 'info', duration),
+          remove: removeToast,
+        };
+
+        // Convert Django messages to toasts
+        document.addEventListener('DOMContentLoaded', function() {
+          {% if messages %}
+          {% for message in messages %}
+          (function() {
+            const messageText = '{{ message|escapejs }}';
+            const messageTags = '{{ message.tags|default:"info" }}';
+            const toastType = messageTags === 'error' ? 'error' : messageTags === 'success' ? 'success' : 'info';
+            window.toast[toastType](messageText);
+          })();
+          {% endfor %}
+          {% endif %}
+        });
+      })();
+    </script>
   </body>
 </html>

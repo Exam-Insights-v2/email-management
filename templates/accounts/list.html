@@ -46,16 +46,7 @@
     </li>
     {% empty %}
     <li class="px-4 py-12 text-center">
-      <div class="inline-flex items-center justify-center w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg mb-3">
-        <svg width="24" height="24" class="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-        </svg>
-      </div>
       <p class="text-gray-600 dark:text-gray-400 text-sm mb-3">No accounts yet.</p>
-      <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs">
-        Connect Your First Account
-        <i class="ti ti-bolt w-3.5 h-3.5 flex-shrink-0" aria-hidden="true"></i>
-      </a>
     </li>
     {% endfor %}
   </ul>

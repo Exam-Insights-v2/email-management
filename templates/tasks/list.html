@@ -6,7 +6,7 @@
 
 {% block header_center %}
   <div id="refresh-sync-message" class="hidden">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-50 text-cyan-500 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-xs sm:text-sm">
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-xs sm:text-sm">
       <i class="ti ti-refresh w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
       Refresh to sync
     </button>
@@ -111,16 +111,8 @@
 
 <!-- Empty State (if no tasks at all) -->
 {% if not all_tasks %}
-  <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center mt-3">
-    <div class="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 dark:bg-gray-700 rounded-lg mb-3">
-      <i class="ti ti-clipboard size-5 sm:size-6 text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
-    </div>
+  <div class="p-6 sm:p-12 text-center mt-3">
     <p class="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3">No tasks yet.</p>
-    <button type="button" onclick="document.getElementById('create-task').showModal();" class="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs">
-      <span class="hidden sm:inline">Create Your First Task</span>
-      <span class="sm:hidden">Create Task</span>
-      <i class="ti ti-plus w-3.5 h-3.5 flex-shrink-0" aria-hidden="true"></i>
-    </button>
   </div>
 {% endif %}
 
