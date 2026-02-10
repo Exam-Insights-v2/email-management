@@ -16,7 +16,7 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A linemarking_hub worker -l info
+    command: celery -A linemarking_hub worker -l warning
     volumes:
       - .:/app
     env_file:
@@ -30,7 +30,7 @@ services:
 
   celery_beat:
     build: .
-    command: celery -A linemarking_hub beat -l info
+    command: celery -A linemarking_hub beat -l warning
     volumes:
       - .:/app
     env_file:

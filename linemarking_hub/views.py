@@ -21,6 +21,7 @@ from linemarking_hub.forms import (
     JobForm,
     LabelForm,
     TaskForm,
+    TaskFilterForm,
 )
 
 
@@ -201,9 +202,17 @@ def job_delete(request, pk):
 def tasks_list(request):
     from django.db.models import Q
     from collections import defaultdict
+    from datetime import datetime
     
     # Get search query
     search_query = request.GET.get('search', '').strip()
+    
+    # Get first available connected account for forms
+    from accounts.models import Account
+    account = Account.objects.filter(is_connected=True).first()
+    
+    # Initialize filter form with GET parameters
+    filter_form = TaskFilterForm(request.GET, user=request.user, account=account)
     
     # Get all tasks
     tasks = Task.objects.select_related("account", "job", "email_message").prefetch_related(
@@ -221,6 +230,53 @@ def tasks_list(request):
             Q(email_message__body_html__icontains=search_query)
         )
     
+    # Apply filter form filters
+    if filter_form.is_valid():
+        # Filter by email (supports multiple comma-separated emails)
+        email_filter = filter_form.cleaned_data.get('email')
+        if email_filter:
+            email_list = [e.strip() for e in email_filter.split(',') if e.strip()]
+            if email_list:
+                email_q = Q()
+                for email in email_list:
+                    email_q |= Q(email_message__from_address__icontains=email) | Q(email_message__from_name__icontains=email)
+                tasks = tasks.filter(email_q)
+        
+        # Filter by date range
+        date_from = filter_form.cleaned_data.get('date_from')
+        date_to = filter_form.cleaned_data.get('date_to')
+        if date_from:
+            tasks = tasks.filter(created_at__date__gte=date_from)
+        if date_to:
+            tasks = tasks.filter(created_at__date__lte=date_to)
+        
+        # Filter by status (multiple)
+        statuses = filter_form.cleaned_data.get('status')
+        if statuses:
+            tasks = tasks.filter(status__in=statuses)
+        
+        # Filter by task ID (supports multiple comma-separated IDs)
+        task_id = filter_form.cleaned_data.get('task_id')
+        if task_id:
+            task_ids = [tid.strip() for tid in task_id.split(',') if tid.strip()]
+            if task_ids:
+                try:
+                    task_id_list = [int(tid) for tid in task_ids]
+                    tasks = tasks.filter(pk__in=task_id_list)
+                except ValueError:
+                    pass  # Invalid task IDs, skip filtering
+        
+        # Filter by priority (multiple)
+        priorities = filter_form.cleaned_data.get('priority')
+        if priorities:
+            priority_list = [int(p) for p in priorities]
+            tasks = tasks.filter(priority__in=priority_list)
+        
+        # Filter by label (multiple)
+        labels = filter_form.cleaned_data.get('label')
+        if labels:
+            tasks = tasks.filter(email_message__labels__label__in=labels).distinct()
+    
     # Group tasks by priority (5=Urgent, 4=High, 3=Medium, 2=Low, 1=Lowest)
     tasks_by_priority = defaultdict(list)
     all_tasks = list(tasks.order_by("-created_at"))
@@ -230,15 +286,13 @@ def tasks_list(request):
         priority = max(1, min(5, task.priority or 1))
         tasks_by_priority[priority].append(task)
     
-    # Get first available connected account for form
-    from accounts.models import Account
-    account = Account.objects.filter(is_connected=True).first()
     form = TaskForm(user=request.user, account=account)
     
     return render(request, "tasks/list.html", {
         "tasks_by_priority": dict(tasks_by_priority),
         "all_tasks": all_tasks,
         "form": form,
+        "filter_form": filter_form,
         "search_query": search_query
     })
 
@@ -532,7 +586,7 @@ def draft_send(request, pk):
 # Labels CRUD
 @login_required
 def labels_list(request):
-    labels = Label.objects.select_related("account").prefetch_related("actions__action").order_by(
+    labels = Label.objects.select_related("account").prefetch_related("actions").order_by(
         "name"
     )
     form = LabelForm()
@@ -542,7 +596,7 @@ def labels_list(request):
 @login_required
 def label_detail(request, pk):
     label = get_object_or_404(
-        Label.objects.select_related("account").prefetch_related("actions__action"),
+        Label.objects.select_related("account").prefetch_related("actions"),
         pk=pk,
     )
     return render(request, "labels/detail.html", {"label": label})

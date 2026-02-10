@@ -45,18 +45,11 @@ def orchestrate_label_actions(
         # If label has linked actions, prefer those; otherwise use all account actions
         if label_actions:
             available_actions = label_actions
-            logger.info(
-                f"Using {len(available_actions)} label-linked actions for label {label.name}"
-            )
         else:
             # Fallback: use all account actions if no label-linked actions
             available_actions = list(Action.objects.filter(account=email.account).order_by("name"))
-            logger.info(
-                f"No label-linked actions found, using all {len(available_actions)} account actions"
-            )
         
         if not available_actions:
-            logger.info(f"No actions available for account {email.account}")
             return {
                 "success": True,
                 "message": "No actions available for this account",
@@ -74,7 +67,6 @@ def orchestrate_label_actions(
         action_plan = get_ai_action_plan(client, system_prompt, user_prompt, available_actions)
         
         if not action_plan or not action_plan.get("actions"):
-            logger.info(f"AI decided no actions needed for label {label.name}")
             return {
                 "success": True,
                 "message": "AI determined no actions needed",
@@ -102,9 +94,6 @@ def orchestrate_label_actions(
                 })
                 continue
             
-            logger.info(
-                f"Executing action '{action.name}' ({tool_name}) for email {email.pk}: {reason}"
-            )
             
             # Execute the action
             result = execute_action(action, email, client, execution_context)
@@ -120,10 +109,6 @@ def orchestrate_label_actions(
             if result.get("success") and result.get("data"):
                 execution_context.update(result["data"])
         
-        logger.info(
-            f"Completed action orchestration for label {label.name}: "
-            f"{len(execution_results)} actions executed"
-        )
         
         return {
             "success": True,

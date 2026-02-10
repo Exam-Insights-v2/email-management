@@ -251,10 +251,6 @@ def process_email(email_message_id: int):
                         ).exclude(pk=task.pk)
                         
                         if other_tasks.exists():
-                            logger.info(
-                                f"Found {other_tasks.count()} other task(s) for thread {email.thread.pk} "
-                                f"after creating task {task.pk}. Consolidating now."
-                            )
                             
                             # Use the current task as the one to keep (it's the latest)
                             task_to_keep = task
@@ -344,7 +340,6 @@ def trigger_label_actions(label_id: int, email_message_id: int, triggered_by_act
     
     # Check if label is active
     if not label.is_active:
-        logger.info(f"Label {label.name} is inactive, skipping action execution")
         return
     
     # Prevent circular triggering: if this was triggered by an action adding a label,
@@ -367,12 +362,7 @@ def trigger_label_actions(label_id: int, email_message_id: int, triggered_by_act
     from automation.mcp_orchestrator import orchestrate_label_actions
     result = orchestrate_label_actions(label, email, client)
     
-    if result.get("success"):
-        logger.info(
-            f"AI orchestration for label {label.name} (email {email_message_id}): "
-            f"{result.get('message', 'completed')}"
-        )
-    else:
+    if not result.get("success"):
         logger.error(
             f"AI orchestration failed for label {label.name} (email {email_message_id}): "
             f"{result.get('message', 'unknown error')}"

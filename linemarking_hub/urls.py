@@ -5,8 +5,10 @@ from rest_framework import routers
 from accounts.views import (
     AccountViewSet,
     account_connect_gmail,
+    account_connect_microsoft,
     account_disconnect,
     account_gmail_oauth_callback,
+    account_microsoft_oauth_callback,
     account_sync,
 )
 from automation.views import ActionViewSet, EmailLabelViewSet, LabelViewSet
@@ -16,6 +18,8 @@ from linemarking_hub.auth_views import (
     google_oauth_login,
     login_view,
     logout_view,
+    microsoft_oauth_callback,
+    microsoft_oauth_login,
 )
 from linemarking_hub.views import (
     account_clear_signature,
@@ -115,6 +119,8 @@ urlpatterns = [
     path("accounts/<int:pk>/clear-writing-style/", account_clear_writing_style, name="account_clear_writing_style"),
     path("accounts/connect/gmail/", account_connect_gmail, name="connect_gmail"),
     path("accounts/gmail/callback/", account_gmail_oauth_callback, name="gmail_oauth_callback"),
+    path("accounts/connect/microsoft/", account_connect_microsoft, name="connect_microsoft"),
+    path("accounts/microsoft/callback/", account_microsoft_oauth_callback, name="microsoft_email_oauth_callback"),
     path("accounts/<int:pk>/disconnect/", account_disconnect, name="disconnect_account"),
     path("accounts/<int:pk>/sync/", account_sync, name="sync_account"),
     # Drafts
@@ -135,6 +141,8 @@ urlpatterns = [
     path("auth/logout/", logout_view, name="logout"),
     path("auth/google/login/", google_oauth_login, name="google_oauth_login"),
     path("auth/google/callback/", google_oauth_callback, name="google_oauth_callback"),
+    path("auth/microsoft/login/", microsoft_oauth_login, name="microsoft_oauth_login"),
+    path("auth/microsoft/callback/", microsoft_oauth_callback, name="microsoft_oauth_callback"),
     # Settings
     path("settings/", settings_view, name="settings"),
     # Admin & API

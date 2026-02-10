@@ -169,11 +169,6 @@ def execute_notify(
 ) -> Dict[str, Any]:
     """Send a notification (placeholder - implement based on your notification system)"""
     # TODO: Implement actual notification system
-    # For now, just log it
-    logger.info(
-        f"Notification action '{action.name}' triggered for email {email.pk}: "
-        f"{action.instructions}"
-    )
     
     return {
         "success": True,
@@ -190,10 +185,6 @@ def execute_schedule(
 ) -> Dict[str, Any]:
     """Schedule a follow-up (placeholder - implement based on your scheduling system)"""
     # TODO: Implement actual scheduling system
-    logger.info(
-        f"Schedule action '{action.name}' triggered for email {email.pk}: "
-        f"{action.instructions}"
-    )
     
     return {
         "success": True,

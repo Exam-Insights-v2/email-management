@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Actions • EmailIQ{% endblock %}
+{% block title %}Actions | EmailIQ{% endblock %}
 
 {% block header_title %}All Actions{% endblock %}
 
@@ -21,7 +21,7 @@
         <div class="min-w-0 flex-auto">
           <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ action.name }}</p>
           <p class="mt-0.5 truncate text-xs text-gray-600 dark:text-gray-400">
-            {% if action.instructions %}{{ action.instructions|truncatewords:20 }}{% else %}{{ action.function }} • {{ action.account.email }}{% endif %}
+            {% if action.instructions %}{{ action.instructions|truncatewords:20 }}{% else %}{{ action.function }} | {{ action.account.email }}{% endif %}
           </p>
         </div>
       </div>

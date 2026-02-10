@@ -5,12 +5,13 @@ from datetime import datetime
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
 
+import requests
 from django.db import transaction
 from django.utils import timezone
 from googleapiclient.discovery import build
 
 from accounts.models import Account
-from accounts.services import GmailOAuthService
+from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from mail.models import Draft, EmailMessage, EmailThread
 
 
@@ -439,12 +440,142 @@ class GmailService(EmailProviderService):
             raise ValueError(f"Error creating Gmail draft: {str(e)}")
 
 
+class MicrosoftService(EmailProviderService):
+    """Microsoft Graph Mail API service for fetching emails"""
+
+    def _get_headers(self, account: Account):
+        """Get authenticated headers for Microsoft Graph API"""
+        credentials = MicrosoftEmailOAuthService.get_valid_credentials(account)
+        if not credentials:
+            raise ValueError(f"Account {account} is not connected or token is invalid")
+        
+        return {
+            "Authorization": f"Bearer {credentials['access_token']}",
+            "Content-Type": "application/json",
+        }
+
+    def _parse_message(self, msg_data: dict) -> dict:
+        """Parse Microsoft Graph API message format"""
+        headers = {h["name"].lower(): h["value"] for h in msg_data.get("internetMessageHeaders", [])}
+
+        # Extract addresses
+        def parse_addresses(address_obj: dict) -> List[str]:
+            """Parse Microsoft Graph address object"""
+            if not address_obj:
+                return []
+            if isinstance(address_obj, list):
+                return [addr.get("emailAddress", {}).get("address", "") for addr in address_obj if addr.get("emailAddress", {}).get("address")]
+            if isinstance(address_obj, dict) and "emailAddress" in address_obj:
+                email_addr = address_obj["emailAddress"].get("address", "")
+                return [email_addr] if email_addr else []
+            return []
+
+        # Get body
+        body_html = msg_data.get("body", {}).get("content", "")
+        body_type = msg_data.get("body", {}).get("contentType", "")
+        
+        # If body is plain text, wrap in pre
+        if body_type == "text" and body_html:
+            body_html = f"<pre>{body_html}</pre>"
+
+        # Parse date
+        date_sent = None
+        if msg_data.get("sentDateTime"):
+            try:
+                date_sent = datetime.fromisoformat(msg_data["sentDateTime"].replace("Z", "+00:00"))
+            except Exception:
+                pass
+
+        # Get from address
+        from_obj = msg_data.get("from", {})
+        from_address = from_obj.get("emailAddress", {}).get("address", "") if from_obj else ""
+        from_name = from_obj.get("emailAddress", {}).get("name", "") if from_obj else ""
+
+        return {
+            "external_message_id": msg_data["id"],
+            "external_thread_id": msg_data.get("conversationId", ""),
+            "subject": msg_data.get("subject", ""),
+            "from_address": from_address,
+            "from_name": from_name,
+            "to_addresses": parse_addresses(msg_data.get("toRecipients", [])),
+            "cc_addresses": parse_addresses(msg_data.get("ccRecipients", [])),
+            "bcc_addresses": parse_addresses(msg_data.get("bccRecipients", [])),
+            "date_sent": date_sent,
+            "body_html": body_html or "",
+        }
+
+    def fetch_messages(
+        self, account: Account, max_results: int = 50, since: Optional[datetime] = None
+    ) -> List[dict]:
+        """Fetch messages from Microsoft - only received emails (inbox)"""
+        headers = self._get_headers(account)
+
+        # Build filter query - get all emails from inbox (not just unread)
+        filter_parts = []
+        
+        if since:
+            # Microsoft Graph filter format: sentDateTime ge YYYY-MM-DDTHH:MM:SSZ
+            filter_parts.append(f"sentDateTime ge {since.strftime('%Y-%m-%dT%H:%M:%SZ')}")
+
+        filter_query = " and ".join(filter_parts) if filter_parts else None
+
+        params = {
+            "$top": max_results,
+            "$orderby": "sentDateTime desc",
+        }
+        if filter_query:
+            params["$filter"] = filter_query
+
+        try:
+            # Get messages from inbox
+            response = requests.get(
+                "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages",
+                headers=headers,
+                params=params,
+            )
+            response.raise_for_status()
+            
+            messages_data = response.json()
+            messages = messages_data.get("value", [])
+
+            parsed_messages = []
+            for msg in messages:
+                # Get full message details
+                msg_id = msg["id"]
+                msg_response = requests.get(
+                    f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}",
+                    headers=headers,
+                )
+                msg_response.raise_for_status()
+                msg_data = msg_response.json()
+                parsed_messages.append(self._parse_message(msg_data))
+
+            return parsed_messages
+        except Exception as e:
+            raise ValueError(f"Error fetching Microsoft messages: {str(e)}")
+
+    def get_message(self, account: Account, external_message_id: str) -> dict:
+        """Get a single message by ID"""
+        headers = self._get_headers(account)
+        try:
+            response = requests.get(
+                f"https://graph.microsoft.com/v1.0/me/messages/{external_message_id}",
+                headers=headers,
+            )
+            response.raise_for_status()
+            msg_data = response.json()
+            return self._parse_message(msg_data)
+        except Exception as e:
+            raise ValueError(f"Error fetching Microsoft message: {str(e)}")
+
+
 class EmailSyncService:
     """Service for syncing emails from providers to database"""
 
     def __init__(self):
         self.providers = {
             "gmail": GmailService(),
+            "microsoft": MicrosoftService(),
         }
 
     def sync_account(self, account: Account, max_results: int = 50) -> dict:

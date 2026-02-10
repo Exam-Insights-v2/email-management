@@ -6,7 +6,7 @@ from rest_framework import viewsets
 
 from .models import Account, Provider
 from .serializers import AccountSerializer
-from .services import GmailOAuthService
+from .services import GmailOAuthService, MicrosoftEmailOAuthService, MicrosoftOAuthService
 
 
 class AccountViewSet(viewsets.ModelViewSet):
@@ -178,12 +178,148 @@ def account_gmail_oauth_callback(request):
 
 
 @login_required
+def account_connect_microsoft(request):
+    """Initiate Microsoft OAuth connection"""
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        if not email:
+            messages.error(request, "Email address is required.")
+            return redirect("accounts_list")
+
+        # Get or create account
+        account, created = Account.objects.get_or_create(
+            provider=Provider.MICROSOFT, email=email, defaults={"sync_enabled": True}
+        )
+
+        if account.is_connected:
+            messages.info(request, f"Account {email} is already connected.")
+            return redirect("account_detail", pk=account.pk)
+
+        # Get authorization URL
+        redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
+        try:
+            auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri)
+            # Store state in session for verification
+            request.session["oauth_state"] = state
+            request.session["oauth_account_id"] = account.pk
+            return redirect(auth_url)
+        except Exception as e:
+            messages.error(request, f"Error initiating OAuth: {str(e)}")
+            return redirect("accounts_list")
+
+    return redirect("accounts_list")
+
+
+@login_required
+def account_microsoft_oauth_callback(request):
+    """Handle Microsoft OAuth callback - get email from OAuth and create/update account"""
+    code = request.GET.get("code")
+    error = request.GET.get("error")
+    state = request.GET.get("state")
+
+    if error:
+        messages.error(request, f"OAuth error: {error}")
+        return redirect("settings?tab=accounts")
+
+    if not code:
+        messages.error(request, "No authorization code received.")
+        return redirect("settings?tab=accounts")
+
+    # Verify state
+    session_state = request.session.get("oauth_state")
+    if not session_state or state != session_state:
+        messages.error(request, "Invalid OAuth state.")
+        return redirect("settings?tab=accounts")
+
+    # Exchange code for token
+    redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
+    token_dict = None
+    
+    try:
+        token_dict = MicrosoftEmailOAuthService.exchange_code_for_token(code, redirect_uri)
+    except Exception as e:
+        messages.error(request, f"OAuth error: {str(e)}. Please try connecting again.")
+        return redirect("settings?tab=accounts")
+    
+    if not token_dict:
+        messages.error(request, "Failed to obtain OAuth credentials.")
+        return redirect("settings?tab=accounts")
+    
+    try:
+        # Get email from Microsoft Graph API
+        email = None
+        try:
+            user_info = MicrosoftOAuthService.get_user_info(token_dict)
+            email = user_info.get("mail") or user_info.get("userPrincipalName")
+        except Exception as e:
+            import traceback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Microsoft Graph API error: {str(e)}\n{traceback.format_exc()}")
+            messages.error(
+                request, 
+                f"Could not retrieve email address from Microsoft: {str(e)}. Please try connecting again."
+            )
+            return redirect("settings?tab=accounts")
+        
+        if not email:
+            messages.error(request, "Could not retrieve email address from Microsoft.")
+            return redirect("settings?tab=accounts")
+        
+        # Get or create account with the email from OAuth
+        account, created = Account.objects.get_or_create(
+            provider=Provider.MICROSOFT, 
+            email=email, 
+            defaults={"sync_enabled": True}
+        )
+        
+        # Save the OAuth token
+        MicrosoftEmailOAuthService.save_token(account, token_dict)
+        
+        if created:
+            messages.success(
+                request, f"Successfully connected new Microsoft account: {account.email}"
+            )
+        else:
+            messages.info(
+                request, f"Microsoft account {account.email} was already connected."
+            )
+        return redirect("settings?tab=accounts")
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        error_traceback = traceback.format_exc()
+        
+        # Log the full error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"OAuth callback error: {error_msg}\n{error_traceback}")
+        
+        # Provide helpful message for scope mismatch errors
+        if "scope" in error_msg.lower() or "invalid_grant" in error_msg.lower():
+            messages.error(
+                request,
+                f"OAuth scope error: {error_msg}. Please try connecting again.",
+            )
+        else:
+            messages.error(request, f"Error connecting account: {error_msg}")
+        return redirect("settings?tab=accounts")
+    finally:
+        # Clean up session
+        request.session.pop("oauth_state", None)
+        request.session.pop("oauth_account_id", None)
+
+
+@login_required
 def account_disconnect(request, pk):
     """Disconnect an account"""
     if request.method == "POST":
         try:
             account = Account.objects.get(pk=pk)
-            GmailOAuthService.disconnect_account(account)
+            if account.provider == Provider.GMAIL:
+                GmailOAuthService.disconnect_account(account)
+            elif account.provider == Provider.MICROSOFT:
+                MicrosoftEmailOAuthService.disconnect_account(account)
             messages.success(request, f"Disconnected account: {account.email}")
         except Account.DoesNotExist:
             messages.error(request, "Account not found.")

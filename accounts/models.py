@@ -23,7 +23,7 @@ class Account(models.Model):
         ordering = ["provider", "email"]
 
     def __str__(self):
-        return f"{self.provider} • {self.email}"
+        return f"{self.provider} | {self.email}"
 
 
 class OAuthToken(models.Model):

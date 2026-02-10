@@ -208,6 +208,77 @@ class TaskForm(forms.ModelForm):
         return task
 
 
+class TaskFilterForm(forms.Form):
+    """Form for filtering tasks"""
+    email = forms.CharField(
+        required=False,
+        label="Email",
+        widget=forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Filter by email address (comma-separated)"}),
+        help_text="Filter by email address (comma-separated for multiple)"
+    )
+    date_from = forms.DateField(
+        required=False,
+        label="Date From",
+        widget=forms.DateInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "type": "date"}),
+        help_text="Filter tasks from this date"
+    )
+    date_to = forms.DateField(
+        required=False,
+        label="Date To",
+        widget=forms.DateInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "type": "date"}),
+        help_text="Filter tasks until this date"
+    )
+    status = forms.MultipleChoiceField(
+        required=False,
+        label="Progress",
+        choices=[(choice.value, choice.label) for choice in TaskStatus],
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "mt-2 space-y-2"}),
+        help_text="Filter by task status (select multiple)"
+    )
+    task_id = forms.CharField(
+        required=False,
+        label="Task ID",
+        widget=forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "e.g., 123, 456, 789"}),
+        help_text="Filter by task IDs (comma-separated)"
+    )
+    priority = forms.MultipleChoiceField(
+        required=False,
+        label="Urgency",
+        choices=[("5", "Urgent"), ("4", "High"), ("3", "Medium"), ("2", "Low"), ("1", "Lowest")],
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "mt-2 space-y-2"}),
+        help_text="Filter by priority level (select multiple)"
+    )
+    label = forms.ModelMultipleChoiceField(
+        required=False,
+        label="Label",
+        queryset=None,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "mt-2 space-y-2"}),
+        help_text="Filter by labels (select multiple)"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        account = kwargs.pop('account', None)
+        super().__init__(*args, **kwargs)
+        
+        # Get account from user or use provided account
+        if account:
+            account_obj = account
+        elif user:
+            from accounts.models import Account
+            account_obj = Account.objects.filter(is_connected=True).first()
+        else:
+            account_obj = None
+        
+        # Set up label queryset
+        if account_obj:
+            from automation.models import Label
+            self.fields['label'].queryset = Label.objects.filter(account=account_obj).order_by('name')
+        else:
+            from automation.models import Label
+            self.fields['label'].queryset = Label.objects.none()
+
+
 class LabelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
