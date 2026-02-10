@@ -376,12 +376,12 @@
       });
     </script>
   </head>
-  <body class="h-full bg-white dark:bg-gray-900">
+  <body class="h-full bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
     {% block header %}
     {% include 'includes/header.html' %}
     {% endblock %}
-    <header class="sticky top-[48px] z-40 relative bg-white dark:bg-gray-900 after:pointer-events-none after:absolute after:inset-x-0 after:inset-y-0">
-      <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-4">
+    <header class="sticky top-[48px] z-40 flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/10">
+      <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-2">
         <div class="flex items-center justify-between py-1 sm:py-2">
           <h1 class="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate pr-2">{% block header_title %}Jobs{% endblock %}</h1>
           <div class="flex items-center">
@@ -390,7 +390,7 @@
         </div>
       </div>
     </header>
-    <main>
+    <main class="flex-1 overflow-y-auto">
       <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
         {% if messages %}
         <div class="mb-3 space-y-2">

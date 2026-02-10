@@ -465,6 +465,7 @@ class EmailSyncService:
         # Store in database
         created_count = 0
         updated_count = 0
+        synced_email_ids = []  # Track which emails were synced in this batch
 
         with transaction.atomic():
             for msg_data in messages:
@@ -491,6 +492,9 @@ class EmailSyncService:
                     },
                 )
 
+                # Track this email as synced in this batch
+                synced_email_ids.append(email_msg.pk)
+
                 if created:
                     created_count += 1
                 else:
@@ -504,4 +508,5 @@ class EmailSyncService:
             "created": created_count,
             "updated": updated_count,
             "total": len(messages),
+            "synced_email_ids": synced_email_ids,  # Return list of synced email IDs
         }

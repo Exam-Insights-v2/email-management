@@ -93,6 +93,18 @@ def slice_filter(value, arg):
         return value
 
 
+def _deterministic_hash(text):
+    """Create a deterministic hash from text that's consistent across Python restarts"""
+    if not text:
+        return 0
+    # Simple deterministic hash function
+    hash_value = 0
+    for char in str(text).lower():
+        hash_value = ((hash_value << 5) - hash_value) + ord(char)
+        hash_value = hash_value & 0xFFFFFFFF  # Convert to 32-bit integer
+    return abs(hash_value)
+
+
 @register.filter
 def label_color_bg(label_name):
     """Get consistent background/text color classes for a label based on its name"""
@@ -111,9 +123,9 @@ def label_color_bg(label_name):
         'bg-orange-400/10 text-orange-600',
     ]
     
-    # Simple hash function to consistently map label name to color
-    hash_value = hash(str(label_name).lower()) % len(colors)
-    return colors[hash_value]
+    # Use deterministic hash function to consistently map label name to color
+    hash_value = _deterministic_hash(str(label_name).lower())
+    return colors[hash_value % len(colors)]
 
 
 @register.filter
@@ -134,6 +146,6 @@ def label_color_dot(label_name):
         'bg-orange-400',
     ]
     
-    # Simple hash function to consistently map label name to color
-    hash_value = hash(str(label_name).lower()) % len(colors)
-    return colors[hash_value]
+    # Use deterministic hash function to consistently map label name to color
+    hash_value = _deterministic_hash(str(label_name).lower())
+    return colors[hash_value % len(colors)]

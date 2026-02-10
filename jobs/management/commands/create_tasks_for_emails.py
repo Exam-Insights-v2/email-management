@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.db.models import Q
+from django.db.models import Q, Count
 from mail.models import EmailMessage
 from jobs.models import Task
 from automation.tasks import process_email
@@ -43,9 +43,10 @@ class Command(BaseCommand):
         use_async = options.get("async", True) and not options.get("sync", False)
 
         # Build query for emails without tasks
-        emails_query = EmailMessage.objects.filter(
-            ~Q(tasks__isnull=False)  # Emails that don't have any tasks
-        ).select_related("account", "thread")
+        # Annotate with task count and filter for emails with 0 tasks
+        emails_query = EmailMessage.objects.annotate(
+            task_count=Count('tasks')
+        ).filter(task_count=0).select_related("account", "thread")
 
         if account_id:
             emails_query = emails_query.filter(account_id=account_id)
