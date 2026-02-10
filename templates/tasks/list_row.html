@@ -1,7 +1,7 @@
 {% comment %}
 List row component for tasks - reusable across priority sections
 {% endcomment %}
-<li class="grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_60px_1fr_auto_120px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="if (window.openTaskDetailModal) window.openTaskDetailModal({{ task.pk }});">
+<li class="grid grid-cols-[32px_1fr_24px_auto] sm:grid-cols-[40px_60px_24px_1fr_auto_120px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="if (window.openTaskDetailModal) window.openTaskDetailModal({{ task.pk }});">
   <!-- Priority Bars Column -->
   <div class="flex items-center justify-center">
     <div class="flex items-end gap-0.5 h-4">
@@ -25,6 +25,19 @@ List row component for tasks - reusable across priority sections
   <!-- ID Column (Desktop) -->
   <div class="hidden sm:flex items-center">
     <span class="text-xs font-light text-gray-500 dark:text-gray-200">TASK-{{ task.pk }}</span>
+  </div>
+  
+  <!-- Status/Progress Icon Column -->
+  <div class="flex items-center justify-center">
+    {% if task.status == 'done' %}
+      <i class="ti ti-circle-check size-4 text-green-500 dark:text-green-400" aria-hidden="true" title="Done"></i>
+    {% elif task.status == 'in_progress' %}
+      <i class="ti ti-clock-play size-4 text-blue-500 dark:text-blue-400" aria-hidden="true" title="In Progress"></i>
+    {% elif task.status == 'cancelled' %}
+      <i class="ti ti-circle-x size-4 text-red-500 dark:text-red-400" aria-hidden="true" title="Cancelled"></i>
+    {% else %}
+      <i class="ti ti-clock size-4 text-yellow-500 dark:text-yellow-400" aria-hidden="true" title="Pending"></i>
+    {% endif %}
   </div>
   
   <!-- Name Column (Desktop) -->

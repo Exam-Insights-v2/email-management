@@ -19,9 +19,9 @@ Opens with Cmd/Ctrl+K or search icon click
                 id="command-palette-input" 
                 name="search" 
                 value="{{ search_query|default:'' }}" 
-                placeholder="{% if 'tasks' in request.path %}Search tasks and emails by title, description, subject, sender, or content...{% else %}Search tasks and emails...{% endif %}" 
+                placeholder="Search tasks and emails..." 
                 autocomplete="off"
-                class="w-full bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none text-xs"
+                class="w-full bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none text-sm"
               >
             </form>
             <button 
@@ -42,10 +42,6 @@ Opens with Cmd/Ctrl+K or search icon click
             >
               <i class="ti ti-x size-4" aria-hidden="true"></i>
             </button>
-          </div>
-          
-          <!-- Keyboard shortcut hint -->
-          <div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10">
           </div>
         </div>
       </el-dialog-panel>

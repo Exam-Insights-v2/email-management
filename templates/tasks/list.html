@@ -4,6 +4,15 @@
 
 {% block header_title %}Tasks{% endblock %}
 
+{% block header_center %}
+  <div id="refresh-sync-message" class="hidden">
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm">
+      <i class="ti ti-refresh w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+      Refresh to sync
+    </button>
+  </div>
+{% endblock %}
+
 {% block header_action %}
   <div class="flex items-center gap-2">
     <!-- Filter Button -->
@@ -120,9 +129,9 @@
   {% include 'tasks/detail_modal.html' with task=task %}
 {% endfor %}
 
-<!-- Edit Drawers -->
+<!-- Edit Modals -->
 {% for task in all_tasks %}
-  {% include 'includes/edit_drawer.html' with drawer_id="edit-task-"|add:task.pk|stringformat:"s" title="Edit Task" form_template="tasks/form_content.html" form_url="task_update" object_pk=task.pk %}
+  {% include 'includes/edit_modal.html' with modal_id="edit-task-"|add:task.pk|stringformat:"s" title="Edit Task" form_template="tasks/form_content.html" form_url="task_update" object_pk=task.pk %}
 {% endfor %}
 
 <script>
@@ -156,54 +165,54 @@
     }
   });
 
-  // Global function to open edit task drawer
-  window.openEditTaskDrawer = function(taskPk) {
-    const drawerId = 'edit-task-' + taskPk;
-    const drawer = document.getElementById(drawerId);
-    const contentDiv = document.getElementById(drawerId + '-content');
+  // Refresh sync message functionality
+  (function() {
+    const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+    const refreshMessage = document.getElementById('refresh-sync-message');
     
-    if (!drawer || !contentDiv) return;
+    if (!refreshMessage) return;
     
-    drawer.showModal();
-    
-    // Load form content if not already loaded
-    if (!contentDiv.hasAttribute('data-loaded')) {
-      fetch('{% url "task_update" 0 %}'.replace('0', taskPk))
-        .then(response => response.text())
-        .then(html => {
-          contentDiv.innerHTML = html;
-          contentDiv.setAttribute('data-loaded', 'true');
-          // Initialize date pickers for dynamically loaded content
-          if (window.initDatePickers) {
-            window.initDatePickers();
-          }
-          // Initialize priority sliders for dynamically loaded content
-          if (window.initPrioritySliders) {
-            window.initPrioritySliders();
-          }
-          // Apply styles to select elements
-          const form = contentDiv.querySelector('form');
-          if (form) {
-            const selects = form.querySelectorAll('.select-wrapper select');
-            selects.forEach(select => {
-              select.classList.add('col-start-1', 'row-start-1', 'block', 'w-full', 'rounded-md', 'bg-gray-100', 'dark:bg-white/5', 'px-3', 'py-1.5', 'text-sm', 'text-gray-900', 'dark:text-white', 'border-0', 'focus:ring-2', 'focus:ring-cyan-600', 'appearance-none');
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Error loading form:', error);
-          contentDiv.innerHTML = '<p class="text-red-400">Error loading form. Please refresh the page.</p>';
-        });
-    } else {
-      // Initialize date pickers if content already loaded
-      if (window.initDatePickers) {
-        window.initDatePickers();
+    // Get or set page load time
+    const getPageLoadTime = () => {
+      const stored = sessionStorage.getItem('pageLoadTime');
+      if (stored) {
+        return parseInt(stored, 10);
       }
-      // Initialize priority sliders if content already loaded
-      if (window.initPrioritySliders) {
-        window.initPrioritySliders();
+      const now = Date.now();
+      sessionStorage.setItem('pageLoadTime', now.toString());
+      return now;
+    };
+    
+    // Check if 10 minutes have passed
+    const checkRefreshNeeded = () => {
+      const loadTime = getPageLoadTime();
+      const now = Date.now();
+      const elapsed = now - loadTime;
+      
+      if (elapsed >= REFRESH_INTERVAL_MS) {
+        refreshMessage.classList.remove('hidden');
+      } else {
+        refreshMessage.classList.add('hidden');
+        // Schedule check for when 10 minutes will have passed
+        const remaining = REFRESH_INTERVAL_MS - elapsed;
+        setTimeout(() => {
+          refreshMessage.classList.remove('hidden');
+        }, remaining);
       }
-    }
-  };
+    };
+    
+    // Initial check
+    checkRefreshNeeded();
+    
+    // Check every minute to be safe
+    setInterval(checkRefreshNeeded, 60 * 1000);
+    
+    // Reset on page visibility change (user comes back to tab)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        checkRefreshNeeded();
+      }
+    });
+  })();
 </script>
 {% endblock %}

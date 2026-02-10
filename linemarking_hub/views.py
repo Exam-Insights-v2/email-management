@@ -289,11 +289,13 @@ def task_update(request, pk):
                 return redirect("task_detail", pk=task.pk)
             except ValidationError as e:
                 messages.error(request, str(e))
-                # Return form with errors for drawer
-                return render(request, "tasks/form_content.html", {"form": form, "task": task, "form_url": "task_update", "drawer_id": f"edit-task-{pk}"})
+                # Return form with errors for modal/drawer
+                modal_id = f"edit-task-{pk}"
+                return render(request, "tasks/form_content.html", {"form": form, "task": task, "form_url": "task_update", "drawer_id": modal_id, "modal_id": modal_id})
     else:
         form = TaskForm(instance=task, user=request.user, account=account)
-    return render(request, "tasks/form_content.html", {"form": form, "task": task, "form_url": "task_update", "drawer_id": f"edit-task-{pk}"})
+    modal_id = f"edit-task-{pk}"
+    return render(request, "tasks/form_content.html", {"form": form, "task": task, "form_url": "task_update", "drawer_id": modal_id, "modal_id": modal_id})
 
 
 @login_required
