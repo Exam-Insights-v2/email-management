@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -80,30 +79,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "linemarking_hub.wsgi.application"
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-if DATABASE_URL:
-    parsed = urlparse(DATABASE_URL)
-    # Ensure HOST is set - if hostname is None/empty, default to localhost
-    # Empty string causes psycopg2 to try Unix socket, which fails in containers
-    db_host = parsed.hostname or "localhost"
-    db_port = parsed.port or "5432"
-    
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed.path.lstrip("/"),
-            "USER": parsed.username,
-            "PASSWORD": parsed.password,
-            "HOST": db_host,
-            "PORT": db_port,
-        }
-    }
-elif all(
+# Database configuration using individual DB_* environment variables
+if all(
     os.environ.get(key)
     for key in ["DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD"]
 ):
-    # Use individual DB_* environment variables if DATABASE_URL is not set
     db_config = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME"),
