@@ -57,8 +57,8 @@
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Body</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
-              <div class="prose prose-invert max-w-none">
-                {{ draft.body_html|safe }}
+              <div class="prose prose-invert max-w-none email-body">
+                {% load db_filters %}{{ draft.body_html|remove_global_style_script }}
               </div>
             </dd>
           </div>

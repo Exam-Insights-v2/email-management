@@ -325,7 +325,7 @@ Usage:
                       data-placeholder="Write your reply..."
                       role="textbox"
                       aria-multiline="true"
-                    >{% if email_data.draft %}{{ email_data.draft.body_html|safe }}{% endif %}</div>
+                    >{% if email_data.draft %}{% load db_filters %}{{ email_data.draft.body_html|remove_global_style_script }}{% endif %}</div>
                     <div id="draft-attachments-list-{{ task.pk }}" class="mt-3 {% if not email_data.draft or not email_data.draft.attachments.all %}hidden{% endif %}">
                       <ul class="space-y-2" id="draft-attachments-ul-{{ task.pk }}">
                       {% if email_data.draft %}{% load db_filters %}{% for att in email_data.draft.attachments.all %}

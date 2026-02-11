@@ -47,6 +47,11 @@
         overflow-wrap: break-word;
         white-space: normal;
         font-weight: 400;
+        /* CSS containment to isolate email styles from affecting the rest of the page */
+        contain: layout style paint;
+        isolation: isolate;
+        /* Prevent style leakage */
+        position: relative;
       }
       
       .dark .email-body {

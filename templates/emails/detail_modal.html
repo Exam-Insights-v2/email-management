@@ -286,7 +286,7 @@ Usage:
                   {% if draft.body_html %}
                   <div class="mt-3 p-3 sm:p-5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-auto max-h-64">
                     <div class="email-body text-xs sm:text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none prose-a:no-underline">
-                      {{ draft.body_html|safe|truncatewords:80 }}
+                      {% load db_filters %}{{ draft.body_html|remove_global_style_script|truncatewords:80 }}
                     </div>
                   </div>
                   {% else %}

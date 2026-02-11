@@ -241,6 +241,14 @@ class GmailOAuthService:
         if not token_scopes:
             token_scopes = GmailOAuthService.SCOPES
 
+        # Check if token is expired using both DB expiry and credentials.expired
+        # This prevents using expired tokens that might cause 401s
+        is_token_expired = oauth_token.is_expired()
+        
+        # If token is expired and we don't have a refresh token, fail fast
+        if is_token_expired and not oauth_token.refresh_token:
+            return None
+
         credentials = Credentials(
             token=oauth_token.access_token,
             refresh_token=oauth_token.refresh_token,
@@ -249,10 +257,15 @@ class GmailOAuthService:
             client_secret=settings.GOOGLE_OAUTH_CLIENT_SECRET,
             scopes=token_scopes,  # Use stored scopes, not current SCOPES
         )
+        
+        # Set expiry from DB if available to ensure accurate expiry check
+        if oauth_token.expires_at:
+            credentials.expiry = oauth_token.expires_at
 
-        # Refresh token if expired
-        if credentials.expired and credentials.refresh_token:
+        # Refresh token if expired (check both DB and credentials object)
+        if (is_token_expired or credentials.expired) and credentials.refresh_token:
             try:
+                # Refresh the token
                 credentials.refresh(Request())
                 # Update stored token and scopes (in case they changed)
                 oauth_token.access_token = credentials.token
@@ -263,9 +276,9 @@ class GmailOAuthService:
                     oauth_token.set_scopes_list(list(credentials.scopes))
                 oauth_token.save()
             except Exception as e:
-                # If refresh fails due to scope mismatch, disconnect the account
-                # This forces re-authorization with correct scopes
-                if "scope" in str(e).lower() or "invalid_grant" in str(e).lower():
+                # If refresh fails, mark account as disconnected to prevent retry loops
+                error_str = str(e).lower()
+                if any(keyword in error_str for keyword in ["scope", "invalid_grant", "invalid_token", "unauthorized", "401"]):
                     GmailOAuthService.disconnect_account(account)
                 return None
 

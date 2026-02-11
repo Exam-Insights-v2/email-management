@@ -10,12 +10,19 @@ register = template.Library()
 
 
 def _strip_quoted_email_html(html):
-    """Remove quoted/reply content from email HTML (blockquotes, Gmail quote divs, and 'On ... wrote:' sections)."""
+    """Remove quoted/reply content from email HTML (blockquotes, Gmail quote divs, and 'On ... wrote:' sections).
+    Also removes <style> and <script> tags to prevent them affecting the rest of the page."""
     if not html or not isinstance(html, str):
         return html
     text = html.strip()
     if not text:
         return html
+
+    # Remove <style> tags and their content (these can't be scoped and affect the whole page)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove <script> tags and their content (security and isolation)
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
 
     # Remove blockquote elements (repeat to handle nested; non-greedy gets innermost first)
     while True:
@@ -330,10 +337,30 @@ def priority_color(priority):
         return "bg-gray-400/10 text-gray-400"
 
 
-@register.filter
+@register.filter(is_safe=True)
 def strip_quoted_email(html):
     """Strip quoted/reply content from email body HTML so only the new message is shown."""
     return _strip_quoted_email_html(html)
+
+
+@register.filter(is_safe=True)
+def remove_global_style_script(html):
+    """Remove <style> and <script> tags from HTML to prevent them affecting the rest of the page.
+    Keeps all other HTML and inline styles intact."""
+    if not html or not isinstance(html, str):
+        return html
+    text = html.strip()
+    if not text:
+        return html
+    
+    # Remove <style> tags and their content (these can't be scoped and affect the whole page)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove <script> tags and their content (security and isolation)
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    result = text.strip() or html
+    return mark_safe(result)
 
 
 @register.filter

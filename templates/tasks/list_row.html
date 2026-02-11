@@ -17,7 +17,7 @@ List row component for tasks - reusable across priority sections
         <span class="text-xs font-light text-gray-500 dark:text-gray-400">TASK-{{ task.account_task_number|default:task.pk }}</span>
         <span class="text-xs text-gray-500 dark:text-gray-400">•</span>
         {% load db_filters %}
-        <time datetime="{{ task.created_at|date:'Y-m-d' }}" class="text-xs text-gray-500 dark:text-gray-400">{{ task.created_at|aus_time:"d M g:i a"|cut:"." }}</time>
+        <time datetime="{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|date:'Y-m-d' }}{% else %}{{ task.created_at|date:'Y-m-d' }}{% endif %}" class="text-xs text-gray-500 dark:text-gray-400">{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|aus_time:"d M g:i A" }}{% else %}{{ task.created_at|aus_time:"d M g:i A" }}{% endif %}</time>
       </div>
     </div>
   </div>
@@ -63,6 +63,6 @@ List row component for tasks - reusable across priority sections
   <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 justify-end">
     <i class="ti ti-calendar size-3" aria-hidden="true"></i>
     {% load db_filters %}
-    <time datetime="{{ task.created_at|date:'Y-m-d' }}">{{ task.created_at|aus_time:"d M g:i a"|cut:"." }}</time>
+    <time datetime="{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|date:'Y-m-d' }}{% else %}{{ task.created_at|date:'Y-m-d' }}{% endif %}">{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|aus_time:"d M g:i A" }}{% else %}{{ task.created_at|aus_time:"d M g:i A" }}{% endif %}</time>
   </div>
 </li>

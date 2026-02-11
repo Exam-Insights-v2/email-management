@@ -12,7 +12,7 @@ from googleapiclient.discovery import build
 
 from accounts.models import Account
 from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
-from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
+from mail.models import Draft, EmailMessage, EmailThread
 
 
 class EmailProviderService:
@@ -31,18 +31,58 @@ class EmailProviderService:
 
 class GmailService(EmailProviderService):
     """Gmail API service for fetching emails"""
+    
+    # Class-level cache for service instances per account
+    _service_cache = {}
+    _credentials_cache = {}
+    _cache_lock = {}  # Track which accounts are being refreshed
 
     def __init__(self):
-        self.service = None
+        # Instance-level cache is not useful since new instances are created each time
+        # Use class-level cache instead
+        pass
 
     def _get_service(self, account: Account):
-        """Get Gmail API service instance"""
+        """Get Gmail API service instance with proper caching"""
+        account_id = account.pk
+        
+        # Check if we have cached credentials and service for this account
+        if account_id in self._service_cache and account_id in self._credentials_cache:
+            cached_credentials = self._credentials_cache[account_id]
+            cached_service = self._service_cache[account_id]
+            
+            # Verify credentials are still valid (not expired)
+            if cached_credentials and not cached_credentials.expired:
+                return cached_service
+        
+        # Get fresh credentials (will refresh if needed)
         credentials = GmailOAuthService.get_valid_credentials(account)
         if not credentials:
+            # Clear cache on failure
+            self._service_cache.pop(account_id, None)
+            self._credentials_cache.pop(account_id, None)
             raise ValueError(f"Account {account} is not connected or token is invalid")
-        if not self.service:
-            self.service = build("gmail", "v1", credentials=credentials)
-        return self.service
+        
+        # Build service with fresh credentials
+        service = build("gmail", "v1", credentials=credentials)
+        
+        # Cache both credentials and service
+        self._credentials_cache[account_id] = credentials
+        self._service_cache[account_id] = service
+        
+        return service
+    
+    @classmethod
+    def clear_cache(cls, account_id=None):
+        """Clear service cache for an account or all accounts"""
+        if account_id:
+            cls._service_cache.pop(account_id, None)
+            cls._credentials_cache.pop(account_id, None)
+            cls._cache_lock.pop(account_id, None)
+        else:
+            cls._service_cache.clear()
+            cls._credentials_cache.clear()
+            cls._cache_lock.clear()
 
     def _parse_message(self, msg_data: dict) -> dict:
         """Parse Gmail API message format"""
@@ -191,41 +231,24 @@ class GmailService(EmailProviderService):
             raise ValueError(f"Error fetching Gmail message: {str(e)}")
 
     def get_thread_messages(self, account: Account, external_thread_id: str) -> List[dict]:
-        """Get all messages in a thread. Fetches thread with minimal format to get every message ID, then fetches each message in full (threads.get with format=full can truncate in some cases)."""
-        service = self._get_service(account)
+        """Get all messages in a thread"""
         try:
-            # Get all message IDs in the thread (minimal format returns full list; full can be truncated)
+            service = self._get_service(account)
             thread = (
                 service.users()
                 .threads()
-                .get(userId="me", id=external_thread_id, format="minimal")
+                .get(userId="me", id=external_thread_id, format="full")
                 .execute()
             )
-            message_list = thread.get("messages", [])
-            if not message_list:
-                return []
-
             messages = []
-            for msg_ref in message_list:
-                msg_id = msg_ref.get("id")
-                if not msg_id:
-                    continue
-                try:
-                    msg = (
-                        service.users()
-                        .messages()
-                        .get(userId="me", id=msg_id, format="full")
-                        .execute()
-                    )
-                    messages.append(self._parse_message(msg))
-                except Exception as e:
-                    # Log but continue so we still return other messages
-                    import logging
-                    logging.getLogger(__name__).warning(
-                        "Failed to fetch message %s in thread %s: %s", msg_id, external_thread_id, e
-                    )
+            for msg in thread.get("messages", []):
+                messages.append(self._parse_message(msg))
             return messages
         except Exception as e:
+            # Clear cache on error (especially 401/authentication errors)
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ["401", "unauthorized", "invalid_token", "invalid_grant"]):
+                self.clear_cache(account.pk)
             raise ValueError(f"Error fetching Gmail thread: {str(e)}")
 
     def delete_message(self, account: Account, external_message_id: str):
@@ -348,18 +371,15 @@ class GmailService(EmailProviderService):
         cc_addresses: List[str] = None,
         bcc_addresses: List[str] = None,
         reply_to_message_id: str = None,
-        attachments: List[dict] = None,
     ) -> dict:
-        """Send an email via Gmail API. attachments: list of {filename, content_type, content (bytes)}."""
+        """Send an email via Gmail API"""
         import email.mime.text
         import email.mime.multipart
-        import email.mime.base
 
         service = self._get_service(account)
-        attachments = attachments or []
 
-        # Use mixed so we can attach both body and files
-        message = email.mime.multipart.MIMEMultipart("mixed")
+        # Create message
+        message = email.mime.multipart.MIMEMultipart("alternative")
         message["to"] = ", ".join(to_addresses)
         message["subject"] = subject
         if cc_addresses:
@@ -367,6 +387,7 @@ class GmailService(EmailProviderService):
         if bcc_addresses:
             message["bcc"] = ", ".join(bcc_addresses)
         if reply_to_message_id:
+            # Get original message for In-Reply-To header
             try:
                 original = service.users().messages().get(
                     userId="me", id=reply_to_message_id, format="metadata"
@@ -377,22 +398,9 @@ class GmailService(EmailProviderService):
             except Exception:
                 pass
 
-        # Body as alternative part (for future plain-text alternative)
-        alt = email.mime.multipart.MIMEMultipart("alternative")
+        # Add HTML body
         html_part = email.mime.text.MIMEText(body_html, "html")
-        alt.attach(html_part)
-        message.attach(alt)
-
-        # Attach files
-        for att in attachments:
-            filename = att.get("filename") or "attachment"
-            content_type = att.get("content_type") or "application/octet-stream"
-            content = att.get("content") or b""
-            part = email.mime.base.MIMEBase(*content_type.split("/", 1))
-            part.set_payload(content)
-            email.encoders.encode_base64(part)
-            part.add_header("Content-Disposition", "attachment", filename=filename)
-            message.attach(part)
+        message.attach(html_part)
 
         # Encode message
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
@@ -411,24 +419,13 @@ class GmailService(EmailProviderService):
 
     def send_draft(self, account: Account, draft_id: int) -> dict:
         """Send a draft email"""
-        draft = Draft.objects.prefetch_related("attachments").get(pk=draft_id, account=account)
+        draft = Draft.objects.get(pk=draft_id, account=account)
         service = self._get_service(account)
         
         try:
             # If draft doesn't exist in Gmail, send as new message instead
             if not draft.external_draft_id:
-                attachment_list = []
-                for att in draft.attachments.all():
-                    content = att.content
-                    if not content and att.storage_path:
-                        # Could load from storage_path if implemented
-                        continue
-                    if content:
-                        attachment_list.append({
-                            "filename": att.filename,
-                            "content_type": att.content_type or "application/octet-stream",
-                            "content": bytes(content),
-                        })
+                # Send as new message
                 return self.send_message(
                     account=account,
                     to_addresses=draft.to_addresses or [],
@@ -436,7 +433,6 @@ class GmailService(EmailProviderService):
                     body_html=draft.body_html or "",
                     cc_addresses=draft.cc_addresses or [],
                     bcc_addresses=draft.bcc_addresses or [],
-                    attachments=attachment_list,
                 )
             
             # Send existing draft
