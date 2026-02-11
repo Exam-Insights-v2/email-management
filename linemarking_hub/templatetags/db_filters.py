@@ -228,7 +228,7 @@ def label_color_bg(label_name):
 @register.filter
 def aus_time(value, format_string=None):
     """
-    Convert datetime to Australia/Sydney timezone and format it.
+    Convert datetime to Australia/Brisbane timezone (GMT+10, no DST) and format it.
     
     Usage: {{ task.created_at|aus_time:"d M Y H:i" }}
     Default format: "d M Y H:i" if not specified
@@ -238,9 +238,9 @@ def aus_time(value, format_string=None):
     
     try:
         # Use Django's timezone utilities (no pytz needed)
-        # Django's timezone.localtime() converts to the TIME_ZONE setting (Australia/Sydney)
+        # Django's timezone.localtime() converts to the TIME_ZONE setting (Australia/Brisbane - always GMT+10)
         if timezone.is_aware(value):
-            # Convert to local timezone (Australia/Sydney from settings)
+            # Convert to local timezone (Australia/Brisbane from settings - always GMT+10)
             aus_time_value = timezone.localtime(value)
         else:
             # Make it timezone-aware using UTC, then convert to local

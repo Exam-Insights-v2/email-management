@@ -230,6 +230,50 @@ class GmailService(EmailProviderService):
         except Exception as e:
             raise ValueError(f"Error fetching Gmail message: {str(e)}")
 
+    def check_email_status(self, account: Account, external_message_id: str) -> dict:
+        """
+        Check the status of an email in Gmail (inbox, deleted, archived, spam).
+        Returns dict with status information.
+        """
+        service = self._get_service(account)
+        try:
+            msg_data = (
+                service.users()
+                .messages()
+                .get(userId="me", id=external_message_id, format="metadata", metadataHeaders=["X-Gmail-Labels"])
+                .execute()
+            )
+            
+            # Get labels from the message
+            label_ids = msg_data.get("labelIds", [])
+            
+            # Determine status
+            is_in_inbox = "INBOX" in label_ids
+            is_deleted = "TRASH" in label_ids
+            is_spam = "SPAM" in label_ids
+            is_archived = not is_in_inbox and not is_deleted and not is_spam
+            
+            return {
+                "exists": True,
+                "in_inbox": is_in_inbox,
+                "is_deleted": is_deleted,
+                "is_spam": is_spam,
+                "is_archived": is_archived,
+            }
+        except Exception as e:
+            # If message not found, it's likely deleted
+            error_str = str(e).lower()
+            if "not found" in error_str or "404" in error_str:
+                return {
+                    "exists": False,
+                    "in_inbox": False,
+                    "is_deleted": True,
+                    "is_spam": False,
+                    "is_archived": False,
+                }
+            # Re-raise other errors
+            raise ValueError(f"Error checking Gmail message status: {str(e)}")
+    
     def get_thread_messages(self, account: Account, external_thread_id: str) -> List[dict]:
         """Get all messages in a thread"""
         try:
@@ -598,6 +642,59 @@ class MicrosoftService(EmailProviderService):
         except Exception as e:
             raise ValueError(f"Error fetching Microsoft messages: {str(e)}")
 
+    def check_email_status(self, account: Account, external_message_id: str) -> dict:
+        """
+        Check the status of an email in Microsoft (inbox, deleted, junk).
+        Returns dict with status information.
+        """
+        headers = self._get_headers(account)
+        try:
+            msg_response = requests.get(
+                f"https://graph.microsoft.com/v1.0/me/messages/{external_message_id}",
+                headers=headers,
+                params={"$select": "id,parentFolderId,isRead"},
+            )
+            msg_response.raise_for_status()
+            msg_data = msg_response.json()
+            
+            # Get folder info to determine if it's in inbox, deleted, or junk
+            folder_id = msg_data.get("parentFolderId")
+            
+            # Check folder type
+            folder_response = requests.get(
+                f"https://graph.microsoft.com/v1.0/me/mailFolders/{folder_id}",
+                headers=headers,
+                params={"$select": "displayName,wellKnownName"},
+            )
+            folder_data = folder_response.json() if folder_response.status_code == 200 else {}
+            folder_name = folder_data.get("wellKnownName") or folder_data.get("displayName", "").lower()
+            
+            is_in_inbox = folder_name in ["inbox", ""]  # Empty or inbox means inbox
+            is_deleted = folder_name in ["deleteditems", "deleted items"]
+            is_spam = folder_name in ["junkemail", "junk email", "junk"]
+            is_archived = not is_in_inbox and not is_deleted and not is_spam
+            
+            return {
+                "exists": True,
+                "in_inbox": is_in_inbox,
+                "is_deleted": is_deleted,
+                "is_spam": is_spam,
+                "is_archived": is_archived,
+            }
+        except requests.exceptions.HTTPError as e:
+            # If message not found (404), it's likely deleted
+            if e.response.status_code == 404:
+                return {
+                    "exists": False,
+                    "in_inbox": False,
+                    "is_deleted": True,
+                    "is_spam": False,
+                    "is_archived": False,
+                }
+            raise ValueError(f"Error checking Microsoft message status: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Error checking Microsoft message status: {str(e)}")
+    
     def get_message(self, account: Account, external_message_id: str) -> dict:
         """Get a single message by ID"""
         headers = self._get_headers(account)
@@ -620,6 +717,90 @@ class EmailSyncService:
         self.providers = {
             "gmail": GmailService(),
             "microsoft": MicrosoftService(),
+        }
+    
+    def sync_email_status(self, account: Account, email_messages: List[EmailMessage]) -> dict:
+        """
+        Check and sync the status of emails that have tasks.
+        Updates task status based on email status (deleted/archived/spam).
+        
+        Args:
+            account: The account to check
+            email_messages: List of EmailMessage objects to check
+            
+        Returns:
+            dict with counts of updated tasks
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        from jobs.models import Task, TaskStatus
+        
+        provider_service = self.providers.get(account.provider)
+        if not provider_service:
+            logger.info(f"[Email Status Sync] No provider service for {account.provider}")
+            return {"checked": 0, "updated": 0, "errors": 0}
+        
+        if not hasattr(provider_service, "check_email_status"):
+            logger.info(f"[Email Status Sync] Provider {account.provider} doesn't support status checking")
+            return {"checked": 0, "updated": 0, "errors": 0}
+        
+        logger.info(f"[Email Status Sync] Starting status check for {len(email_messages)} emails with tasks (account: {account.email})")
+        
+        checked_count = 0
+        updated_count = 0
+        error_count = 0
+        
+        for email_msg in email_messages:
+            # Only check emails that have tasks
+            if not email_msg.tasks.exists():
+                continue
+            
+            try:
+                logger.info(f"[Email Status Sync] Checking email {email_msg.pk} (external_id: {email_msg.external_message_id}, subject: {email_msg.subject[:50] if email_msg.subject else 'No subject'})")
+                
+                # Check email status in provider
+                status = provider_service.check_email_status(account, email_msg.external_message_id)
+                checked_count += 1
+                
+                logger.info(f"[Email Status Sync] Email {email_msg.pk} status - exists: {status.get('exists')}, in_inbox: {status.get('in_inbox')}, deleted: {status.get('is_deleted')}, spam: {status.get('is_spam')}, archived: {status.get('is_archived')}")
+                
+                # Determine what to do based on status
+                if status.get("is_deleted") or status.get("is_spam"):
+                    # Email deleted or marked as spam - mark tasks as cancelled
+                    tasks_to_update = email_msg.tasks.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
+                    task_count = tasks_to_update.count()
+                    tasks_updated = tasks_to_update.update(status=TaskStatus.CANCELLED)
+                    if tasks_updated > 0:
+                        updated_count += tasks_updated
+                        logger.info(f"[Email Status Sync] ✅ Updated {tasks_updated} task(s) to CANCELLED for email {email_msg.pk} (deleted/spam)")
+                elif status.get("is_archived") and not status.get("in_inbox"):
+                    # Email archived (not in inbox) - mark tasks as done
+                    tasks_to_update = email_msg.tasks.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
+                    task_count = tasks_to_update.count()
+                    tasks_updated = tasks_to_update.update(
+                        status=TaskStatus.DONE,
+                        completed_at=timezone.now()
+                    )
+                    if tasks_updated > 0:
+                        updated_count += tasks_updated
+                        logger.info(f"[Email Status Sync] ✅ Updated {tasks_updated} task(s) to DONE for email {email_msg.pk} (archived)")
+                else:
+                    logger.info(f"[Email Status Sync] No action needed for email {email_msg.pk} (still in inbox)")
+                # If email is back in inbox and task was done/cancelled, we could reactivate it
+                # but that might be too aggressive, so we'll leave it as is
+                
+            except Exception as e:
+                error_count += 1
+                logger.warning(f"[Email Status Sync] ❌ Error checking status for email {email_msg.pk} ({email_msg.external_message_id}): {e}", exc_info=True)
+                continue
+        
+        logger.info(f"[Email Status Sync] Completed - Checked: {checked_count}, Updated: {updated_count}, Errors: {error_count}")
+        
+        return {
+            "checked": checked_count,
+            "updated": updated_count,
+            "errors": error_count,
         }
 
     def sync_account(self, account: Account, max_results: int = 50) -> dict:

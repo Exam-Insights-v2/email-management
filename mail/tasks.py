@@ -84,6 +84,32 @@ def sync_account_emails(account_id: int):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to queue process_email task for email {email_msg.pk}: {e}", exc_info=True)
+        
+        # Check status of emails that have tasks (reverse sync)
+        # Limit to recent emails to avoid checking too many at once
+        emails_with_tasks = EmailMessage.objects.filter(
+            account=account
+        ).annotate(
+            task_count=Count('tasks')
+        ).filter(
+            task_count__gt=0
+        ).order_by("-updated_at")[:50]  # Check up to 50 most recently updated emails with tasks
+        
+        if emails_with_tasks.exists():
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[Email Sync] Starting reverse sync - checking status of {emails_with_tasks.count()} emails with tasks")
+            
+            status_result = sync_service.sync_email_status(account, list(emails_with_tasks))
+            result["status_checked"] = status_result.get("checked", 0)
+            result["status_updated"] = status_result.get("updated", 0)
+            result["status_errors"] = status_result.get("errors", 0)
+            
+            logger.info(f"[Email Sync] Reverse sync complete - Checked: {result['status_checked']}, Updated: {result['status_updated']}, Errors: {result['status_errors']}")
+        else:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[Email Sync] No emails with tasks found to check status for")
 
         return result
     except Exception as e:

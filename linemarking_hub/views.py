@@ -268,6 +268,10 @@ def tasks_list(request):
         statuses = filter_form.cleaned_data.get('status')
         if statuses:
             tasks = tasks.filter(status__in=statuses)
+        else:
+            # Default: exclude done and cancelled tasks if no status filter is set
+            from jobs.models import TaskStatus
+            tasks = tasks.exclude(status__in=[TaskStatus.DONE, TaskStatus.CANCELLED])
         
         # Filter by task ID (supports multiple comma-separated IDs)
         task_id = filter_form.cleaned_data.get('task_id')

@@ -157,8 +157,8 @@ Usage:
                   <!-- Body -->
                   <div class="px-4 sm:px-5 py-4">
                     {% if msg.body_html %}
-                    <div class="email-body text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none prose-a:text-cyan-600 dark:prose-a:text-cyan-400 prose-p:my-2" style="contain: layout style paint; isolation: isolate;">
-                      {{ msg.body_html|strip_quoted_email }}
+                    <div class="email-body" style="contain: layout style paint; isolation: isolate;">
+                      {% load db_filters %}{{ msg.body_html|remove_global_style_script|strip_quoted_email }}
                     </div>
                     {% else %}
                     <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>

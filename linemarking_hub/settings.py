@@ -116,7 +116,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-au"
 
-TIME_ZONE = "Australia/Sydney"
+TIME_ZONE = "Australia/Brisbane"  # Always GMT+10 (no daylight saving time)
 
 USE_I18N = True
 
