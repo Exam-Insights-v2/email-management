@@ -1,10 +1,68 @@
+import re
 from django import template
 from django.utils import timezone
 from django.utils.dateformat import format
+from django.utils.safestring import mark_safe
 from datetime import datetime
 import builtins
 
 register = template.Library()
+
+
+def _strip_quoted_email_html(html):
+    """Remove quoted/reply content from email HTML (blockquotes, Gmail quote divs, and 'On ... wrote:' sections)."""
+    if not html or not isinstance(html, str):
+        return html
+    text = html.strip()
+    if not text:
+        return html
+
+    # Remove blockquote elements (repeat to handle nested; non-greedy gets innermost first)
+    while True:
+        match = re.search(
+            r'<blockquote[^>]*>.*?</blockquote>',
+            text,
+            re.IGNORECASE | re.DOTALL
+        )
+        if not match:
+            break
+        text = text[:match.start()] + text[match.end():]
+
+    # Remove Gmail quote div: <div class="gmail_quote">...</div> (find matching closing tag by counting div depth)
+    gmail_start = re.search(
+        r'<div[^>]*class="[^"]*gmail_quote[^"]*"[^>]*>',
+        text,
+        re.IGNORECASE
+    )
+    if gmail_start:
+        start = gmail_start.start()
+        pos = gmail_start.end()
+        depth = 1
+        while pos < len(text) and depth > 0:
+            next_open = text.find('<div', pos)
+            next_close = text.find('</div>', pos)
+            if next_close == -1:
+                break
+            if next_open != -1 and next_open < next_close:
+                depth += 1
+                pos = next_open + 4
+            else:
+                depth -= 1
+                pos = next_close + 6
+        if depth == 0:
+            text = text[:start] + text[pos:].lstrip()
+
+    # Remove Outlook/other "Original Message" or "On ... wrote:" blocks (often at end of body)
+    # Match from "-----Original Message-----" or "On ... wrote:" to end (common reply boundaries)
+    for pattern in (
+        r'-----Original Message-----.*$',
+        r'(?:<[^>]+>|\s)*On\s+.+?\s+wrote\s*:.*$',
+        r'(?:<[^>]+>|\s)*From:\s*.+?Sent:\s*.+?To:\s*.+?Subject:.*$',
+    ):
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
+
+    result = text.strip() or html
+    return mark_safe(result)
 
 
 @register.filter
@@ -162,7 +220,8 @@ def aus_time(value, format_string=None):
             'H': '%H',  # 24-hour format hour
             'i': '%M',  # Minutes
             'g': '%I',  # 12-hour format hour (without leading zero)
-            'a': '%p',  # AM/PM
+            'a': '%p',  # am/pm
+            'A': '%p',  # AM/PM (same as %p; we uppercase after)
         }
         
         if format_string:
@@ -171,6 +230,10 @@ def aus_time(value, format_string=None):
             for django_code, strftime_code in format_map.items():
                 strftime_format = strftime_format.replace(django_code, strftime_code)
             formatted = aus_time_value.strftime(strftime_format)
+            # 12-hour format: strip leading zero from hour (2:20pm not 02:20pm)
+            if 'g' in format_string or 'a' in format_string or 'A' in format_string:
+                import re
+                formatted = re.sub(r' 0(\d)(?=:)', r' \1', formatted)
             # Capitalize month names (replace lowercase month abbreviations with capitalized versions)
             month_map = {
                 'jan': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'apr': 'Apr',
@@ -179,6 +242,9 @@ def aus_time(value, format_string=None):
             }
             for lower, upper in month_map.items():
                 formatted = formatted.replace(lower, upper)
+            # If format had 'A', show AM/PM in capitals
+            if 'A' in format_string:
+                formatted = formatted.replace(' am', ' AM').replace(' pm', ' PM')
             return formatted
         else:
             formatted = aus_time_value.strftime("%d %b %Y %H:%M")
@@ -265,8 +331,56 @@ def priority_color(priority):
 
 
 @register.filter
+def strip_quoted_email(html):
+    """Strip quoted/reply content from email body HTML so only the new message is shown."""
+    return _strip_quoted_email_html(html)
+
+
+@register.filter
 def get_item(dictionary, key):
     """Get an item from a dictionary using a key"""
     if not dictionary or not isinstance(dictionary, dict):
         return None
     return dictionary.get(key, [])
+
+
+@register.filter
+def attachment_icon(filename):
+    """Return Tabler icon class for an attachment based on filename extension."""
+    if not filename or not isinstance(filename, str):
+        return "ti-file"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext in ("jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"):
+        return "ti-photo"
+    if ext in ("mp4", "webm", "mov", "avi", "mkv", "m4v"):
+        return "ti-video"
+    if ext in ("mp3", "wav", "ogg", "m4a", "flac", "aac"):
+        return "ti-music"
+    if ext == "pdf":
+        return "ti-file-text"
+    if ext in ("xls", "xlsx", "csv"):
+        return "ti-file-spreadsheet"
+    if ext in ("doc", "docx", "txt", "rtf"):
+        return "ti-file-description"
+    return "ti-file"
+
+
+@register.filter
+def attachment_icon_bg(filename):
+    """Return Tailwind background colour classes for attachment icon box."""
+    if not filename or not isinstance(filename, str):
+        return "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext in ("jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"):
+        return "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"
+    if ext in ("mp4", "webm", "mov", "avi", "mkv", "m4v"):
+        return "bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400"
+    if ext in ("mp3", "wav", "ogg", "m4a", "flac", "aac"):
+        return "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
+    if ext == "pdf":
+        return "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400"
+    if ext in ("xls", "xlsx", "csv"):
+        return "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
+    if ext in ("doc", "docx", "txt", "rtf"):
+        return "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+    return "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"

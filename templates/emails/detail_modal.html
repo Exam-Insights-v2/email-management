@@ -138,7 +138,7 @@ Usage:
                           {% if msg.body_html %}
                           <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-white/10 p-4 sm:p-6">
                             <div class="email-body text-sm sm:text-base text-gray-900 dark:text-white prose prose-sm dark:prose-invert max-w-none prose-a:no-underline">
-                              {{ msg.body_html|safe }}
+                              {{ msg.body_html|strip_quoted_email }}
                             </div>
                           </div>
                           {% else %}
@@ -222,7 +222,7 @@ Usage:
                   {% if email.body_html %}
                   <div class="mt-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-white/10 p-4 sm:p-8">
                     <div class="email-body text-sm sm:text-base text-gray-900 dark:text-white prose prose-sm dark:prose-invert max-w-none prose-a:no-underline">
-                      {{ email.body_html|safe }}
+                      {{ email.body_html|strip_quoted_email }}
                     </div>
                   </div>
                   {% else %}

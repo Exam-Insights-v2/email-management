@@ -11,443 +11,1105 @@ Usage:
     <div tabindex="0" class="flex min-h-full items-center justify-center text-center focus:outline-none">
       <el-dialog-panel class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in w-full max-w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] m-4 sm:m-6 data-closed:sm:translate-y-0 data-closed:sm:scale-95 flex flex-col">
         <div class="bg-white dark:bg-gray-800 flex flex-col flex-1 min-h-0 overflow-hidden">
-          <!-- Header -->
-          <div class="flex items-start sm:items-center justify-between gap-2 px-3 pt-4 pb-3 sm:px-4 sm:pt-5 sm:pb-4 sm:p-6 flex-shrink-0 border-b border-gray-200 dark:border-white/10">
-            <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 pr-2 truncate">{{ task.title|default:"Untitled Task" }}</h2>
-            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              <button type="button" data-task-pk="{{ task.pk }}" onclick="if (window.openEditTaskModal) window.openEditTaskModal({{ task.pk }});" class="edit-task-btn inline-flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
-                <i class="ti ti-pencil mr-1 -ml-0.5 size-3.5 sm:size-4 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true"></i>
-                <span class="hidden sm:inline">Edit</span>
-              </button>
-              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="relative rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
-                <span class="absolute -inset-2.5"></span>
-                <span class="sr-only">Close</span>
+          <!-- Header: title (left), Mark as Done + Close (right) -->
+          <div class="flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 flex-shrink-0 border-b border-gray-200 dark:border-white/10">
+            <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 truncate">{{ task.title|default:"Untitled Task" }}</h2>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              {% if task.status != 'done' %}
+              <form method="post" action="{% url 'task_update' task.pk %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+                <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+                <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+                <input type="hidden" name="status" value="done">
+                {% if task.due_at %}
+                {% load db_filters %}
+                <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
+                {% endif %}
+                <button type="submit" class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-colors">
+                  <i class="ti ti-circle-check mr-1.5 size-4" aria-hidden="true"></i>
+                  Mark as Done
+                </button>
+              </form>
+              {% endif %}
+              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="rounded-md p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
                 <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
               </button>
             </div>
           </div>
 
-          <!-- Scrollable Content -->
-          <div class="flex-1 overflow-y-auto min-h-0 px-3 pt-4 pb-3 sm:px-4 sm:pt-5 sm:pb-4 sm:p-6">
-            <!-- Task Information -->
-            <div>
-            <div class="border-t border-gray-200 dark:border-white/10">
-              <dl class="divide-y divide-gray-200 dark:divide-white/10">
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Task ID</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">TASK-{{ task.account_task_number|default:task.pk }}</dd>
+          <!-- Two columns: description (left), task details (right) -->
+          <div class="flex-1 overflow-y-auto min-h-0">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6 border-b border-gray-200 dark:border-white/10 pb-4">
+              <!-- Left: Task description (2/3) -->
+              <section class="px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 lg:col-span-2 lg:border-r lg:border-gray-200 dark:lg:border-white/10" aria-labelledby="task-detail-{{ task.pk }}-desc-heading">
+                <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
+                <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                  {% if task.description %}{{ task.description }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
                 </div>
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Status</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
-                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
-                      {% if task.status == 'done' %}bg-green-400/10 text-green-400
-                      {% elif task.status == 'in_progress' %}bg-blue-400/10 text-blue-400
-                      {% elif task.status == 'cancelled' %}bg-red-400/10 text-red-400
-                      {% else %}bg-yellow-400/10 text-yellow-500{% endif %}">
-                      {{ task.get_status_display }}
-                    </span>
-                  </dd>
-                </div>
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Priority</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.priority|default:"—" }}</dd>
-                </div>
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Account</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 break-words">{{ task.account.email }}</dd>
-                </div>
-                {% if task.job %}
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Job</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
-                    <a href="{% url 'job_detail' task.job.pk %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 break-words no-underline">{{ task.job.title }}</a>
-                  </dd>
-                </div>
-                {% endif %}
-                {% if task.email_message and task.email_message.labels.all %}
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Labels</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
-                    <div class="flex flex-wrap gap-2">
-                      {% load db_filters %}
-                      {% for email_label in task.email_message.labels.all %}
-                      <span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium {{ email_label.label.name|label_color_bg }}">
-                        <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
-                        {{ email_label.label.name }}
-                      </span>
-                      {% endfor %}
-                    </div>
-                  </dd>
-                </div>
-                {% endif %}
-                {% if task.due_at %}
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Due At</dt>
-                  {% load db_filters %}
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.due_at|aus_time:"d M Y H:i" }}</dd>
-                </div>
-                {% endif %}
-                {% if task.completed_at %}
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Completed At</dt>
-                  {% load db_filters %}
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.completed_at|aus_time:"d M Y H:i" }}</dd>
-                </div>
-                {% endif %}
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Created</dt>
-                  {% load db_filters %}
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.created_at|aus_time:"d M Y H:i" }}</dd>
-                </div>
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Updated</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ task.updated_at|aus_time:"d M Y H:i" }}</dd>
-                </div>
-                {% if task.description %}
-                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Description</dt>
-                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 whitespace-pre-wrap break-words">{{ task.description }}</dd>
-                </div>
-                {% endif %}
-              </dl>
-            </div>
-          </div>
+              </section>
 
-          <!-- Email Thread & Draft Section -->
-          {% if task.email_message and email_data %}
-          <div class="mt-6">
-            <!-- Email Action Buttons -->
-            {% if task.email_message.account.is_connected %}
-            <div class="mb-6 flex flex-wrap gap-3">
-              <form method="post" action="{% url 'email_reply' task.email_message.pk %}" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="px-4 sm:px-6 py-2 sm:py-2.5 bg-cyan-600 text-white rounded-full hover:bg-cyan-500 text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
-                  </svg>
-                  Reply
-                </button>
-              </form>
-              <a href="{% url 'email_forward' task.email_message.pk %}" class="px-4 sm:px-6 py-2 sm:py-2.5 bg-slate-600 text-white rounded-full hover:bg-slate-500 text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 no-underline">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                </svg>
-                Forward
-              </a>
-              <form method="post" action="{% url 'email_archive' task.email_message.pk %}" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="px-4 sm:px-6 py-2 sm:py-2.5 bg-emerald-600 text-white rounded-full hover:bg-emerald-500 text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  Mark as Done
-                </button>
-              </form>
-              {% with modal_id="delete-email-modal-"|add:task.pk|stringformat:"s" %}
-              <form method="post" action="{% url 'email_delete' task.email_message.pk %}" class="inline" data-warning-modal="{{ modal_id }}">
-                {% csrf_token %}
-                <button type="submit" class="px-4 sm:px-6 py-2 sm:py-2.5 bg-red-600 text-white rounded-full hover:bg-red-500 text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                  Delete
-                </button>
-              </form>
-              {% include 'includes/warning_modal.html' with modal_id=modal_id title="Delete email" message="Are you sure you want to delete this email?" confirm_text="Delete" %}
-              {% endwith %}
+              <!-- Right: Task details (1/3) -->
+              <section class="px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 lg:col-span-1" aria-labelledby="task-detail-{{ task.pk }}-details-heading">
+                <h3 id="task-detail-{{ task.pk }}-details-heading" class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Details</h3>
+                <dl class="divide-y divide-gray-200 dark:divide-white/10">
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Task ID</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">TASK-{{ task.account_task_number|default:task.pk }}</dd>
+                  </div>
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Priority</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
+                      <span class="inline-flex items-center gap-2">
+                        {% include 'tasks/priority_bars.html' with priority=task.priority %}
+                        {% if task.priority == 5 %}Urgent{% elif task.priority == 4 %}High{% elif task.priority == 3 %}Medium{% elif task.priority == 2 %}Low{% elif task.priority == 1 %}Lowest{% else %}—{% endif %}
+                      </span>
+                    </dd>
+                  </div>
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
+                      <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
+                        {% if task.status == 'done' %}bg-green-400/10 text-green-400
+                        {% elif task.status == 'in_progress' %}bg-blue-400/10 text-blue-400
+                        {% elif task.status == 'cancelled' %}bg-red-400/10 text-red-400
+                        {% else %}bg-yellow-400/10 text-yellow-500{% endif %}">
+                        {{ task.get_status_display }}
+                      </span>
+                    </dd>
+                  </div>
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Labels</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
+                      {% if task.email_message and task.email_message.labels.all %}
+                      <div class="flex flex-wrap gap-2">
+                        {% load db_filters %}
+                        {% for email_label in task.email_message.labels.all %}
+                        <span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium {{ email_label.label.name|label_color_bg }}">
+                          <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
+                          {{ email_label.label.name }}
+                        </span>
+                        {% endfor %}
+                      </div>
+                      {% else %}—{% endif %}
+                    </dd>
+                  </div>
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Sent from</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">{% if task.email_message %}{{ task.email_message.from_address }}{% else %}—{% endif %}</dd>
+                  </div>
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Sent to</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">{% if task.email_message and task.email_message.to_addresses %}{{ task.email_message.to_addresses|join:", " }}{% else %}—{% endif %}</dd>
+                  </div>
+                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Time received</dt>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
+                      {% if task.email_message and task.email_message.date_sent %}
+                      {% load db_filters %}
+                      {{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}
+                      {% else %}—{% endif %}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
             </div>
+
+            <!-- Email Thread & Draft Section (same scroll area) -->
+            {% if task.email_message and email_data %}
+            <div class="mt-6 px-4 pb-4 sm:px-6 sm:pb-6">
+            <!-- Scrollable area: thread (oldest→newest) then draft; scroll to bottom so current email + draft are in view; scroll up to see older messages -->
+            <div id="task-email-thread-draft-{{ task.pk }}" class="mt-4 overflow-y-auto rounded-lg border border-gray-200 dark:border-white/10 max-h-[70vh]">
+            <!-- Email Thread Section (shown first, oldest first so current email is at bottom) -->
+            {% if email_data.thread_messages %}
+            <section class="p-4 sm:p-6">
+              <div class="space-y-4">
+                {% for msg in email_data.thread_messages reversed %}
+                <article class="rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden">
+                  <!-- Header: sender to recipient | timestamp + menu -->
+                  <div class="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold {% if msg.external_message_id == task.email_message.external_message_id %}bg-cyan-500{% else %}bg-gray-500 dark:bg-gray-600{% endif %}" aria-hidden="true">
+                        {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
+                      </span>
+                      <div class="min-w-0 text-sm">
+                        <span class="text-cyan-600 dark:text-cyan-400">{{ msg.from_address }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
+                        <span class="text-cyan-600 dark:text-cyan-400">{% if msg.to_addresses %}{{ msg.to_addresses|join:", " }}{% else %}—{% endif %}</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center flex-shrink-0">
+                      <time class="text-xs text-gray-500 dark:text-gray-400" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
+                    </div>
+                  </div>
+                  <!-- Subject -->
+                  <div class="px-4 sm:px-5 py-2 border-b border-gray-200 dark:border-white/10">
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
+                  </div>
+                  <!-- Body -->
+                  <div class="px-4 sm:px-5 py-4">
+                    {% if msg.body_html %}
+                    <div class="email-body text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none prose-a:text-cyan-600 dark:prose-a:text-cyan-400 prose-p:my-2">
+                      {{ msg.body_html|strip_quoted_email }}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
+                    {% endif %}
+                  </div>
+                  <!-- Actions: reply, forward -->
+                  <div class="px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-white/10 flex justify-end gap-2">
+                    <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10" aria-label="Reply">
+                      <i class="ti ti-arrow-back-up size-4" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10" aria-label="Forward">
+                      <i class="ti ti-arrow-forward-up size-4" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </article>
+                {% endfor %}
+              </div>
+            </section>
             {% endif %}
-            
-            <!-- Draft Reply Section -->
+
+            <!-- Draft Reply Section (same card style as thread emails, clearly marked as draft and editable) -->
             {% if email_data.has_draft_reply %}
-            <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden mb-6">
-              <header class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-900">
-                <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Draft Reply</h2>
-                <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Compose your response</p>
-              </header>
+            <section class="p-4 sm:p-6 pt-0 sm:pt-0">
               {% if email_data.draft %}
-              <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_update' email_data.draft.pk %}" class="px-4 sm:px-6 py-4 sm:py-6">
+              <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_update' email_data.draft.pk %}" data-draft-id="{{ email_data.draft.pk }}">
               {% else %}
-              <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_create' %}" class="px-4 sm:px-6 py-4 sm:py-6">
+              <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_create' %}" data-draft-id="">
               {% endif %}
                 {% csrf_token %}
                 <input type="hidden" name="account" value="{{ task.account.pk }}">
                 <input type="hidden" name="email_message" value="{{ task.email_message.pk }}">
-                <div class="space-y-4 sm:space-y-6">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div>
-                      <label for="draft-to-{{ task.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">To</label>
-                      <input 
-                        type="text" 
-                        id="draft-to-{{ task.pk }}" 
-                        name="to_addresses_input" 
-                        value="{% if email_data.draft %}{{ email_data.draft.to_addresses|join:", " }}{% else %}{{ task.email_message.from_address }}{% endif %}" 
-                        class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-xs sm:text-sm text-gray-900 dark:text-white border-0 focus:ring-2 focus:ring-cyan-600"
-                        placeholder="email@example.com"
+                <input type="hidden" id="draft-to-json-{{ task.pk }}" name="to_addresses" value="">
+                <input type="hidden" id="draft-cc-json-{{ task.pk }}" name="cc_addresses" value="">
+                <input type="hidden" id="draft-bcc-json-{{ task.pk }}" name="bcc_addresses" value="">
+                <article class="rounded-lg border border-amber-200 dark:border-amber-500/40 bg-white dark:bg-gray-800/80 overflow-visible ring-1 ring-amber-500/20 dark:ring-amber-400/10">
+                  <!-- Clickable header: toggles dropdown for To / From / CC / BCC -->
+                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10 text-left hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors cursor-pointer" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-amber-500 dark:bg-amber-600" aria-hidden="true">Y</span>
+                      <div class="min-w-0 text-sm">
+                        <span class="text-gray-500 dark:text-gray-400">You</span>
+                        <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
+                        <span id="draft-to-summary-{{ task.pk }}" class="text-cyan-600 dark:text-cyan-400">{% if email_data.draft %}{{ email_data.draft.to_addresses|join:", " }}{% else %}{{ task.email_message.from_address }}{% endif %}</span>
+                        <span id="draft-cc-bcc-summary-{{ task.pk }}" class="text-gray-500 dark:text-gray-400">{% if email_data.draft %}{% if email_data.draft.cc_addresses %}, CC: {{ email_data.draft.cc_addresses|join:", " }}{% endif %}{% if email_data.draft.bcc_addresses %}{% if email_data.draft.cc_addresses %}; {% endif %}BCC: {{ email_data.draft.bcc_addresses|join:", " }}{% endif %}{% endif %}</span>
+                      </div>
+                      <i class="ti ti-chevron-down size-5 text-gray-400 flex-shrink-0 transition-transform duration-200 draft-recipients-chevron" aria-hidden="true"></i>
+                    </div>
+                    <span class="inline-flex items-center rounded-md bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300 border border-amber-400/30 flex-shrink-0 ml-2">Draft</span>
+                  </button>
+                  <div id="draft-recipients-dropdown-{{ task.pk }}" class="draft-recipients-dropdown hidden border-b border-gray-200 dark:border-white/10 bg-gray-100/50 dark:bg-white/5" aria-hidden="true">
+                    <div class="px-4 sm:px-5 py-3 flex flex-wrap gap-x-4 gap-y-3">
+                      <div class="flex-1 min-w-0" style="min-width: 8rem;">
+                        <label for="draft-to-{{ task.pk }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">To</label>
+                        <input type="text" id="draft-to-{{ task.pk }}" name="to_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.to_addresses|join:", " }}{% else %}{{ task.email_message.from_address }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="email@example.com" />
+                      </div>
+                      <div class="flex-1 min-w-0" style="min-width: 8rem;">
+                        <label for="draft-cc-{{ task.pk }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">CC (optional)</label>
+                        <input type="text" id="draft-cc-{{ task.pk }}" name="cc_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.cc_addresses|join:", " }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="cc@example.com" />
+                      </div>
+                      <div class="flex-1 min-w-0" style="min-width: 8rem;">
+                        <label for="draft-bcc-{{ task.pk }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">BCC (optional)</label>
+                        <input type="text" id="draft-bcc-{{ task.pk }}" name="bcc_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.bcc_addresses|join:", " }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="bcc@example.com" />
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Subject (editable, same look as thread) -->
+                  <div class="px-4 sm:px-5 py-2 border-b border-gray-200 dark:border-white/10">
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                      <span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span>
+                      <input
+                        type="text"
+                        id="draft-subject-{{ task.pk }}"
+                        name="subject"
+                        value="{% if email_data.draft %}{{ email_data.draft.subject }}{% else %}Re: {{ task.email_message.subject|default:"No subject" }}{% endif %}"
+                        class="w-full min-w-0 bg-transparent border-0 px-0 py-0 text-gray-700 dark:text-gray-300 focus:ring-0 focus:outline-none placeholder:text-gray-400"
+                        placeholder="(No subject)"
                       />
-                      <input type="hidden" id="draft-to-json-{{ task.pk }}" name="to_addresses" value="">
+                    </p>
+                  </div>
+                  <!-- Body (editable) + attachments inline. Rich text: looks like normal text, stored/sent as HTML. -->
+                  <div class="px-4 sm:px-5 py-4">
+                    <input type="hidden" name="body_html" id="draft-body-html-{{ task.pk }}" value="">
+                    <div class="flex flex-wrap items-center gap-1 mb-2 border border-gray-200 dark:border-white/10 rounded-t-md bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 border-b-0">
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="bold" title="Bold" aria-label="Bold"><i class="ti ti-bold size-4"></i></button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Bold</span>
+                      </span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="italic" title="Italic" aria-label="Italic"><i class="ti ti-italic size-4"></i></button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Italic</span>
+                      </span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="underline" title="Underline" aria-label="Underline"><i class="ti ti-underline size-4"></i></button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Underline</span>
+                      </span>
+                      <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
+                      <span class="relative inline-block group/tooltip">
+                        <button type="button" class="draft-trigger-fore-color flex items-center gap-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700 border border-transparent hover:border-gray-300 dark:hover:border-gray-600" title="Text colour" aria-label="Text colour" aria-expanded="false" aria-haspopup="true" data-current-color="#000000">
+                          <i class="ti ti-letter-a size-4 shrink-0 text-gray-600 dark:text-gray-300" aria-hidden="true"></i>
+                          <span class="draft-fore-swatch w-4 h-4 rounded border border-gray-300 dark:border-gray-500 shrink-0" style="background-color:#000000" aria-hidden="true"></span>
+                          <i class="ti ti-chevron-down size-3.5 text-gray-400 shrink-0"></i>
+                        </button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Text colour</span>
+                        <div id="draft-fore-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-lg p-3" role="menu">
+                          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-0.5">Text colour</p>
+                          <div class="draft-fore-presets grid grid-cols-6 gap-2 w-max" data-role="fore-presets"></div>
+                        </div>
+                      </span>
+                      <span class="relative inline-block group/tooltip">
+                        <button type="button" class="draft-trigger-back-color flex items-center gap-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700 border border-transparent hover:border-gray-300 dark:hover:border-gray-600" title="Highlight colour" aria-label="Highlight colour" aria-expanded="false" aria-haspopup="true" data-current-color="#fef08a">
+                          <i class="ti ti-highlight size-4 shrink-0 text-gray-600 dark:text-gray-300" aria-hidden="true"></i>
+                          <span class="draft-back-swatch w-4 h-4 rounded border border-gray-300 dark:border-gray-500 shrink-0" style="background-color:#fef08a" aria-hidden="true"></span>
+                          <i class="ti ti-chevron-down size-3.5 text-gray-400 shrink-0"></i>
+                        </button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Highlight colour</span>
+                        <div id="draft-back-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-lg p-3" role="menu">
+                          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-0.5">Highlight colour</p>
+                          <div class="draft-back-presets grid grid-cols-6 gap-2 w-max" data-role="back-presets"></div>
+                        </div>
+                      </span>
+                      <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertUnorderedList" title="Bullet list" aria-label="Bullet list"><i class="ti ti-list size-4"></i></button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Bullet list</span>
+                      </span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertOrderedList" title="Numbered list" aria-label="Numbered list"><i class="ti ti-list-numbers size-4"></i></button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Numbered list</span>
+                      </span>
+                      <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="draft-insert-link p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" title="Insert link" aria-label="Insert link" id="draft-link-btn-{{ task.pk }}"><i class="ti ti-link size-4"></i></button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Insert link</span>
+                        <!-- Insert link popup (small, next to button) -->
+                        <div id="draft-link-popup-{{ task.pk }}" class="hidden absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-link-popup-title-{{ task.pk }}" role="dialog">
+                          <h3 id="draft-link-popup-title-{{ task.pk }}" class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Insert link</h3>
+                          <label for="draft-link-url-{{ task.pk }}" class="sr-only">URL</label>
+                          <input type="url" id="draft-link-url-{{ task.pk }}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" placeholder="https://" autocomplete="url">
+                          <div class="mt-1.5 flex justify-end gap-1.5">
+                            <button type="button" id="draft-link-cancel-{{ task.pk }}" class="rounded px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancel</button>
+                            <button type="button" id="draft-link-done-{{ task.pk }}" class="rounded bg-cyan-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500">Done</button>
+                          </div>
+                        </div>
+                      </span>
+                      <span class="relative group/tooltip inline-block">
+                        <label for="draft-font-size-{{ task.pk }}" class="sr-only">Font size (pt)</label>
+                        <select id="draft-font-size-{{ task.pk }}" class="draft-font-size-select text-xs rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-1 pr-6 pl-1.5 focus:ring-1 focus:ring-cyan-500" title="Font size" aria-label="Font size (points)">
+                          <option value="8">8</option>
+                          <option value="9">9</option>
+                          <option value="10">10</option>
+                          <option value="11">11</option>
+                          <option value="12" selected>12</option>
+                          <option value="14">14</option>
+                          <option value="16">16</option>
+                          <option value="18">18</option>
+                          <option value="20">20</option>
+                          <option value="22">22</option>
+                          <option value="24">24</option>
+                          <option value="26">26</option>
+                          <option value="28">28</option>
+                          <option value="36">36</option>
+                          <option value="48">48</option>
+                          <option value="72">72</option>
+                        </select>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Font size</span>
+                      </span>
                     </div>
-                    <div>
-                      <label for="draft-cc-{{ task.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">CC (optional)</label>
-                      <input 
-                        type="text" 
-                        id="draft-cc-{{ task.pk }}" 
-                        name="cc_addresses_input" 
-                        value="{% if email_data.draft %}{{ email_data.draft.cc_addresses|join:", " }}{% endif %}" 
-                        class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-xs sm:text-sm text-gray-900 dark:text-white border-0 focus:ring-2 focus:ring-cyan-600"
-                        placeholder="cc@example.com"
-                      />
-                      <input type="hidden" id="draft-cc-json-{{ task.pk }}" name="cc_addresses" value="">
+                    <div
+                      id="draft-body-{{ task.pk }}"
+                      class="draft-body-editor block w-full rounded-b-md bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/10 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
+                      contenteditable="true"
+                      data-placeholder="Write your reply..."
+                      role="textbox"
+                      aria-multiline="true"
+                    >{% if email_data.draft %}{{ email_data.draft.body_html|safe }}{% endif %}</div>
+                    <div id="draft-attachments-list-{{ task.pk }}" class="mt-3 {% if not email_data.draft or not email_data.draft.attachments.all %}hidden{% endif %}">
+                      <ul class="space-y-2" id="draft-attachments-ul-{{ task.pk }}">
+                      {% if email_data.draft %}{% load db_filters %}{% for att in email_data.draft.attachments.all %}
+                      <li class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 text-sm" data-attachment-id="{{ att.pk }}">
+                        <span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md {{ att.filename|attachment_icon_bg }}">
+                          <i class="ti {{ att.filename|attachment_icon }} size-5 block" aria-hidden="true"></i>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                          <span class="text-gray-700 dark:text-gray-300 truncate block" title="{{ att.filename }}">{{ att.filename }}</span>
+                          {% if att.size_bytes %}<span class="text-xs text-gray-500 dark:text-gray-400">{{ att.size_bytes|filesizeformat }}</span>{% endif %}
+                        </div>
+                        <a href="{% url 'draft_attachment_download' email_data.draft.pk att.pk %}" class="draft-attachment-download flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download {{ att.filename }}" title="Download"><i class="ti ti-download size-4"></i></a>
+                        <button type="button" class="draft-attachment-remove flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-attachment-id="{{ att.pk }}" aria-label="Remove {{ att.filename }}"><i class="ti ti-x size-4"></i></button>
+                      </li>
+                      {% endfor %}{% endif %}
+                      </ul>
                     </div>
                   </div>
-                  <div>
-                    <label for="draft-subject-{{ task.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">Subject</label>
-                    <input 
-                      type="text" 
-                      id="draft-subject-{{ task.pk }}" 
-                      name="subject" 
-                      value="{% if email_data.draft %}{{ email_data.draft.subject }}{% else %}Re: {{ task.email_message.subject|default:"No subject" }}{% endif %}" 
-                      class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-xs sm:text-sm text-gray-900 dark:text-white border-0 focus:ring-2 focus:ring-cyan-600"
-                    />
-                  </div>
-                  <div>
-                    <label for="draft-body-{{ task.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">Body (HTML)</label>
-                    <textarea 
-                      id="draft-body-{{ task.pk }}" 
-                      name="body_html" 
-                      rows="12" 
-                      class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-xs sm:text-sm text-gray-900 dark:text-white border-0 focus:ring-2 focus:ring-cyan-600 font-mono"
-                    >{% if email_data.draft %}{{ email_data.draft.body_html }}{% endif %}</textarea>
-                  </div>
-                  
-                  <!-- AI Rewrite Section -->
-                  {% if email_data.draft %}
-                  <div class="border-t border-gray-200 dark:border-white/10 pt-4">
-                    <div class="mb-3">
-                      <label for="draft-rewrite-feedback-{{ task.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1">
-                        <i class="ti ti-sparkles mr-1"></i>
-                        Improve with AI
-                      </label>
-                      <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Tell AI how to improve this draft (e.g., "make it more professional", "add pricing details", "be more concise")</p>
-                      <textarea 
-                        id="draft-rewrite-feedback-{{ task.pk }}" 
-                        rows="3" 
-                        placeholder="e.g., Make it more professional and add a call to action..."
-                        class="block w-full rounded-md bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-xs sm:text-sm text-gray-900 dark:text-white border-0 focus:ring-2 focus:ring-cyan-600"
-                      ></textarea>
+                  <!-- Draft actions (icons) -->
+                  <!-- Draft actions (icons) and Send buttons on one line -->
+                  <div class="px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-1">
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="p-2 rounded-md text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors" title="Rewrite with AI" aria-label="Rewrite with AI" id="draft-rewrite-btn-{{ task.pk }}">
+                          <i class="ti ti-sparkles size-4" aria-hidden="true"></i>
+                        </button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Rewrite with AI</span>
+                        <!-- Rewrite with AI popup (fixed position so not clipped by scroll container) -->
+                        <div id="draft-rewrite-popup-{{ task.pk }}" class="hidden fixed z-[100] w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-rewrite-popup-title-{{ task.pk }}" role="dialog" style="top: 0; left: 0;">
+                          <h3 id="draft-rewrite-popup-title-{{ task.pk }}" class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Rewrite with AI</h3>
+                          <label for="draft-rewrite-prompt-{{ task.pk }}" class="sr-only">Your instructions</label>
+                          <textarea id="draft-rewrite-prompt-{{ task.pk }}" rows="2" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g. Make it more concise"></textarea>
+                          <div class="mt-1.5 flex justify-end gap-1.5">
+                            <button type="button" id="draft-rewrite-cancel-{{ task.pk }}" class="rounded px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancel</button>
+                            <button type="button" id="draft-rewrite-submit-{{ task.pk }}" class="rounded bg-purple-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-purple-500">Rewrite</button>
+                          </div>
+                        </div>
+                      </span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors" title="Add attachment" aria-label="Add attachment" id="draft-attachment-btn-{{ task.pk }}">
+                          <i class="ti ti-paperclip size-4" aria-hidden="true"></i>
+                        </button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Add attachment</span>
+                      </span>
+                      <input type="file" id="draft-attachment-input-{{ task.pk }}" class="hidden" multiple accept="*/*">
                     </div>
-                    <button 
-                      type="button" 
-                      id="draft-rewrite-btn-{{ task.pk }}"
-                      onclick="rewriteDraft{{ task.pk }}()"
-                      class="inline-flex items-center gap-2 rounded-md bg-purple-600 px-3 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <i class="ti ti-sparkles size-4"></i>
-                      <span>Rewrite with AI</span>
-                    </button>
-                    <div id="draft-rewrite-status-{{ task.pk }}" class="mt-2 text-xs hidden"></div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      {% if user_connected_accounts|length > 1 %}
+                        <label for="draft-from-account-{{ task.pk }}" class="text-[10px] text-gray-500 dark:text-gray-400 shrink-0">From:</label>
+                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="text-[10px] rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-0.5 pr-5 pl-1 focus:ring-1 focus:ring-cyan-500 max-w-[11rem]" title="Choose which account to send from" aria-label="Send from account">
+                          {% for acc in user_connected_accounts %}
+                            <option value="{{ acc.pk }}" {% if email_data.draft %}{% if acc.pk == email_data.draft.account_id %}selected{% endif %}{% else %}{% if acc.pk == task.account_id %}selected{% endif %}{% endif %}>{{ acc.email }}</option>
+                          {% endfor %}
+                        </select>
+                      {% else %}
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mr-1 shrink-0">From: {{ task.account.email }}</p>
+                      {% endif %}
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" id="draft-send-btn-{{ task.pk }}" class="rounded-md bg-slate-600 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Send Email</button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Send Email</span>
+                      </span>
+                      <span class="relative group/tooltip inline-block">
+                        <button type="button" id="draft-send-mark-done-btn-{{ task.pk }}" class="rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Send Email and Mark as Done</button>
+                        <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Send Email and Mark as Done</span>
+                      </span>
+                    </div>
                   </div>
-                  {% endif %}
-                  
-                  <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
-                    <button type="button" onclick="document.getElementById('task-detail-{{ task.pk }}').close();" class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">Cancel</button>
-                    <button type="submit" class="rounded-md bg-cyan-600 px-3 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Save Draft</button>
-                  </div>
-                </div>
+                </article>
               </form>
               <script>
                 (function() {
                   const taskPk = {{ task.pk }};
                   const form = document.getElementById('draft-form-' + taskPk);
-                  if (form) {
-                    form.addEventListener('submit', function(event) {
-                      event.preventDefault();
-                      
-                      // Convert comma-separated emails to JSON arrays
-                      const toInput = document.getElementById('draft-to-' + taskPk);
-                      const toJson = document.getElementById('draft-to-json-' + taskPk);
-                      const ccInput = document.getElementById('draft-cc-' + taskPk);
-                      const ccJson = document.getElementById('draft-cc-json-' + taskPk);
-                      
-                      const toEmails = toInput.value.split(',').map(e => e.trim()).filter(e => e);
-                      const ccEmails = ccInput.value.split(',').map(e => e.trim()).filter(e => e);
-                      
-                      toJson.value = JSON.stringify(toEmails);
-                      ccJson.value = JSON.stringify(ccEmails);
-                      
-                      // Submit form
-                      event.target.submit();
+                  const toggleBtn = document.getElementById('draft-recipients-toggle-' + taskPk);
+                  const dropdown = document.getElementById('draft-recipients-dropdown-' + taskPk);
+                  const toInput = document.getElementById('draft-to-' + taskPk);
+                  const ccInput = document.getElementById('draft-cc-' + taskPk);
+                  const bccInput = document.getElementById('draft-bcc-' + taskPk);
+                  const toSummary = document.getElementById('draft-to-summary-' + taskPk);
+                  const ccBccSummary = document.getElementById('draft-cc-bcc-summary-' + taskPk);
+                  const subjectInput = document.getElementById('draft-subject-' + taskPk);
+                  const bodyEditor = document.getElementById('draft-body-' + taskPk);
+                  const bodyHtmlInput = document.getElementById('draft-body-html-' + taskPk);
+                  const AUTOSAVE_DELAY_MS = 1500;
+                  let autosaveTimer = null;
+
+                  function syncBodyToHidden() {
+                    if (bodyEditor && bodyHtmlInput) bodyHtmlInput.value = bodyEditor.innerHTML || '';
+                  }
+                  var savedSel = null;
+                  var DRAFT_LIST_DEBUG = false;
+                  if (typeof window !== 'undefined') window.draftListDebug = function(on) { DRAFT_LIST_DEBUG = !!on; return DRAFT_LIST_DEBUG; };
+                  // Bullet list troubleshooting: open DevTools (F12), open a task with draft, run draftListDebug(1), then click bullet list and check console for [draft list] messages.
+                  function saveSel() {
+                    var sel = window.getSelection();
+                    if (!sel.rangeCount || !bodyEditor || !bodyEditor.contains(sel.anchorNode)) return null;
+                    try {
+                      var r = sel.getRangeAt(0).cloneRange();
+                      return { startContainer: r.startContainer, startOffset: r.startOffset, endContainer: r.endContainer, endOffset: r.endOffset };
+                    } catch (err) { return null; }
+                  }
+                  function restoreSel(s) {
+                    if (!s || !bodyEditor) return false;
+                    try {
+                      var sel = window.getSelection();
+                      var r = document.createRange();
+                      r.setStart(s.startContainer, s.startOffset);
+                      r.setEnd(s.endContainer, s.endOffset);
+                      sel.removeAllRanges();
+                      sel.addRange(r);
+                      if (DRAFT_LIST_DEBUG) console.log('[draft list] restoreSel OK');
+                      return true;
+                    } catch (err) {
+                      if (DRAFT_LIST_DEBUG) console.warn('[draft list] restoreSel failed', err);
                       return false;
+                    }
+                  }
+                  if (bodyEditor && bodyHtmlInput) {
+                    syncBodyToHidden();
+                    bodyEditor.addEventListener('input', function() { syncBodyToHidden(); scheduleAutosave(); });
+                    bodyEditor.addEventListener('paste', function() { setTimeout(syncBodyToHidden, 0); });
+                    bodyEditor.addEventListener('click', function(e) {
+                      var anchor = e.target.closest('a[href]');
+                      if (!anchor || !anchor.href) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+                    });
+                  }
+                  document.addEventListener('selectionchange', function() {
+                    if (bodyEditor && document.getSelection() && document.getSelection().anchorNode && bodyEditor.contains(document.getSelection().anchorNode))
+                      savedSel = saveSel();
+                  });
+                  function expandSelectionToBlock() {
+                    var sel = window.getSelection();
+                    if (!sel.rangeCount || !bodyEditor) return;
+                    var r = sel.getRangeAt(0);
+                    var node = r.startContainer;
+                    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+                    while (node && node !== bodyEditor) {
+                      var tag = (node.nodeName || '').toUpperCase();
+                      if (tag === 'DIV' || tag === 'P' || tag === 'LI' || tag === 'H1' || tag === 'H2' || tag === 'H3' || tag === 'H4' || tag === 'H5' || tag === 'H6' || tag === 'BLOCKQUOTE') {
+                        try {
+                          var blockRange = document.createRange();
+                          blockRange.selectNodeContents(node);
+                          sel.removeAllRanges();
+                          sel.addRange(blockRange);
+                        } catch (err) {}
+                        return;
+                      }
+                      node = node.parentElement;
+                    }
+                    if (r.collapsed) {
+                      try {
+                        var fullRange = document.createRange();
+                        fullRange.selectNodeContents(bodyEditor);
+                        sel.removeAllRanges();
+                        sel.addRange(fullRange);
+                      } catch (err) {}
+                    }
+                  }
+                  function applyListCommand(ordered) {
+                    var sel = window.getSelection();
+                    if (!sel.rangeCount || !bodyEditor) {
+                      if (DRAFT_LIST_DEBUG) console.warn('[draft list] applyListCommand: no selection or bodyEditor');
+                      return;
+                    }
+                    if (!bodyEditor.contains(sel.anchorNode)) {
+                      if (DRAFT_LIST_DEBUG) console.warn('[draft list] applyListCommand: selection not in bodyEditor');
+                      bodyEditor.focus();
+                      var r = document.createRange();
+                      r.selectNodeContents(bodyEditor);
+                      sel.removeAllRanges();
+                      sel.addRange(r);
+                    }
+                    expandSelectionToBlock();
+                    var range = sel.getRangeAt(0);
+                    if (DRAFT_LIST_DEBUG) console.log('[draft list] applyListCommand: range text length', range.toString().length, 'collapsed', range.collapsed);
+                    try {
+                      var tag = ordered ? 'ol' : 'ul';
+                      var html = '';
+                      try {
+                        var frag = range.cloneContents();
+                        var div = document.createElement('div');
+                        div.appendChild(frag);
+                        html = div.innerHTML;
+                      } catch (err) {
+                        html = range.toString() || '';
+                      }
+                      if (!html.trim()) html = '<br>';
+                      var inner = html.replace(/<br\s*\/?>/gi, '</li><li>');
+                      if (inner.lastIndexOf('</li><li>') === inner.length - 9) inner = inner.slice(0, -9);
+                      var listHtml = '<' + tag + '><li>' + inner + '</li></' + tag + '>';
+                      if (DRAFT_LIST_DEBUG) console.log('[draft list] listHtml length', listHtml.length);
+                      range.deleteContents();
+                      var wrap = document.createElement('div');
+                      wrap.innerHTML = listHtml;
+                      var listEl = wrap.firstElementChild;
+                      range.insertNode(listEl);
+                      sel.removeAllRanges();
+                      var r = document.createRange();
+                      r.setStartAfter(listEl);
+                      r.collapse(true);
+                      sel.addRange(r);
+                      if (DRAFT_LIST_DEBUG) console.log('[draft list] list inserted OK');
+                    } catch (err) {
+                      if (DRAFT_LIST_DEBUG) console.warn('[draft list] applyListCommand catch', err);
+                      document.execCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+                    }
+                  }
+                  if (form) {
+                    form.addEventListener('click', function(e) {
+                      var wrap = e.target.closest('span[class*="group/tooltip"]');
+                      if (!wrap || !wrap.querySelector('.draft-tooltip')) return;
+                      wrap.classList.add('tooltip-dismissed');
+                    });
+                    form.querySelectorAll('.draft-format-btn').forEach(function(btn) {
+                      btn.addEventListener('mouseenter', function() {
+                        if (bodyEditor && document.getSelection() && document.getSelection().anchorNode && bodyEditor.contains(document.getSelection().anchorNode))
+                          savedSel = saveSel();
+                      });
+                      btn.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        var target = e.currentTarget;
+                        var cmd = target ? target.getAttribute('data-command') : null;
+                        if (!cmd || !bodyEditor) return;
+                        bodyEditor.focus();
+                        var toRestore = savedSel;
+                        var isListCmd = (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList');
+                        if (DRAFT_LIST_DEBUG && isListCmd) console.log('[draft list] mousedown list cmd, toRestore=', !!toRestore);
+                        setTimeout(function() {
+                          var restored = toRestore ? restoreSel(toRestore) : false;
+                          if (isListCmd && !restored && !toRestore) {
+                            var sel = window.getSelection();
+                            if (!sel.rangeCount || !bodyEditor.contains(sel.anchorNode)) {
+                              var r = document.createRange();
+                              r.selectNodeContents(bodyEditor);
+                              sel.removeAllRanges();
+                              sel.addRange(r);
+                            }
+                          }
+                          if (isListCmd) {
+                            applyListCommand(cmd === 'insertOrderedList');
+                          } else {
+                            document.execCommand(cmd, false, null);
+                          }
+                          syncBodyToHidden();
+                          scheduleAutosave();
+                        }, 0);
+                      });
+                    });
+                    var PRESET_FORE = ['#000000','#374151','#6b7280','#9ca3af','#dc2626','#2563eb','#059669','#7c3aed','#b45309','#0d9488','#ea580c','#be123c'];
+                    var PRESET_BACK = ['#fef08a','#bbf7d0','#bfdbfe','#fbcfe8','#e5e7eb','#fde68a','#a5f3fc','#ddd6fe','#fecaca','#d9f99d','#fed7aa','#f5d0fe'];
+                    function rgbToHex(rgb) {
+                      if (!rgb || rgb.indexOf('rgb') !== 0) return null;
+                      var m = rgb.match(/\d+/g);
+                      if (!m || m.length < 3) return null;
+                      return '#' + [0,1,2].map(function(i) { var x = parseInt(m[i], 10); return ('0' + (x <= 15 ? '0' : '') + x.toString(16)).slice(-2); }).join('');
+                    }
+                    function hexEqual(a, b) {
+                      if (!a || !b) return false;
+                      a = a.replace(/^#/, '').toLowerCase();
+                      b = b.replace(/^#/, '').toLowerCase();
+                      if (a.length === 3) a = a[0]+a[0]+a[1]+a[1]+a[2]+a[2];
+                      if (b.length === 3) b = b[0]+b[0]+b[1]+b[1]+b[2]+b[2];
+                      return a === b;
+                    }
+                    var forePalette = form.querySelector('#draft-fore-palette-' + taskPk);
+                    var backPalette = form.querySelector('#draft-back-palette-' + taskPk);
+                    var forePresetsContainer = form.querySelector('.draft-fore-presets');
+                    var backPresetsContainer = form.querySelector('.draft-back-presets');
+                    if (forePresetsContainer) {
+                      PRESET_FORE.forEach(function(hex) {
+                        var el = document.createElement('button');
+                        el.type = 'button';
+                        el.className = 'draft-preset-color w-7 h-7 min-w-[28px] min-h-[28px] shrink-0 rounded-md border-2 border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 transition-transform box-border';
+                        el.style.backgroundColor = hex;
+                        el.setAttribute('data-color', hex);
+                        el.setAttribute('aria-label', 'Text colour ' + hex);
+                        forePresetsContainer.appendChild(el);
+                      });
+                    }
+                    if (backPresetsContainer) {
+                      PRESET_BACK.forEach(function(hex) {
+                        var el = document.createElement('button');
+                        el.type = 'button';
+                        el.className = 'draft-preset-color w-7 h-7 min-w-[28px] min-h-[28px] shrink-0 rounded-md border-2 border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 transition-transform box-border';
+                        el.style.backgroundColor = hex;
+                        el.setAttribute('data-color', hex);
+                        el.setAttribute('aria-label', 'Highlight colour ' + hex);
+                        backPresetsContainer.appendChild(el);
+                      });
+                    }
+                    form.querySelectorAll('.draft-trigger-fore-color').forEach(function(btn) {
+                      btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+                      btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (!bodyEditor) return;
+                        var open = forePalette && forePalette.classList.toggle('hidden');
+                        if (backPalette) backPalette.classList.add('hidden');
+                        if (forePalette && !forePalette.classList.contains('hidden')) {
+                          try {
+                            var val = document.queryCommandValue('foreColor');
+                            var hex = (val && val.indexOf('rgb') === 0) ? rgbToHex(val) : (val || '');
+                            forePresetsContainer && forePresetsContainer.querySelectorAll('.draft-preset-color').forEach(function(b) {
+                              var on = hexEqual(b.getAttribute('data-color'), hex);
+                              b.classList.toggle('ring-2', on);
+                              b.classList.toggle('ring-cyan-500', on);
+                            });
+                          } catch (err) {}
+                        }
+                      });
+                    });
+                    form.querySelectorAll('.draft-trigger-back-color').forEach(function(btn) {
+                      btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+                      btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (!bodyEditor) return;
+                        var open = backPalette && backPalette.classList.toggle('hidden');
+                        if (forePalette) forePalette.classList.add('hidden');
+                        if (backPalette && !backPalette.classList.contains('hidden')) {
+                          try {
+                            var val = document.queryCommandValue('backColor');
+                            var hex = (val && val.indexOf('rgb') === 0) ? rgbToHex(val) : (val || '');
+                            backPresetsContainer && backPresetsContainer.querySelectorAll('.draft-preset-color').forEach(function(b) {
+                              var on = hexEqual(b.getAttribute('data-color'), hex);
+                              b.classList.toggle('ring-2', on);
+                              b.classList.toggle('ring-cyan-500', on);
+                            });
+                          } catch (err) {}
+                        }
+                      });
+                    });
+                    function applyForeColor(hex) {
+                      if (!bodyEditor) return;
+                      bodyEditor.focus();
+                      document.execCommand('foreColor', false, hex);
+                      var btn = form.querySelector('.draft-trigger-fore-color');
+                      var swatch = form.querySelector('.draft-fore-swatch');
+                      if (btn) { btn.setAttribute('data-current-color', hex); btn.setAttribute('aria-expanded', 'false'); }
+                      if (swatch) swatch.style.backgroundColor = hex;
+                      if (forePalette) forePalette.classList.add('hidden');
+                      syncBodyToHidden();
+                      scheduleAutosave();
+                    }
+                    function applyBackColor(hex) {
+                      if (!bodyEditor) return;
+                      bodyEditor.focus();
+                      document.execCommand('backColor', false, hex);
+                      var btn = form.querySelector('.draft-trigger-back-color');
+                      var swatch = form.querySelector('.draft-back-swatch');
+                      if (btn) { btn.setAttribute('data-current-color', hex); btn.setAttribute('aria-expanded', 'false'); }
+                      if (swatch) swatch.style.backgroundColor = hex;
+                      if (backPalette) backPalette.classList.add('hidden');
+                      syncBodyToHidden();
+                      scheduleAutosave();
+                    }
+                    forePresetsContainer && forePresetsContainer.addEventListener('mousedown', function(e) {
+                      var btn = e.target.closest('.draft-preset-color');
+                      if (btn && btn.getAttribute('data-color')) { e.preventDefault(); applyForeColor(btn.getAttribute('data-color')); }
+                    });
+                    backPresetsContainer && backPresetsContainer.addEventListener('mousedown', function(e) {
+                      var btn = e.target.closest('.draft-preset-color');
+                      if (btn && btn.getAttribute('data-color')) { e.preventDefault(); applyBackColor(btn.getAttribute('data-color')); }
+                    });
+                    document.addEventListener('click', function(e) {
+                      var foreBtn = form.querySelector('.draft-trigger-fore-color');
+                      var backBtn = form.querySelector('.draft-trigger-back-color');
+                      if (forePalette && !forePalette.classList.contains('hidden') && !forePalette.contains(e.target) && (!foreBtn || !foreBtn.contains(e.target))) forePalette.classList.add('hidden');
+                      if (backPalette && !backPalette.classList.contains('hidden') && !backPalette.contains(e.target) && (!backBtn || !backBtn.contains(e.target))) backPalette.classList.add('hidden');
+                    });
+                    var linkBtn = document.getElementById('draft-link-btn-' + taskPk);
+                    var linkPopup = document.getElementById('draft-link-popup-' + taskPk);
+                    var linkUrlInput = document.getElementById('draft-link-url-' + taskPk);
+                    var linkCancelBtn = document.getElementById('draft-link-cancel-' + taskPk);
+                    var linkDoneBtn = document.getElementById('draft-link-done-' + taskPk);
+                    function closeLinkPopup() {
+                      if (linkPopup) linkPopup.classList.add('hidden');
+                      if (linkUrlInput) linkUrlInput.value = '';
+                    }
+                    if (linkBtn) {
+                      var linkWrap = linkBtn.closest('span');
+                      if (linkWrap) {
+                        linkWrap.addEventListener('mouseenter', function() {
+                          if (bodyEditor && document.getSelection() && document.getSelection().anchorNode && bodyEditor.contains(document.getSelection().anchorNode))
+                            savedSel = saveSel();
+                        });
+                      }
+                      linkBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!bodyEditor || !linkPopup || !linkUrlInput) return;
+                        linkPopup.classList.toggle('hidden');
+                        if (!linkPopup.classList.contains('hidden')) { linkUrlInput.value = ''; linkUrlInput.focus(); }
+                      });
+                    }
+                    if (linkCancelBtn) linkCancelBtn.addEventListener('click', closeLinkPopup);
+                    if (linkPopup) {
+                      document.addEventListener('click', function(e) {
+                        if (linkPopup.classList.contains('hidden')) return;
+                        if (linkPopup.contains(e.target) || (linkBtn && linkBtn.contains(e.target))) return;
+                        closeLinkPopup();
+                      });
+                      document.addEventListener('keydown', function linkPopupKey(e) {
+                        if (!linkPopup || linkPopup.classList.contains('hidden')) return;
+                        if (e.key === 'Escape') { closeLinkPopup(); e.preventDefault(); e.stopPropagation(); }
+                      });
+                    }
+                    if (linkDoneBtn && linkUrlInput && bodyEditor) {
+                      function applyLinkAndClose() {
+                        bodyEditor.focus();
+                        var toRestore = savedSel;
+                        if (toRestore) restoreSel(toRestore);
+                        var url = (linkUrlInput.value || '').trim();
+                        if (url) document.execCommand('createLink', false, url);
+                        else document.execCommand('unlink', false, null);
+                        closeLinkPopup();
+                        syncBodyToHidden();
+                        scheduleAutosave();
+                      }
+                      linkDoneBtn.addEventListener('click', applyLinkAndClose);
+                      linkUrlInput.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') { e.preventDefault(); applyLinkAndClose(); }
+                      });
+                    }
+                    var fontSizeSelect = form.querySelector('#draft-font-size-' + taskPk);
+                    if (fontSizeSelect && bodyEditor) {
+                      var fontSizeWrap = fontSizeSelect.closest('span');
+                      if (fontSizeWrap) {
+                        fontSizeWrap.addEventListener('mouseenter', function() {
+                          if (bodyEditor && document.getSelection() && document.getSelection().anchorNode && bodyEditor.contains(document.getSelection().anchorNode))
+                            savedSel = saveSel();
+                        });
+                      }
+                      fontSizeSelect.addEventListener('change', function() {
+                        var pt = parseInt(fontSizeSelect.value, 10) || 12;
+                        bodyEditor.focus();
+                        var toRestore = savedSel;
+                        if (toRestore) restoreSel(toRestore);
+                        var sel = window.getSelection();
+                        if (!sel.rangeCount || !bodyEditor.contains(sel.anchorNode)) return;
+                        var range = sel.getRangeAt(0);
+                        try {
+                          var span = document.createElement('span');
+                          span.style.fontSize = pt + 'pt';
+                          if (range.collapsed) {
+                            range.insertNode(span);
+                            range.setStart(span, 0);
+                            range.setEnd(span, 0);
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                          } else {
+                            range.surroundContents(span);
+                            var r = document.createRange();
+                            r.selectNodeContents(span);
+                            sel.removeAllRanges();
+                            sel.addRange(r);
+                          }
+                        } catch (err) {
+                          try {
+                            var span = document.createElement('span');
+                            span.style.fontSize = pt + 'pt';
+                            var frag = range.extractContents();
+                            span.appendChild(frag);
+                            range.insertNode(span);
+                            var r = document.createRange();
+                            r.setStart(span, 0);
+                            r.setEnd(span, span.childNodes.length);
+                            sel.removeAllRanges();
+                            sel.addRange(r);
+                          } catch (e) {}
+                        }
+                        syncBodyToHidden();
+                        scheduleAutosave();
+                      });
+                    }
+                  }
+
+                  if (toggleBtn && dropdown) {
+                    toggleBtn.addEventListener('click', function() {
+                      const isOpen = dropdown.classList.toggle('hidden');
+                      toggleBtn.setAttribute('aria-expanded', !isOpen);
+                      const chevron = toggleBtn.querySelector('.draft-recipients-chevron');
+                      if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+                    });
+                  }
+
+                  function updateRecipientSummary() {
+                    if (toSummary) toSummary.textContent = toInput ? toInput.value.trim() || '—' : '—';
+                    if (ccBccSummary) {
+                      const cc = ccInput ? ccInput.value.trim() : '';
+                      const bcc = bccInput ? bccInput.value.trim() : '';
+                      const parts = [];
+                      if (cc) parts.push('CC: ' + cc);
+                      if (bcc) parts.push('BCC: ' + bcc);
+                      ccBccSummary.textContent = parts.length ? ', ' + parts.join('; ') : '';
+                    }
+                  }
+                  if (toInput) toInput.addEventListener('input', updateRecipientSummary);
+                  if (toInput) toInput.addEventListener('change', updateRecipientSummary);
+                  if (ccInput) ccInput.addEventListener('input', updateRecipientSummary);
+                  if (ccInput) ccInput.addEventListener('change', updateRecipientSummary);
+                  if (bccInput) bccInput.addEventListener('input', updateRecipientSummary);
+                  if (bccInput) bccInput.addEventListener('change', updateRecipientSummary);
+
+                  function syncHiddenAddressFields() {
+                    const toJson = document.getElementById('draft-to-json-' + taskPk);
+                    const ccJson = document.getElementById('draft-cc-json-' + taskPk);
+                    const bccJson = document.getElementById('draft-bcc-json-' + taskPk);
+                    if (toInput && toJson) toJson.value = JSON.stringify(toInput.value.split(',').map(e => e.trim()).filter(e => e));
+                    if (ccInput && ccJson) ccJson.value = JSON.stringify(ccInput.value.split(',').map(e => e.trim()).filter(e => e));
+                    if (bccInput && bccJson) bccJson.value = JSON.stringify(bccInput.value.split(',').map(e => e.trim()).filter(e => e));
+                  }
+
+                  function getFormData() {
+                    syncHiddenAddressFields();
+                    syncBodyToHidden();
+                    return new FormData(form);
+                  }
+
+                  function saveDraft() {
+                    return new Promise(function(resolve, reject) {
+                      syncHiddenAddressFields();
+                      syncBodyToHidden();
+                      const fd = new FormData(form);
+                      const xhr = new XMLHttpRequest();
+                      xhr.open('POST', form.action);
+                      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                      xhr.onload = function() {
+                        if (xhr.status !== 200) {
+                          try {
+                            var r = JSON.parse(xhr.responseText);
+                            reject(new Error(r.error || 'Save failed'));
+                          } catch (e) {
+                            reject(new Error('Save failed'));
+                          }
+                          return;
+                        }
+                        try {
+                          var r = JSON.parse(xhr.responseText);
+                          if (r.success && r.draft_id) {
+                            form.setAttribute('data-draft-id', r.draft_id);
+                            form.action = '/drafts/' + r.draft_id + '/edit/';
+                            resolve(r.draft_id);
+                          } else {
+                            resolve(form.getAttribute('data-draft-id') || null);
+                          }
+                        } catch (e) {
+                          resolve(form.getAttribute('data-draft-id') || null);
+                        }
+                      };
+                      xhr.onerror = function() { reject(new Error('Network error')); };
+                      xhr.send(fd);
+                    });
+                  }
+
+                  function scheduleAutosave() {
+                    if (autosaveTimer) clearTimeout(autosaveTimer);
+                    autosaveTimer = setTimeout(function() {
+                      autosaveTimer = null;
+                      const fd = getFormData();
+                      fetch(form.action, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                      }).then(function(res) { return res.json(); }).then(function(data) {
+                        if (data.success && data.draft_id && !form.getAttribute('data-draft-id')) {
+                          form.setAttribute('data-draft-id', data.draft_id);
+                          form.action = '/drafts/' + data.draft_id + '/edit/';
+                        }
+                      }).catch(function() {});
+                    }, AUTOSAVE_DELAY_MS);
+                  }
+
+                  if (toInput) { toInput.addEventListener('input', scheduleAutosave); toInput.addEventListener('change', scheduleAutosave); }
+                  if (ccInput) { ccInput.addEventListener('input', scheduleAutosave); ccInput.addEventListener('change', scheduleAutosave); }
+                  if (bccInput) { bccInput.addEventListener('input', scheduleAutosave); bccInput.addEventListener('change', scheduleAutosave); }
+                  if (subjectInput) { subjectInput.addEventListener('input', scheduleAutosave); subjectInput.addEventListener('change', scheduleAutosave); }
+
+                  var sendBtn = document.getElementById('draft-send-btn-' + taskPk);
+                  var sendMarkDoneBtn = document.getElementById('draft-send-mark-done-btn-' + taskPk);
+                  if (sendBtn) {
+                    sendBtn.addEventListener('click', function() {
+                      sendBtn.disabled = true;
+                      saveDraft().then(function(draftId) {
+                        if (draftId) {
+                          var formSend = document.createElement('form');
+                          formSend.method = 'POST';
+                          formSend.action = '/drafts/' + draftId + '/send/';
+                          var csrf = form.querySelector('[name=csrfmiddlewaretoken]');
+                          if (csrf) {
+                            var c = document.createElement('input');
+                            c.type = 'hidden';
+                            c.name = 'csrfmiddlewaretoken';
+                            c.value = csrf.value;
+                            formSend.appendChild(c);
+                          }
+                          var fromSelect = document.getElementById('draft-from-account-' + taskPk);
+                          if (fromSelect && fromSelect.value) {
+                            var fromInp = document.createElement('input');
+                            fromInp.type = 'hidden';
+                            fromInp.name = 'from_account';
+                            fromInp.value = fromSelect.value;
+                            formSend.appendChild(fromInp);
+                          }
+                          document.body.appendChild(formSend);
+                          formSend.submit();
+                        } else {
+                          sendBtn.disabled = false;
+                        }
+                      }).catch(function() { sendBtn.disabled = false; });
+                    });
+                  }
+                  if (sendMarkDoneBtn) {
+                    sendMarkDoneBtn.addEventListener('click', function() {
+                      sendMarkDoneBtn.disabled = true;
+                      saveDraft().then(function(draftId) {
+                        if (draftId) {
+                          var formSend = document.createElement('form');
+                          formSend.method = 'POST';
+                          formSend.action = '/drafts/' + draftId + '/send-and-mark-done/';
+                          var csrf = form.querySelector('[name=csrfmiddlewaretoken]');
+                          if (csrf) {
+                            var c = document.createElement('input');
+                            c.type = 'hidden';
+                            c.name = 'csrfmiddlewaretoken';
+                            c.value = csrf.value;
+                            formSend.appendChild(c);
+                          }
+                          var fromSelect = document.getElementById('draft-from-account-' + taskPk);
+                          if (fromSelect && fromSelect.value) {
+                            var fromInp = document.createElement('input');
+                            fromInp.type = 'hidden';
+                            fromInp.name = 'from_account';
+                            fromInp.value = fromSelect.value;
+                            formSend.appendChild(fromInp);
+                          }
+                          document.body.appendChild(formSend);
+                          formSend.submit();
+                        } else {
+                          sendMarkDoneBtn.disabled = false;
+                        }
+                      }).catch(function() { sendMarkDoneBtn.disabled = false; });
+                    });
+                  }
+
+                  function getDraftId() { return form.getAttribute('data-draft-id') || null; }
+                  function getCsrf() { var c = form.querySelector('[name=csrfmiddlewaretoken]'); return c ? c.value : ''; }
+
+                  var rewriteBtn = document.getElementById('draft-rewrite-btn-' + taskPk);
+                  var rewritePopup = document.getElementById('draft-rewrite-popup-' + taskPk);
+                  var rewritePrompt = document.getElementById('draft-rewrite-prompt-' + taskPk);
+                  var rewriteCancel = document.getElementById('draft-rewrite-cancel-' + taskPk);
+                  var rewriteSubmit = document.getElementById('draft-rewrite-submit-' + taskPk);
+                  function closeRewritePopup() {
+                    if (rewritePopup) rewritePopup.classList.add('hidden');
+                    if (rewritePrompt) rewritePrompt.value = '';
+                  }
+                  if (rewriteBtn && rewritePopup) {
+                    rewriteBtn.addEventListener('click', function(e) {
+                      e.stopPropagation();
+                      var isOpening = rewritePopup.classList.contains('hidden');
+                      if (isOpening) {
+                        var rect = rewriteBtn.getBoundingClientRect();
+                        var gap = 4;
+                        var popupW = 288;
+                        var popupH = 160;
+                        var viewW = window.innerWidth;
+                        var viewH = window.innerHeight;
+                        var top = rect.bottom + gap;
+                        var left = Math.max(8, Math.min(rect.left, viewW - popupW - 8));
+                        if (top + popupH > viewH - 8) top = Math.max(8, rect.top - popupH - gap);
+                        rewritePopup.style.top = top + 'px';
+                        rewritePopup.style.left = left + 'px';
+                      }
+                      rewritePopup.classList.toggle('hidden');
+                      if (isOpening && rewritePrompt) { rewritePrompt.value = ''; rewritePrompt.focus(); }
+                    });
+                    if (rewriteCancel) rewriteCancel.addEventListener('click', closeRewritePopup);
+                    document.addEventListener('click', function(e) {
+                      if (rewritePopup.classList.contains('hidden')) return;
+                      if (rewritePopup.contains(e.target) || rewriteBtn.contains(e.target)) return;
+                      closeRewritePopup();
+                    });
+                    document.addEventListener('keydown', function onRewriteKey(e) {
+                      if (!rewritePopup || rewritePopup.classList.contains('hidden')) return;
+                      if (e.key === 'Escape') { closeRewritePopup(); e.preventDefault(); e.stopPropagation(); }
+                    });
+                    if (rewriteSubmit && rewritePrompt) {
+                      rewriteSubmit.addEventListener('click', function() {
+                        var feedback = (rewritePrompt.value || '').trim();
+                        if (!feedback) return;
+                        rewriteSubmit.disabled = true;
+                        saveDraft().then(function(draftId) {
+                          if (!draftId) { rewriteSubmit.disabled = false; return; }
+                          var fd = new FormData();
+                          fd.append('csrfmiddlewaretoken', getCsrf());
+                          fd.append('feedback', feedback);
+                          return fetch('/drafts/' + draftId + '/rewrite/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function(r) { return r.json(); });
+                        }).then(function(data) {
+                          if (data && data.success && data.body_html !== undefined && bodyEditor) {
+                            bodyEditor.innerHTML = data.body_html;
+                            syncBodyToHidden();
+                            closeRewritePopup();
+                          }
+                          rewriteSubmit.disabled = false;
+                        }).catch(function() { rewriteSubmit.disabled = false; });
+                      });
+                    }
+                  }
+
+                  var attachmentBtn = document.getElementById('draft-attachment-btn-' + taskPk);
+                  var attachmentInput = document.getElementById('draft-attachment-input-' + taskPk);
+                  var attachmentsList = document.getElementById('draft-attachments-list-' + taskPk);
+                  var attachmentsUl = document.getElementById('draft-attachments-ul-' + taskPk);
+                  if (attachmentBtn && attachmentInput) attachmentBtn.addEventListener('click', function() { attachmentInput.click(); });
+                  if (attachmentInput && attachmentsUl && attachmentsList) {
+                    attachmentInput.addEventListener('change', function() {
+                      var files = attachmentInput.files;
+                      if (!files || !files.length) return;
+                      saveDraft().then(function(draftId) {
+                        if (!draftId) return;
+                        var csrf = getCsrf();
+                        var done = 0;
+                        for (var i = 0; i < files.length; i++) {
+                          (function(file) {
+                            var fd = new FormData();
+                            fd.append('csrfmiddlewaretoken', csrf);
+                            fd.append('file', file);
+                            fetch('/drafts/' + draftId + '/attachments/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                              .then(function(r) { return r.json(); })
+                              .then(function(data) {
+                                if (data && data.success && data.attachment) {
+                                  var name = data.attachment.filename || 'file';
+                                  var ext = name.indexOf('.') >= 0 ? name.split('.').pop().toLowerCase() : '';
+                                  var icon = 'ti-file';
+                                  var bg = 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
+                                  if (['jpg','jpeg','png','gif','webp','svg','bmp','ico'].indexOf(ext) >= 0) { icon = 'ti-photo'; bg = 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'; }
+                                  else if (['mp4','webm','mov','avi','mkv','m4v'].indexOf(ext) >= 0) { icon = 'ti-video'; bg = 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400'; }
+                                  else if (['mp3','wav','ogg','m4a','flac','aac'].indexOf(ext) >= 0) { icon = 'ti-music'; bg = 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'; }
+                                  else if (ext === 'pdf') { icon = 'ti-file-text'; bg = 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'; }
+                                  else if (['xls','xlsx','csv'].indexOf(ext) >= 0) { icon = 'ti-file-spreadsheet'; bg = 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'; }
+                                  else if (['doc','docx','txt','rtf'].indexOf(ext) >= 0) { icon = 'ti-file-description'; bg = 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'; }
+                                  var sizeStr = data.attachment.size_bytes != null ? (data.attachment.size_bytes < 1024 ? data.attachment.size_bytes + ' B' : (data.attachment.size_bytes < 1048576 ? (data.attachment.size_bytes / 1024).toFixed(1) + ' KB' : (data.attachment.size_bytes / 1048576).toFixed(1) + ' MB')) : '';
+                                  var downloadUrl = '/drafts/' + draftId + '/attachments/' + data.attachment.id + '/download/';
+                                  var li = document.createElement('li');
+                                  li.className = 'flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 text-sm';
+                                  li.setAttribute('data-attachment-id', data.attachment.id);
+                                  li.innerHTML = '<span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md ' + bg + '"><i class="ti ' + icon + ' size-5 block" aria-hidden="true"></i></span><div class="min-w-0 flex-1"><span class="text-gray-700 dark:text-gray-300 truncate block" title="' + name.replace(/"/g, '&quot;') + '">' + name.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' + (sizeStr ? '<span class="text-xs text-gray-500 dark:text-gray-400">' + sizeStr + '</span>' : '') + '</div><a href="' + downloadUrl + '" class="draft-attachment-download flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download" title="Download"><i class="ti ti-download size-4"></i></a><button type="button" class="draft-attachment-remove flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-attachment-id="' + data.attachment.id + '" aria-label="Remove"><i class="ti ti-x size-4"></i></button>';
+                                  attachmentsUl.appendChild(li);
+                                  attachmentsList.classList.remove('hidden');
+                                }
+                                done++;
+                                if (done === files.length) attachmentInput.value = '';
+                              });
+                          })(files[i]);
+                        }
+                      });
+                    });
+                  }
+                  if (attachmentsUl) {
+                    attachmentsUl.addEventListener('click', function(e) {
+                      var btn = e.target.closest('.draft-attachment-remove');
+                      if (!btn) return;
+                      var attId = btn.getAttribute('data-attachment-id');
+                      var draftId = getDraftId();
+                      if (!attId || !draftId) return;
+                      var li = btn.closest('li');
+                      var fd = new FormData();
+                      fd.append('csrfmiddlewaretoken', getCsrf());
+                      fetch('/drafts/' + draftId + '/attachments/' + attId + '/remove/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                          if (data && data.success && li) { li.remove(); if (!attachmentsUl.children.length && attachmentsList) attachmentsList.classList.add('hidden'); }
+                        });
                     });
                   }
                 })();
-                
-                // AI Rewrite function
-                {% if email_data.draft %}
-                window.rewriteDraft{{ task.pk }} = function() {
-                  const taskPk = {{ task.pk }};
-                  const draftPk = {{ email_data.draft.id }};
-                  const feedbackInput = document.getElementById('draft-rewrite-feedback-' + taskPk);
-                  const bodyTextarea = document.getElementById('draft-body-' + taskPk);
-                  const rewriteBtn = document.getElementById('draft-rewrite-btn-' + taskPk);
-                  const statusDiv = document.getElementById('draft-rewrite-status-' + taskPk);
-                  
-                  const feedback = feedbackInput.value.trim();
-                  if (!feedback) {
-                    statusDiv.className = 'mt-2 text-xs text-red-400';
-                    statusDiv.textContent = 'Please provide feedback on how to improve the draft.';
-                    statusDiv.classList.remove('hidden');
-                    return;
-                  }
-                  
-                  // Disable button and show loading
-                  rewriteBtn.disabled = true;
-                  rewriteBtn.innerHTML = '<i class="ti ti-loader-2 size-4 animate-spin"></i><span>Rewriting...</span>';
-                  statusDiv.className = 'mt-2 text-xs text-gray-600 dark:text-gray-400';
-                  statusDiv.textContent = 'AI is rewriting your draft...';
-                  statusDiv.classList.remove('hidden');
-                  
-                  // Create form data
-                  const formData = new FormData();
-                  formData.append('feedback', feedback);
-                  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-                  if (csrfToken) {
-                    formData.append('csrfmiddlewaretoken', csrfToken.value);
-                  }
-                  
-                  // Make AJAX request
-                  fetch('/drafts/' + draftPk + '/rewrite/', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                      'X-Requested-With': 'XMLHttpRequest'
-                    }
-                  })
-                  .then(response => response.json())
-                  .then(data => {
-                    if (data.success) {
-                      // Update the draft body
-                      bodyTextarea.value = data.body_html;
-                      statusDiv.className = 'mt-2 text-xs text-emerald-400';
-                      statusDiv.textContent = 'Draft rewritten successfully!';
-                      // Clear feedback
-                      feedbackInput.value = '';
-                      // Re-enable button
-                      rewriteBtn.disabled = false;
-                      rewriteBtn.innerHTML = '<i class="ti ti-sparkles size-4"></i><span>Rewrite with AI</span>';
-                    } else {
-                      statusDiv.className = 'mt-2 text-xs text-red-400';
-                      statusDiv.textContent = 'Error: ' + (data.error || 'Failed to rewrite draft');
-                      rewriteBtn.disabled = false;
-                      rewriteBtn.innerHTML = '<i class="ti ti-sparkles size-4"></i><span>Rewrite with AI</span>';
-                    }
-                  })
-                  .catch(error => {
-                    console.error('Error rewriting draft:', error);
-                    statusDiv.className = 'mt-2 text-xs text-red-400';
-                    statusDiv.textContent = 'Error: Failed to rewrite draft. Please try again.';
-                    rewriteBtn.disabled = false;
-                    rewriteBtn.innerHTML = '<i class="ti ti-sparkles size-4"></i><span>Rewrite with AI</span>';
-                  });
-                };
-                {% endif %}
               </script>
             </section>
             {% endif %}
-            
-            <!-- Email Thread Section -->
-            {% if email_data.thread_messages %}
-            <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
-              <header class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-900">
-                <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Email Thread</h2>
-                <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{{ email_data.thread_messages|length }} message{{ email_data.thread_messages|length|pluralize }} in this conversation</p>
-              </header>
-              <div class="divide-y divide-gray-200 dark:divide-white/10">
-                {% for msg in email_data.thread_messages %}
-                {% with is_current=msg.external_message_id|stringformat:"s"|add:"|"|add:task.email_message.external_message_id|stringformat:"s" %}
-                <div class="thread-accordion-item">
-                  <button 
-                    type="button"
-                    class="thread-accordion-header w-full px-4 sm:px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex justify-between items-center group {% if msg.external_message_id == task.email_message.external_message_id %}bg-cyan-50 dark:bg-cyan-900/20{% endif %}"
-                    onclick="toggleThreadAccordion_{{ task.pk }}({{ forloop.counter0 }})"
-                    aria-expanded="{% if forloop.first or msg.external_message_id == task.email_message.external_message_id %}true{% else %}false{% endif %}"
-                  >
-                    <div class="flex-1 flex items-center gap-3 sm:gap-4">
-                      <svg 
-                        class="thread-accordion-icon w-4 h-4 sm:w-5 sm:h-5 text-gray-400 transition-transform duration-200 flex-shrink-0 {% if msg.external_message_id == task.email_message.external_message_id %}text-cyan-600{% endif %}" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                        style="transform: {% if forloop.first or msg.external_message_id == task.email_message.external_message_id %}rotate(180deg){% else %}rotate(0deg){% endif %};"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                      </svg>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 sm:gap-3 mb-1">
-                          <h3 class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white group-hover:text-cyan-600 transition-colors truncate">
-                            {{ msg.subject|default:"(No subject)" }}
-                          </h3>
-                          {% if msg.external_message_id == task.email_message.external_message_id %}
-                          <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-400 flex-shrink-0">Current</span>
-                          {% endif %}
-                        </div>
-                        <div class="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                          <span class="font-medium">{{ msg.from_name|default:msg.from_address }}</span>
-                          <span class="text-xs">
-                            {% if msg.date_sent %}{{ msg.date_sent|date:"d M Y H:i" }}{% else %}Date unknown{% endif %}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                  <div 
-                    class="thread-accordion-content overflow-hidden transition-all duration-300 ease-in-out"
-                    id="thread-accordion-content-{{ task.pk }}-{{ forloop.counter0 }}"
-                    style="max-height: {% if forloop.first or msg.external_message_id == task.email_message.external_message_id %}none{% else %}0{% endif %};"
-                  >
-                    <div class="px-4 sm:px-6 pb-4 sm:pb-6 pt-0">
-                      <div class="pt-4 border-t border-gray-200 dark:border-white/10">
-                        <div class="space-y-3 sm:space-y-4">
-                          <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                              <div class="mb-2 sm:mb-3">
-                                <span class="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">From:</span>
-                                <span class="text-xs sm:text-sm text-gray-900 dark:text-white ml-2">{{ msg.from_name|default:msg.from_address }}</span>
-                                <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">({{ msg.from_address }})</span>
-                              </div>
-                              {% if msg.to_addresses %}
-                              <div class="mb-2 sm:mb-3">
-                                <span class="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">To:</span>
-                                <span class="text-xs sm:text-sm text-gray-900 dark:text-white ml-2">{{ msg.to_addresses|join:", " }}</span>
-                              </div>
-                              {% endif %}
-                            </div>
-                          </div>
-                          {% if msg.body_html %}
-                          <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-white/10 p-4 sm:p-6">
-                            <div class="email-body text-sm sm:text-base text-gray-900 dark:text-white prose prose-sm dark:prose-invert max-w-none prose-a:no-underline">
-                              {{ msg.body_html|safe }}
-                            </div>
-                          </div>
-                          {% else %}
-                          <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-white/10 text-sm text-gray-500 dark:text-gray-400 italic text-center">
-                            No body content available
-                          </div>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {% endwith %}
-                {% endfor %}
-              </div>
-            </section>
-            {% endif %}
-          </div>
-          {% endif %}
             </div>
+            </div>
+          {% endif %}
           </div>
         </div>
       </el-dialog-panel>
@@ -459,39 +1121,13 @@ Usage:
 <script>
 (function() {
   const taskPk = {{ task.pk }};
-  
-  // Thread accordion toggle function
-  window.toggleThreadAccordion_{{ task.pk }} = function(index) {
-    const content = document.getElementById(`thread-accordion-content-${taskPk}-${index}`);
-    const button = event.currentTarget;
-    const icon = button.querySelector('.thread-accordion-icon');
-    const isExpanded = button.getAttribute('aria-expanded') === 'true';
-    
-    // Toggle current accordion
-    if (isExpanded) {
-      content.style.maxHeight = '0';
-      button.setAttribute('aria-expanded', 'false');
-      if (icon) icon.style.transform = 'rotate(0deg)';
-    } else {
-      content.style.maxHeight = content.scrollHeight + 'px';
-      button.setAttribute('aria-expanded', 'true');
-      if (icon) icon.style.transform = 'rotate(180deg)';
-    }
-  };
-  
-  // Initialize accordion heights on page load
-  document.addEventListener('DOMContentLoaded', function() {
-    {% if email_data.thread_messages %}
-    {% for msg in email_data.thread_messages %}
-    {% if forloop.first or msg.external_message_id == task.email_message.external_message_id %}
-    const content{{ forloop.counter0 }} = document.getElementById('thread-accordion-content-{{ task.pk }}-{{ forloop.counter0 }}');
-    if (content{{ forloop.counter0 }}) {
-      content{{ forloop.counter0 }}.style.maxHeight = content{{ forloop.counter0 }}.scrollHeight + 'px';
-    }
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-  });
+  const dialog = document.getElementById('task-detail-' + taskPk);
+  const scrollContainer = document.getElementById('task-email-thread-draft-' + taskPk);
+  if (dialog && scrollContainer) {
+    dialog.addEventListener('open', function() {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    });
+  }
 })();
 </script>
 {% endif %}

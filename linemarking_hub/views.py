@@ -28,6 +28,58 @@ from linemarking_hub.forms import (
 )
 
 
+def _reply_draft_content(email, account, thread_messages=None):
+    """Return (reply_to, reply_subject, reply_body) for a draft replying to this email.
+    If the email is from the account (user's own sent message), use the other party's
+    message from the thread for the quote and reply-to so we don't show the user's name
+    as the quoted author."""
+    thread_messages = thread_messages or []
+    if email.from_address != account.email:
+        reply_to = [email.from_address]
+        reply_subject = f"Re: {email.subject or 'No subject'}"
+        date_str = email.date_sent.strftime("%Y-%m-%d %H:%M") if email.date_sent else "date"
+        attribution = email.from_name or email.from_address
+        reply_body = f"""<div>
+  <p>On {date_str}, {attribution} wrote:</p>
+  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
+    {email.body_html or ''}
+  </blockquote>
+</div>
+"""
+        return reply_to, reply_subject, reply_body
+
+    for msg in thread_messages:
+        if msg.get("from_address") and msg.get("from_address") != account.email:
+            reply_to = [msg["from_address"]]
+            reply_subject = f"Re: {msg.get('subject') or email.subject or 'No subject'}"
+            date_sent = msg.get("date_sent")
+            date_str = date_sent.strftime("%Y-%m-%d %H:%M") if date_sent else "date"
+            attribution = msg.get("from_name") or msg.get("from_address") or ""
+            body = msg.get("body_html") or ""
+            reply_body = f"""<div>
+  <p>On {date_str}, {attribution} wrote:</p>
+  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
+    {body}
+  </blockquote>
+</div>
+"""
+            return reply_to, reply_subject, reply_body
+
+    reply_to = list(email.to_addresses)[:1] if email.to_addresses else []
+    if not reply_to:
+        reply_to = [email.from_address]
+    reply_subject = f"Re: {email.subject or 'No subject'}"
+    date_str = email.date_sent.strftime("%Y-%m-%d %H:%M") if email.date_sent else "date"
+    reply_body = f"""<div>
+  <p>On {date_str}, you wrote:</p>
+  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
+    {email.body_html or ''}
+  </blockquote>
+</div>
+"""
+    return reply_to, reply_subject, reply_body
+
+
 # Jobs CRUD
 @login_required
 def jobs_list(request):
@@ -311,6 +363,9 @@ def tasks_list(request):
                     thread_messages = gmail_service.get_thread_messages(
                         email.account, email.thread.external_thread_id
                     )
+                    # Only show messages that belong to this thread (avoid cross-thread mix-up)
+                    current_thread_id = email.thread.external_thread_id or ""
+                    thread_messages = [m for m in thread_messages if m.get("external_thread_id") == current_thread_id]
                     # Sort by date
                     thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
                 except Exception as e:
@@ -323,16 +378,9 @@ def tasks_list(request):
             
             # If no draft exists and we should have one, create it
             if not draft and has_draft_reply:
-                reply_subject = f"Re: {email.subject or 'No subject'}"
-                reply_to = [email.from_address]
-                reply_body = f"""
-<div>
-  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
-  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
-    {email.body_html or ''}
-  </blockquote>
-</div>
-"""
+                reply_to, reply_subject, reply_body = _reply_draft_content(
+                    email, email.account, thread_messages
+                )
                 draft = Draft.objects.create(
                     account=email.account,
                     email_message=email,
@@ -349,7 +397,12 @@ def tasks_list(request):
             }
     
     form = TaskForm(user=request.user, account=account)
-    
+    user_connected_accounts = (
+        request.user.accounts.filter(is_connected=True).order_by("email")
+        if request.user.is_authenticated
+        else []
+    )
+
     return render(request, "tasks/list.html", {
         "tasks_by_priority": dict(tasks_by_priority),
         "all_tasks": all_tasks,
@@ -357,6 +410,7 @@ def tasks_list(request):
         "filter_form": filter_form,
         "search_query": search_query,
         "task_email_data": task_email_data,
+        "user_connected_accounts": user_connected_accounts,
     })
 
 
@@ -443,6 +497,8 @@ def emails_list(request):
                 thread_messages = gmail_service.get_thread_messages(
                     email.account, email.thread.external_thread_id
                 )
+                current_thread_id = email.thread.external_thread_id or ""
+                thread_messages = [m for m in thread_messages if m.get("external_thread_id") == current_thread_id]
                 thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
             except Exception as e:
                 logger.error(f"Error fetching thread messages for email {email.pk}: {e}")
@@ -494,6 +550,9 @@ def task_email_data(request, pk):
             thread_messages = gmail_service.get_thread_messages(
                 email.account, email.thread.external_thread_id
             )
+            # Only show messages that belong to this thread (avoid cross-thread mix-up)
+            current_thread_id = email.thread.external_thread_id or ""
+            thread_messages = [m for m in thread_messages if m.get("external_thread_id") == current_thread_id]
             # Sort by date
             thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
         except Exception as e:
@@ -506,16 +565,9 @@ def task_email_data(request, pk):
     
     # If no draft exists and we should have one, create it
     if not draft and has_draft_reply:
-        reply_subject = f"Re: {email.subject or 'No subject'}"
-        reply_to = [email.from_address]
-        reply_body = f"""
-<div>
-  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
-  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
-    {email.body_html or ''}
-  </blockquote>
-</div>
-"""
+        reply_to, reply_subject, reply_body = _reply_draft_content(
+            email, email.account, thread_messages
+        )
         draft = Draft.objects.create(
             account=email.account,
             email_message=email,
@@ -654,20 +706,22 @@ def email_reply(request, pk):
         messages.error(request, "Account is not connected to Gmail.")
         return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
     
-    # Create reply draft
-    reply_subject = f"Re: {email.subject or 'No subject'}"
-    reply_to = [email.from_address]
-    
-    # Include original message
-    reply_body = f"""
-<div>
-  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
-  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
-    {email.body_html}
-  </blockquote>
-</div>
-"""
-    
+    # Create reply draft (use other party's message if this email is from the account)
+    thread_messages = []
+    if email.account.is_connected and email.thread:
+        try:
+            from mail.services import GmailService
+            thread_messages = GmailService().get_thread_messages(
+                email.account, email.thread.external_thread_id
+            )
+            current_thread_id = email.thread.external_thread_id or ""
+            thread_messages = [m for m in thread_messages if m.get("external_thread_id") == current_thread_id]
+            thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
+        except Exception:
+            pass
+    reply_to, reply_subject, reply_body = _reply_draft_content(
+        email, email.account, thread_messages
+    )
     try:
         draft = Draft.objects.create(
             account=email.account,
@@ -688,13 +742,26 @@ def email_reply(request, pk):
 def draft_send(request, pk):
     """Send a draft via Gmail"""
     from mail.models import Draft
-    
+
     draft = get_object_or_404(Draft, pk=pk)
-    
+
+    from_account_pk = request.POST.get("from_account")
+    if from_account_pk:
+        try:
+            from accounts.models import Account
+            send_account = Account.objects.get(pk=from_account_pk)
+            if send_account in request.user.accounts.all() and send_account.is_connected:
+                if send_account != draft.account:
+                    draft.account = send_account
+                    draft.external_draft_id = None
+                    draft.save(update_fields=["account", "external_draft_id"])
+        except (Account.DoesNotExist, ValueError):
+            pass
+
     if not draft.account.is_connected:
         messages.error(request, "Account is not connected to Gmail.")
         return redirect("draft_detail", pk=draft.pk)
-    
+
     try:
         from mail.services import GmailService
         gmail_service = GmailService()
@@ -723,6 +790,64 @@ def draft_send(request, pk):
         messages.success(request, f"Draft '{draft.subject or 'Untitled'}' sent successfully!")
         draft.delete()  # Remove draft after sending
         return redirect("drafts_list")
+    except Exception as e:
+        messages.error(request, f"Error sending draft: {str(e)}")
+        return redirect("draft_detail", pk=draft.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def draft_send_and_mark_done(request, pk):
+    """Send a draft via Gmail and mark the linked task(s) as done."""
+    draft = get_object_or_404(Draft, pk=pk)
+
+    from_account_pk = request.POST.get("from_account")
+    if from_account_pk:
+        try:
+            from accounts.models import Account
+            send_account = Account.objects.get(pk=from_account_pk)
+            if send_account in request.user.accounts.all() and send_account.is_connected:
+                if send_account != draft.account:
+                    draft.account = send_account
+                    draft.external_draft_id = None
+                    draft.save(update_fields=["account", "external_draft_id"])
+        except (Account.DoesNotExist, ValueError):
+            pass
+
+    if not draft.account.is_connected:
+        messages.error(request, "Account is not connected to Gmail.")
+        return redirect("draft_detail", pk=draft.pk)
+
+    try:
+        from mail.services import GmailService
+        gmail_service = GmailService()
+        result = gmail_service.send_draft(draft.account, draft.pk)
+
+        from mail.models import EmailMessage, EmailThread
+        thread, _ = EmailThread.objects.get_or_create(
+            account=draft.account,
+            external_thread_id=result.get("threadId", ""),
+        )
+        EmailMessage.objects.create(
+            account=draft.account,
+            thread=thread,
+            external_message_id=result["id"],
+            subject=draft.subject or "",
+            from_address=draft.account.email,
+            to_addresses=draft.to_addresses or [],
+            cc_addresses=draft.cc_addresses or [],
+            bcc_addresses=draft.bcc_addresses or [],
+            body_html=draft.body_html or "",
+            date_sent=timezone.now(),
+        )
+        # Mark any tasks linked to this draft's email_message as done
+        if draft.email_message_id:
+            Task.objects.filter(email_message_id=draft.email_message_id).update(
+                status="done", completed_at=timezone.now()
+            )
+        messages.success(request, "Draft sent and task marked as done.")
+        draft.delete()
+        return redirect("tasks_list")
     except Exception as e:
         messages.error(request, f"Error sending draft: {str(e)}")
         return redirect("draft_detail", pk=draft.pk)
@@ -1038,9 +1163,13 @@ def draft_create(request):
                 subject=subject,
                 body_html=body_html,
             )
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": True, "draft_id": draft.pk})
             messages.success(request, f"Draft '{draft.subject or 'Untitled'}' created successfully.")
             return redirect("draft_detail", pk=draft.pk)
         except (Account.DoesNotExist, EmailMessage.DoesNotExist, json.JSONDecodeError) as e:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "error": str(e)}, status=400)
             messages.error(request, f"Error creating draft: {str(e)}")
 
     accounts = Account.objects.all()
@@ -1061,6 +1190,8 @@ def draft_update(request, pk):
         draft.subject = request.POST.get("subject", "")
         draft.body_html = request.POST.get("body_html", "")
         draft.save()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "draft_id": draft.pk})
         messages.success(request, f"Draft '{draft.subject or 'Untitled'}' updated successfully.")
         return redirect("draft_detail", pk=draft.pk)
 
@@ -1131,6 +1262,67 @@ def draft_rewrite(request, pk):
         "success": True,
         "body_html": rewritten_body
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def draft_attachment_add(request, pk):
+    """Add a file attachment to a draft. POST with 'file' in FILES. Returns JSON."""
+    draft = get_object_or_404(Draft, pk=pk)
+    if draft.account not in request.user.accounts.all():
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+    file = request.FILES.get("file") or request.FILES.get("attachment")
+    if not file:
+        return JsonResponse({"success": False, "error": "No file provided"}, status=400)
+    content = file.read()
+    content_type = getattr(file, "content_type", None) or "application/octet-stream"
+    filename = getattr(file, "name", None) or "attachment"
+    if len(filename) > 255:
+        filename = filename[-255:]
+    att = DraftAttachment.objects.create(
+        draft=draft,
+        filename=filename,
+        content_type=content_type,
+        size_bytes=len(content),
+        content=content,
+    )
+    return JsonResponse({
+        "success": True,
+        "attachment": {"id": att.pk, "filename": att.filename, "size_bytes": att.size_bytes},
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def draft_attachment_download(request, pk, attachment_id):
+    """Download a draft attachment. Returns file with Content-Disposition: attachment."""
+    draft = get_object_or_404(Draft, pk=pk)
+    if draft.account not in request.user.accounts.all():
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Forbidden")
+    att = get_object_or_404(DraftAttachment, pk=attachment_id, draft=draft)
+    content = att.content
+    if not content:
+        from django.http import HttpResponse
+        return HttpResponse("File not available", status=404)
+    from django.http import HttpResponse
+    from urllib.parse import quote
+    response = HttpResponse(bytes(content), content_type=att.content_type or "application/octet-stream")
+    safe_filename = quote(att.filename or "attachment")
+    response["Content-Disposition"] = f'attachment; filename*=UTF-8\'\'{safe_filename}'
+    return response
+
+
+@login_required
+@require_http_methods(["POST", "DELETE"])
+def draft_attachment_remove(request, pk, attachment_id):
+    """Remove an attachment from a draft. Returns JSON."""
+    draft = get_object_or_404(Draft, pk=pk)
+    if draft.account not in request.user.accounts.all():
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+    att = get_object_or_404(DraftAttachment, pk=attachment_id, draft=draft)
+    att.delete()
+    return JsonResponse({"success": True})
 
 
 @login_required
