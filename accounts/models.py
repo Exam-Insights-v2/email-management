@@ -1,4 +1,7 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class Provider(models.TextChoices):
@@ -9,6 +12,12 @@ class Provider(models.TextChoices):
 class Account(models.Model):
     provider = models.CharField(max_length=32, choices=Provider.choices)
     email = models.EmailField(max_length=255)
+    users = models.ManyToManyField(
+        User,
+        related_name="accounts",
+        blank=True,
+        help_text="Users who have access to this account"
+    )
     signature_html = models.TextField(blank=True, null=True)
     writing_style = models.TextField(blank=True, null=True)
     is_connected = models.BooleanField(default=False)

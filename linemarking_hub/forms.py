@@ -132,16 +132,14 @@ class TaskForm(forms.ModelForm):
             "due_at",
             "priority",
             "status",
-            "job",
         ]
-        field_order = ["title", "description", "due_at", "priority", "status", "job"]
+        field_order = ["title", "description", "due_at", "priority", "status"]
         widgets = {
             "title": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Task title"}),
             "description": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 4, "placeholder": "Task description"}),
             "due_at": forms.DateTimeInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "type": "datetime-local"}),
             "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 5, "value": 1}),
             "status": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
-            "job": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -165,27 +163,15 @@ class TaskForm(forms.ModelForm):
         # Get account from user or use provided account
         if account:
             account_obj = account
-        elif user:
+        elif user and user.is_authenticated:
             # Try to get first available account for user
-            from accounts.models import Account
-            account_obj = Account.objects.filter(is_connected=True).first()
+            account_obj = user.accounts.filter(is_connected=True).first()
         else:
             account_obj = None
         
         # Store account and email_message for save
         self.account = account_obj
         self.email_message = email_message
-        
-        # Make job optional and only show if there are jobs
-        self.fields['job'].required = False
-        if account_obj:
-            self.fields['job'].queryset = Job.objects.filter(account=account_obj).order_by('-created_at')
-        else:
-            self.fields['job'].queryset = Job.objects.none()
-        
-        # Hide job field if no jobs available and not editing existing task with job
-        if not self.fields['job'].queryset.exists() and not self.instance.job_id:
-            self.fields['job'].widget = forms.HiddenInput()
     
     def save(self, commit=True):
         task = super().save(commit=False)
@@ -264,16 +250,18 @@ class TaskFilterForm(forms.Form):
         # Get account from user or use provided account
         if account:
             account_obj = account
-        elif user:
-            from accounts.models import Account
-            account_obj = Account.objects.filter(is_connected=True).first()
+        elif user and user.is_authenticated:
+            account_obj = user.accounts.filter(is_connected=True).first()
         else:
             account_obj = None
         
-        # Set up label queryset
+        # Set up label queryset - show labels available to this account
         if account_obj:
             from automation.models import Label
-            self.fields['label'].queryset = Label.objects.filter(account=account_obj).order_by('name')
+            from django.db.models import Q
+            self.fields['label'].queryset = Label.objects.filter(
+                Q(account=account_obj) | Q(accounts=account_obj)
+            ).distinct().order_by('name')
         else:
             from automation.models import Label
             self.fields['label'].queryset = Label.objects.none()
@@ -281,7 +269,9 @@ class TaskFilterForm(forms.Form):
 
 class LabelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
         # Filter actions by account if account is set
         if self.instance and self.instance.pk and self.instance.account:
             self.fields['actions'].queryset = Action.objects.filter(account=self.instance.account)
@@ -292,18 +282,33 @@ class LabelForm(forms.ModelForm):
                     self.fields['actions'].queryset = Action.objects.filter(account_id=account_id)
             except (ValueError, TypeError):
                 pass
+        
+        # Filter accounts field to user's accounts
+        if user and user.is_authenticated:
+            user_accounts = user.accounts.all()
+            self.fields['account'].queryset = user_accounts
+            self.fields['accounts'].queryset = user_accounts
+        else:
+            from accounts.models import Account
+            self.fields['account'].queryset = Account.objects.none()
+            self.fields['accounts'].queryset = Account.objects.none()
     
     class Meta:
         model = Label
-        fields = ["account", "name", "prompt", "instructions", "priority", "is_active", "actions"]
+        fields = ["account", "accounts", "name", "prompt", "instructions", "priority", "is_active", "actions"]
         widgets = {
-            "account": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
+            "account": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "help_text": "The account that owns this label"}),
+            "accounts": forms.SelectMultiple(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "size": 5, "help_text": "Additional accounts that can use this label (leave empty to only allow the owner account)"}),
             "name": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
             "prompt": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 4, "placeholder": "When this label applies (classification criteria)"}),
             "instructions": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 5, "placeholder": "What the AI should do when this label applies (business logic)"}),
             "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 100, "value": 1}),
             "is_active": forms.CheckboxInput(attrs={"class": "h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"}),
             "actions": forms.SelectMultiple(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "size": 5}),
+        }
+        help_texts = {
+            "account": "The account that owns/created this label",
+            "accounts": "Additional accounts that can use this label for classification. If empty, only the owner account can use it.",
         }
 
 
@@ -317,6 +322,23 @@ class AccountForm(forms.ModelForm):
             "signature_html": forms.Textarea(attrs={"class": "w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-900 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 outline-none transition-all", "rows": 8}),
             "writing_style": forms.Textarea(attrs={"class": "w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-900 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 outline-none transition-all", "rows": 5}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        # Allow filtering fields for settings page
+        fields_to_show = kwargs.pop('fields', None)
+        super().__init__(*args, **kwargs)
+        
+        if fields_to_show:
+            # Remove fields not in fields_to_show
+            for field_name in list(self.fields.keys()):
+                if field_name not in fields_to_show:
+                    del self.fields[field_name]
+        
+        # Add help text for signature and writing style
+        if 'signature_html' in self.fields:
+            self.fields['signature_html'].help_text = "HTML signature to append to email replies (e.g., your name, title, contact info)"
+        if 'writing_style' in self.fields:
+            self.fields['writing_style'].help_text = "Describe your writing style preferences (e.g., 'professional and concise', 'friendly and conversational')"
 
 
 class ActionForm(forms.ModelForm):
@@ -337,11 +359,22 @@ class ActionForm(forms.ModelForm):
         # Set function choices
         self.fields["function"].widget = forms.Select(choices=[
             ("draft_reply", "Draft Reply"),
+            ("send_reply", "Send Reply"),
             ("create_task", "Create Task"),
+            ("create_job", "Create Job"),
+            ("extract_information", "Extract Information"),
+            ("set_priority", "Set Priority"),
             ("notify", "Notify"),
             ("schedule", "Schedule"),
-            ("forward", "Forward"),
-            ("archive", "Archive"),
+            ("create_reminder", "Create Reminder"),
+            ("forward_email", "Forward Email"),
+            ("archive_email", "Archive Email"),
+            ("mark_as_read", "Mark as Read"),
+            ("mark_as_spam", "Mark as Spam"),
+            ("delete_email", "Delete Email"),
+            ("respond_to_calendar_invite", "Respond to Calendar Invite"),
+            ("add_label", "Add Label"),
+            ("remove_label", "Remove Label"),
         ], attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"})
 
 

@@ -30,6 +30,9 @@ def orchestrate_label_actions(
     The AI analyses the email, reviews the label's instructions, and decides which actions
     to execute and in what order.
     
+    IMPORTANT: Only actions linked to labels currently applied to the email can be used.
+    This ensures actions are only available when appropriate labels are present.
+    
     Args:
         label: The Label that was applied
         email: The EmailMessage to process
@@ -39,24 +42,36 @@ def orchestrate_label_actions(
         Dict with orchestration results
     """
     try:
-        # Get label-linked actions (preferred - these are the actions configured for this label)
-        label_actions = list(label.actions.all())
+        # Get ALL labels currently applied to this email
+        from automation.models import EmailLabel
+        email_labels = EmailLabel.objects.filter(
+            email_message=email
+        ).select_related('label').prefetch_related('label__actions')
         
-        # If label has linked actions, prefer those; otherwise use all account actions
-        if label_actions:
-            available_actions = label_actions
-        else:
-            # Fallback: use all account actions if no label-linked actions
-            available_actions = list(Action.objects.filter(account=email.account).order_by("name"))
+        # Collect all actions from all labels applied to the email
+        available_actions_set = set()
+        applied_labels = []
+        
+        for email_label in email_labels:
+            applied_label = email_label.label
+            applied_labels.append(applied_label)
+            # Get all actions linked to this label
+            for action in applied_label.actions.all():
+                available_actions_set.add(action)
+        
+        # Convert to list and sort by name for consistency
+        available_actions = sorted(list(available_actions_set), key=lambda a: a.name)
         
         if not available_actions:
             return {
                 "success": True,
-                "message": "No actions available for this account",
+                "message": f"No actions linked to labels applied to this email. Applied labels: {[l.name for l in applied_labels]}",
                 "actions_executed": []
             }
         
-        # Build context (available_actions may be label_actions or all actions)
+        # Build context with all available actions from applied labels
+        # Note: label_actions here refers to actions from the specific label that triggered this orchestration
+        label_actions = list(label.actions.all())
         context = build_action_context(label, email, available_actions, label_actions)
         
         # Build AI prompts
@@ -152,8 +167,18 @@ def get_ai_action_plan(
         # Build tool definitions for available actions
         tools = build_tool_definitions(available_actions)
         
+        # Log what we're sending to OpenAI for debugging
+        logger.info(
+            f"OpenAI Request - get_ai_action_plan:\n"
+            f"Model: gpt-5-mini\n"
+            f"System prompt length: {len(system_prompt)} chars\n"
+            f"User prompt length: {len(user_prompt)} chars\n"
+            f"Available actions: {[a.name for a in available_actions]}\n"
+            f"User prompt preview: {user_prompt[:500]}..."
+        )
+        
         response = client.client.chat.completions.create(
-            model="gpt-4o-mini",  # Using gpt-4o-mini for cost efficiency
+            model="gpt-5-mini",  # Using gpt-5-mini for cost efficiency
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -161,6 +186,8 @@ def get_ai_action_plan(
             ],
             temperature=0.3,  # Lower temperature for more consistent decisions
         )
+        
+        logger.info(f"OpenAI Response - get_ai_action_plan: {len(response.choices[0].message.content) if response.choices else 0} chars")
         
         choices = response.choices or []
         if not choices:

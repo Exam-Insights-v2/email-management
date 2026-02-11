@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="mb-6">
-  <a href="{% url 'label_detail' label.pk %}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-cyan-400 transition-colors">
+  <a href="{% url 'settings' %}?tab=labels" onclick="if (window.openLabelDetailModal) { window.openLabelDetailModal({{ label.pk }}); return false; }" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-cyan-400 transition-colors">
     <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
     </svg>
@@ -57,7 +57,7 @@
     </div>
 
     <div class="mt-6 flex items-center justify-end gap-x-6">
-      <a href="{% url 'label_detail' label.pk %}" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Cancel</a>
+      <a href="{% url 'settings' %}?tab=labels" onclick="if (window.openLabelDetailModal) { window.openLabelDetailModal({{ label.pk }}); return false; }" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Cancel</a>
       <button type="submit" class="rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Link Action</button>
     </div>
   </form>

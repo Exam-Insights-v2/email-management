@@ -19,13 +19,21 @@ def build_action_context(
     Args:
         label: The label that was applied
         email: The email message
-        available_actions: ALL actions available for the account (AI can choose from any)
-        label_actions: Actions linked to the label (preferred but not required)
+        available_actions: Actions from ALL labels currently applied to the email (AI can ONLY choose from these)
+        label_actions: Actions linked to the specific label that triggered this orchestration (for context)
     
     Returns:
         Dict with all context needed for AI to make action decisions
     """
     label_actions = label_actions or []
+    
+    # Get all labels currently applied to this email (for context)
+    from automation.models import EmailLabel
+    email_labels = EmailLabel.objects.filter(
+        email_message=email
+    ).select_related('label')
+    
+    applied_label_names = [el.label.name for el in email_labels]
     
     # Get other active labels for the account (for context)
     other_labels = Label.objects.filter(
@@ -39,8 +47,8 @@ def build_action_context(
     # Format ALL available actions as tool descriptions
     actions_text = format_actions(available_actions)
     
-    # Format label-linked actions separately (for preference context)
-    label_actions_text = format_actions(label_actions) if label_actions else "None (AI can choose from all available actions)"
+    # Format label-linked actions separately (for context - these are from the triggering label)
+    label_actions_text = format_actions(label_actions) if label_actions else "None"
     
     # Build email context
     email_context = {
@@ -62,6 +70,7 @@ def build_action_context(
         "label_prompt": label.prompt or "",
         "label_instructions": label.instructions or "",
         "label_priority": label.priority,
+        "applied_labels": applied_label_names,
         "other_labels": other_labels_text,
         "all_actions": actions_text,
         "label_actions": label_actions_text,
@@ -115,6 +124,8 @@ Your role is to analyse emails and intelligently decide which actions to execute
 
 CURRENT LABEL: {context['label_name']} (Priority: {context['label_priority']})
 
+LABELS APPLIED TO THIS EMAIL: {', '.join(context['applied_labels']) if context['applied_labels'] else 'None'}
+
 WHEN THIS LABEL APPLIES:
 {context['label_prompt'] if context['label_prompt'] else 'No specific criteria defined'}
 
@@ -124,31 +135,35 @@ WHAT TO DO (Business Logic - Use as Guidance):
 OTHER ACTIVE LABELS (for context):
 {context['other_labels']}
 
-LABEL-LINKED ACTIONS (Preferred but not required):
+ACTIONS FROM CURRENT LABEL (for reference):
 {context['label_actions']}
 
-ALL AVAILABLE ACTIONS (You can choose from ANY of these):
-{context['all_actions']}
+AVAILABLE ACTIONS (You can ONLY choose from these - they come from labels applied to this email):
+{context['all_actions'] if context['all_actions'] else 'NO ACTIONS AVAILABLE - No labels with linked actions are applied to this email.'}
 
 ACCOUNT SETTINGS:
 Writing Style: {context['account_settings']['writing_style'] if context['account_settings']['writing_style'] else 'Not specified'}
 
 CRITICAL INSTRUCTIONS:
-1. **You have access to ALL available actions** - you are NOT limited to label-linked actions
-2. **Analyse the email content first** - understand what the email actually needs (job inquiry? spam? scheduling request? urgent reply?)
-3. **Use label instructions as guidance**, not rigid constraints - be flexible and intelligent
-4. **Make smart decisions** based on email content:
-   - Email mentions scheduling/meeting → consider schedule action
-   - Email is clearly spam → use mark_as_spam
-   - Email is job inquiry → use create_job (even if not linked to label)
-   - Email needs immediate reply → use send_reply vs draft_reply based on urgency
-   - Email mentions specific dates → extract and schedule
-5. **Prefer label-linked actions when appropriate**, but don't be constrained by them
-6. **Consider time of day, urgency, and other contextual factors**
-7. **Skip unnecessary actions** - only execute what makes sense
-8. **Determine optimal execution order** - some actions may depend on others
-9. **Use Australian English spelling**
-10. **Be context-aware and intelligent** - the goal is to handle emails appropriately, not just follow a rigid script
+1. **You can ONLY choose from the available actions listed above** - these are actions linked to labels currently applied to this email
+2. **If no actions are available**, it means no labels with linked actions are applied - return an empty actions array
+3. **Analyse the email content first** - understand what the email actually needs (job inquiry? spam? scheduling request? needs reply?)
+4. **Use label instructions as guidance** - be flexible and intelligent in choosing which available actions to execute
+5. **Email reply rules** - choose the right action based on reply type:
+   - For custom business communications (quotes, job inquiries, complaints, scheduling, etc.) → ALWAYS use draft_reply (user must review)
+   - For automated/templated responses (confirmations, receipts, standard acknowledgements) → can use send_reply
+   - When in doubt → use draft_reply (safer, allows user review)
+   - send_reply should ONLY be used for standardised, templated responses that don't require customisation
+6. **Make smart decisions** based on email content and available actions:
+   - Email mentions scheduling/meeting → use schedule action (if available)
+   - Email is clearly spam → use mark_as_spam or delete_email (if available)
+   - Email is job inquiry → use create_job (if available)
+   - Email mentions specific dates → extract and schedule (if available)
+7. **Consider time of day, urgency, and other contextual factors**
+8. **Skip unnecessary actions** - only execute what makes sense from the available actions
+9. **Determine optimal execution order** - some actions may depend on others
+10. **Use Australian English spelling**
+11. **Be context-aware and intelligent** - the goal is to handle emails appropriately using the actions available from the applied labels
 
 Return a JSON object with your action plan:
 {{

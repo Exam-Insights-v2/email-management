@@ -1,4 +1,7 @@
 from django import template
+from django.utils import timezone
+from django.utils.dateformat import format
+from datetime import datetime
 import builtins
 
 register = template.Library()
@@ -129,6 +132,76 @@ def label_color_bg(label_name):
 
 
 @register.filter
+def aus_time(value, format_string=None):
+    """
+    Convert datetime to Australia/Sydney timezone and format it.
+    
+    Usage: {{ task.created_at|aus_time:"d M Y H:i" }}
+    Default format: "d M Y H:i" if not specified
+    """
+    if not value:
+        return ""
+    
+    try:
+        # Use Django's timezone utilities (no pytz needed)
+        # Django's timezone.localtime() converts to the TIME_ZONE setting (Australia/Sydney)
+        if timezone.is_aware(value):
+            # Convert to local timezone (Australia/Sydney from settings)
+            aus_time_value = timezone.localtime(value)
+        else:
+            # Make it timezone-aware using UTC, then convert to local
+            aware_value = timezone.make_aware(value, timezone.utc)
+            aus_time_value = timezone.localtime(aware_value)
+        
+        # Format the time using Django's dateformat
+        # Map common format codes
+        format_map = {
+            'd': '%d',  # Day of month, 2 digits
+            'M': '%b',  # Short month name
+            'Y': '%Y',  # 4-digit year
+            'H': '%H',  # 24-hour format hour
+            'i': '%M',  # Minutes
+            'g': '%I',  # 12-hour format hour (without leading zero)
+            'a': '%p',  # AM/PM
+        }
+        
+        if format_string:
+            # Convert Django format to strftime format
+            strftime_format = format_string
+            for django_code, strftime_code in format_map.items():
+                strftime_format = strftime_format.replace(django_code, strftime_code)
+            formatted = aus_time_value.strftime(strftime_format)
+            # Capitalize month names (replace lowercase month abbreviations with capitalized versions)
+            month_map = {
+                'jan': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'apr': 'Apr',
+                'may': 'May', 'jun': 'Jun', 'jul': 'Jul', 'aug': 'Aug',
+                'sep': 'Sep', 'oct': 'Oct', 'nov': 'Nov', 'dec': 'Dec'
+            }
+            for lower, upper in month_map.items():
+                formatted = formatted.replace(lower, upper)
+            return formatted
+        else:
+            formatted = aus_time_value.strftime("%d %b %Y %H:%M")
+            # Capitalize month
+            month_map = {
+                'jan': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'apr': 'Apr',
+                'may': 'May', 'jun': 'Jun', 'jul': 'Jul', 'aug': 'Aug',
+                'sep': 'Sep', 'oct': 'Oct', 'nov': 'Nov', 'dec': 'Dec'
+            }
+            for lower, upper in month_map.items():
+                formatted = formatted.replace(lower, upper)
+            return formatted
+    except (AttributeError, TypeError, ValueError) as e:
+        # Fallback to regular date formatting if conversion fails
+        try:
+            if format_string:
+                return value.strftime(format_string) if hasattr(value, 'strftime') else str(value)
+            return str(value)
+        except:
+            return str(value)
+
+
+@register.filter
 def label_color_dot(label_name):
     """Get consistent dot color class for a label based on its name"""
     if not label_name:
@@ -149,3 +222,51 @@ def label_color_dot(label_name):
     # Use deterministic hash function to consistently map label name to color
     hash_value = _deterministic_hash(str(label_name).lower())
     return colors[hash_value % len(colors)]
+
+
+@register.filter
+def priority_word(priority):
+    """Convert priority number (1-5) to word"""
+    if not priority:
+        return "Lowest"
+    
+    try:
+        priority_int = int(priority)
+        priority_map = {
+            1: "Lowest",
+            2: "Low",
+            3: "Medium",
+            4: "High",
+            5: "Urgent"
+        }
+        return priority_map.get(priority_int, f"Priority {priority_int}")
+    except (ValueError, TypeError):
+        return str(priority)
+
+
+@register.filter
+def priority_color(priority):
+    """Returns Tailwind CSS color classes for priority badge based on priority level."""
+    if not priority:
+        return "bg-gray-400/10 text-gray-400"
+    
+    try:
+        priority_int = int(priority)
+        color_map = {
+            1: "bg-gray-400/10 text-gray-400",  # Lowest - gray
+            2: "bg-blue-400/10 text-blue-400",  # Low - blue
+            3: "bg-amber-400/10 text-amber-400",  # Medium - amber/yellow
+            4: "bg-orange-400/10 text-orange-400",  # High - orange
+            5: "bg-red-400/10 text-red-400",  # Urgent - red
+        }
+        return color_map.get(priority_int, "bg-gray-400/10 text-gray-400")
+    except (ValueError, TypeError):
+        return "bg-gray-400/10 text-gray-400"
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Get an item from a dictionary using a key"""
+    if not dictionary or not isinstance(dictionary, dict):
+        return None
+    return dictionary.get(key, [])

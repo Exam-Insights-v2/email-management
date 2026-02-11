@@ -122,8 +122,11 @@
 {% endif %}
 
 <!-- Task Detail Modals -->
+{% load db_filters %}
 {% for task in all_tasks %}
-  {% include 'tasks/detail_modal.html' with task=task %}
+  {% with email_data=task_email_data|get_item:task.pk %}
+    {% include 'tasks/detail_modal.html' with task=task email_data=email_data %}
+  {% endwith %}
 {% endfor %}
 
 <!-- Edit Modals -->

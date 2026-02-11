@@ -4,7 +4,16 @@ from django.db import models
 class Label(models.Model):
     """Smart Rules: Combine email classification with business logic and actions"""
     account = models.ForeignKey(
-        "accounts.Account", on_delete=models.CASCADE, related_name="labels"
+        "accounts.Account", 
+        on_delete=models.CASCADE, 
+        related_name="owned_labels",
+        help_text="The account that owns/created this label"
+    )
+    accounts = models.ManyToManyField(
+        "accounts.Account",
+        related_name="available_labels",
+        blank=True,
+        help_text="Accounts that can use this label for classification. If empty, only the owner account can use it."
     )
     name = models.CharField(max_length=255)
     prompt = models.TextField(
@@ -40,6 +49,12 @@ class Label(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def get_available_accounts(self):
+        """Get all accounts that can use this label (owner + accounts in ManyToMany)"""
+        accounts = [self.account]
+        accounts.extend(self.accounts.all())
+        return accounts
 
 
 class EmailLabel(models.Model):

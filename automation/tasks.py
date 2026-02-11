@@ -42,9 +42,23 @@ def process_email(email_message_id: int):
     except Exception as e:
         logger.error(f"Error fetching email {email_message_id}: {e}", exc_info=True)
         return
+    
+    # Early exit: If this email already has a task, skip processing
+    # This prevents re-processing when tasks are consolidated
+    if email.tasks.exists():
+        logger.debug(f"Email {email_message_id} already has a task, skipping processing")
+        return
 
     # Get available labels for this account
-    available_labels = list(Label.objects.filter(account=email.account))
+    # Labels where the email's account is the owner OR is in the accounts ManyToMany field
+    # If accounts ManyToMany is empty, only the owner can use it
+    from django.db.models import Q
+    available_labels = list(
+        Label.objects.filter(
+            Q(account=email.account) | 
+            (Q(accounts=email.account) & ~Q(accounts=None))
+        ).distinct()
+    )
 
     # SINGLE AI CALL - Get all classification data
     client = OpenAIClient()
@@ -54,8 +68,22 @@ def process_email(email_message_id: int):
     due_at = parse_due_date(classification.get("due_date"))
 
     # Apply labels from AI response first to validate
+    # Step 1: Validate and filter labels using validation rules
+    from automation.label_validator import validate_and_filter_labels
+    
+    raw_label_names = classification.get("labels", [])
+    validated_label_names = validate_and_filter_labels(raw_label_names, max_labels=3)
+    
+    if len(raw_label_names) != len(validated_label_names):
+        removed = set(raw_label_names) - set(validated_label_names)
+        logger.info(
+            f"Label validation filtered {len(raw_label_names)} labels to {len(validated_label_names)}. "
+            f"Removed: {removed}"
+        )
+    
+    # Step 2: Match validated labels to actual Label objects
     labels_to_apply = []
-    for label_name in classification.get("labels", []):
+    for label_name in validated_label_names:
         # Find matching label (case-insensitive) - improved validation
         if not isinstance(label_name, str) or not label_name.strip():
             logger.warning(f"Invalid label name in classification: {label_name}")
@@ -73,7 +101,7 @@ def process_email(email_message_id: int):
             labels_to_apply.append(label)
         else:
             logger.warning(
-                f"Label '{label_name}' from AI classification not found in available labels. "
+                f"Label '{label_name}' from validated classification not found in available labels. "
                 f"Available: {[l.name for l in available_labels]}"
             )
 
@@ -107,29 +135,12 @@ def process_email(email_message_id: int):
                 if not task_to_keep:
                     task_to_keep = existing_tasks.first()
                 
-                # Collect information from all tasks and emails in thread
+                # Use only the latest classification description (emails are linked via thread, no need to duplicate)
+                # Check if this is part of a multi-email thread
                 all_emails_in_thread = email.thread.messages.filter(
                     account=email.account
-                ).order_by('date_sent', 'created_at')
-                
-                # Build merged description with all emails
-                email_descriptions = []
-                for thread_email in all_emails_in_thread:
-                    email_info = f"From: {thread_email.from_name or thread_email.from_address}\n"
-                    email_info += f"Subject: {thread_email.subject or '(No subject)'}\n"
-                    email_info += f"Date: {thread_email.date_sent.strftime('%Y-%m-%d %H:%M') if thread_email.date_sent else 'Unknown'}\n"
-                    # Strip HTML and get first 200 chars of body
-                    import re
-                    from html import unescape
-                    body_text = re.sub(r'<[^>]+>', '', thread_email.body_html or '')
-                    body_text = unescape(body_text).strip()[:200]
-                    if body_text:
-                        email_info += f"Content: {body_text}...\n"
-                    email_descriptions.append(email_info)
-                
-                merged_description = f"Thread with {all_emails_in_thread.count()} message(s):\n\n"
-                merged_description += "\n---\n\n".join(email_descriptions)
-                merged_description += f"\n\nLatest classification: {classification['task_description']}"
+                )
+                thread_count = all_emails_in_thread.count()
                 
                 # Merge priorities (keep highest)
                 all_priorities = [t.priority for t in existing_tasks] + [classification["priority"]]
@@ -147,10 +158,15 @@ def process_email(email_message_id: int):
                 task_ids_to_delete = list(all_tasks_to_delete.values_list('pk', flat=True))
                 delete_count = len(task_ids_to_delete)
                 
-                # Add consolidation note to description
+                # Build description with just the latest classification
+                merged_description = classification['task_description']
+                
+                # Add consolidation note to description (without task IDs for account portability)
                 if delete_count > 0:
-                    consolidation_note = f"\n\n[Consolidated from {delete_count} previous task(s): {', '.join(f'TASK-{tid}' for tid in task_ids_to_delete)}]"
-                    merged_description += consolidation_note
+                    if thread_count > 1:
+                        merged_description += f"\n\n[Part of conversation thread with {thread_count} message(s). Consolidated from {delete_count} previous task(s).]"
+                    else:
+                        merged_description += f"\n\n[Consolidated from {delete_count} previous task(s).]"
                 
                 # Update the task to keep with merged information
                 task_to_keep.email_message = email  # Update to latest email
@@ -267,33 +283,22 @@ def process_email(email_message_id: int):
                             if task.status != TaskStatus.IN_PROGRESS:
                                 task.status = TaskStatus.PENDING
                             
-                            # Build merged description
+                            # Use only the latest classification description (emails are linked via thread, no need to duplicate)
                             all_emails_in_thread = email.thread.messages.filter(
                                 account=email.account
-                            ).order_by('date_sent', 'created_at')
+                            )
+                            thread_count = all_emails_in_thread.count()
                             
-                            email_descriptions = []
-                            for thread_email in all_emails_in_thread:
-                                email_info = f"From: {thread_email.from_name or thread_email.from_address}\n"
-                                email_info += f"Subject: {thread_email.subject or '(No subject)'}\n"
-                                email_info += f"Date: {thread_email.date_sent.strftime('%Y-%m-%d %H:%M') if thread_email.date_sent else 'Unknown'}\n"
-                                import re
-                                from html import unescape
-                                body_text = re.sub(r'<[^>]+>', '', thread_email.body_html or '')
-                                body_text = unescape(body_text).strip()[:200]
-                                if body_text:
-                                    email_info += f"Content: {body_text}...\n"
-                                email_descriptions.append(email_info)
-                            
-                            merged_description = f"Thread with {all_emails_in_thread.count()} message(s):\n\n"
-                            merged_description += "\n---\n\n".join(email_descriptions)
-                            merged_description += f"\n\nLatest classification: {classification['task_description']}"
-                            
-                            # Add consolidation note
+                            # Build description with just the latest classification
                             other_task_ids = list(other_tasks.values_list('pk', flat=True))
+                            merged_description = classification['task_description']
+                            
+                            # Add consolidation note if needed
                             if other_task_ids:
-                                consolidation_note = f"\n\n[Consolidated from {len(other_task_ids)} previous task(s): {', '.join(f'TASK-{tid}' for tid in other_task_ids)}]"
-                                merged_description += consolidation_note
+                                if thread_count > 1:
+                                    merged_description += f"\n\n[Part of conversation thread with {thread_count} message(s). Consolidated from {len(other_task_ids)} previous task(s).]"
+                                else:
+                                    merged_description += f"\n\n[Consolidated from {len(other_task_ids)} previous task(s).]"
                             
                             task.description = merged_description[:5000]
                             task.email_message = email  # Update to latest email
@@ -310,6 +315,23 @@ def process_email(email_message_id: int):
                 )
                 # Trigger label actions
                 trigger_label_actions.delay(label.id, email.id)
+            
+            # Automatically mark email as read after processing
+            # This is done by default for all processed emails
+            if email.account.is_connected:
+                try:
+                    from mail.services import GmailService
+                    gmail_service = GmailService()
+                    service = gmail_service._get_service(email.account)
+                    service.users().messages().modify(
+                        userId="me",
+                        id=email.external_message_id,
+                        body={"removeLabelIds": ["UNREAD"]}
+                    ).execute()
+                    logger.debug(f"Email {email_message_id} automatically marked as read")
+                except Exception as e:
+                    # Log but don't fail - marking as read is not critical
+                    logger.warning(f"Could not automatically mark email {email_message_id} as read: {e}")
     except Exception as e:
         logger.error(
             f"Error creating task for email {email_message_id}: {e}", 

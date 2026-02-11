@@ -55,7 +55,7 @@
     </div>
 
     <div class="mt-6 flex items-center justify-end gap-x-6">
-      <a href="{% if action %}{% url 'action_detail' action.pk %}{% else %}{% url 'actions_list' %}{% endif %}" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Cancel</a>
+      <a href="{% url 'settings' %}?tab=actions" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Cancel</a>
       <button type="submit" class="rounded-md bg-cyan-600 px-3 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Save</button>
     </div>
   </form>

@@ -27,6 +27,15 @@ def account_connect_gmail(request):
         account, created = Account.objects.get_or_create(
             provider=Provider.GMAIL, email=email, defaults={"sync_enabled": True}
         )
+        
+        # Link account to user
+        if request.user.is_authenticated and request.user not in account.users.all():
+            account.users.add(request.user)
+        
+        # Set up recommended labels and actions for new accounts
+        if created:
+            from automation.utils import setup_account_automation
+            setup_account_automation(account)
 
         if account.is_connected:
             messages.info(request, f"Account {email} is already connected.")
@@ -161,12 +170,21 @@ def account_gmail_oauth_callback(request):
             defaults={"sync_enabled": True}
         )
         
+        # Link account to user
+        if request.user.is_authenticated and request.user not in account.users.all():
+            account.users.add(request.user)
+        
         # Save the OAuth token
         GmailOAuthService.save_token(account, credentials)
         
+        # Set up recommended labels and actions for new accounts
         if created:
+            from automation.utils import setup_account_automation
+            setup_result = setup_account_automation(account)
             messages.success(
-                request, f"Successfully connected new Gmail account: {account.email}"
+                request, 
+                f"Successfully connected new Gmail account: {account.email}. "
+                f"Created {setup_result['labels']['created']} labels and {setup_result['actions']['created']} actions."
             )
         else:
             messages.info(
@@ -219,6 +237,15 @@ def account_connect_microsoft(request):
         account, created = Account.objects.get_or_create(
             provider=Provider.MICROSOFT, email=email, defaults={"sync_enabled": True}
         )
+        
+        # Link account to user
+        if request.user.is_authenticated and request.user not in account.users.all():
+            account.users.add(request.user)
+        
+        # Set up recommended labels and actions for new accounts
+        if created:
+            from automation.utils import setup_account_automation
+            setup_account_automation(account)
 
         if account.is_connected:
             messages.info(request, f"Account {email} is already connected.")
@@ -302,12 +329,21 @@ def account_microsoft_oauth_callback(request):
             defaults={"sync_enabled": True}
         )
         
+        # Link account to user
+        if request.user.is_authenticated and request.user not in account.users.all():
+            account.users.add(request.user)
+        
         # Save the OAuth token
         MicrosoftEmailOAuthService.save_token(account, token_dict)
         
+        # Set up recommended labels and actions for new accounts
         if created:
+            from automation.utils import setup_account_automation
+            setup_result = setup_account_automation(account)
             messages.success(
-                request, f"Successfully connected new Microsoft account: {account.email}"
+                request, 
+                f"Successfully connected new Microsoft account: {account.email}. "
+                f"Created {setup_result['labels']['created']} labels and {setup_result['actions']['created']} actions."
             )
         else:
             messages.info(

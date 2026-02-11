@@ -17,11 +17,18 @@ Parameters:
 
   <el-menu anchor="bottom end" popover class="w-56 origin-top-right rounded-md bg-white dark:bg-gray-800 outline-1 -outline-offset-1 outline-gray-200 dark:outline-white/10 transition transition-discrete [--anchor-gap:--spacing(0.5)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in shadow-lg">
     <div class="py-1">
-      {% if view_url %}
+      {% if view_url or view_onclick %}
+      {% if view_onclick %}
+      <button type="button" onclick="{{ view_onclick }}" class="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
+        <i class="ti ti-eye size-4 text-gray-500 dark:text-gray-400" aria-hidden="true"></i>
+        <span>View</span>
+      </button>
+      {% else %}
       <a href="{{ view_url }}" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
         <i class="ti ti-eye size-4 text-gray-500 dark:text-gray-400" aria-hidden="true"></i>
         <span>View</span>
       </a>
+      {% endif %}
       {% endif %}
       {% if edit_url %}
       {% if '/tasks/' in edit_url and '/edit' in edit_url %}

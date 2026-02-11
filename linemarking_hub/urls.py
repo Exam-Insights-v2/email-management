@@ -22,6 +22,7 @@ from linemarking_hub.auth_views import (
     microsoft_oauth_login,
 )
 from linemarking_hub.views import (
+    labels_add_recommended,
     account_clear_signature,
     account_clear_writing_style,
     account_create,
@@ -30,12 +31,12 @@ from linemarking_hub.views import (
     account_update,
     action_create,
     action_delete,
-    action_detail,
     action_update,
     actions_list,
     draft_create,
     draft_delete,
     draft_detail,
+    draft_rewrite,
     draft_update,
     drafts_list,
     email_detail,
@@ -55,13 +56,12 @@ from linemarking_hub.views import (
     jobs_list,
     label_create,
     label_delete,
-    label_detail,
     label_update,
-    labels_list,
     settings_view,
     task_create,
     task_delete,
     task_detail,
+    task_email_data,
     task_update,
     tasks_list,
 )
@@ -94,9 +94,10 @@ urlpatterns = [
     path("tasks/<int:pk>/", task_detail, name="task_detail"),
     path("tasks/<int:pk>/edit/", task_update, name="task_update"),
     path("tasks/<int:pk>/delete/", task_delete, name="task_delete"),
+    path("tasks/<int:pk>/email-data/", task_email_data, name="task_email_data"),
     # Emails
     path("emails/", emails_list, name="emails_list"),
-    path("emails/<int:pk>/", email_detail, name="email_detail"),
+    path("emails/<int:pk>/", email_detail, name="email_detail"),  # Redirects to emails_list with modal
     path("emails/<int:pk>/delete/", email_delete, name="email_delete"),
     path("emails/<int:pk>/archive/", email_archive, name="email_archive"),
     path("emails/<int:pk>/reply/", email_reply, name="email_reply"),
@@ -105,9 +106,8 @@ urlpatterns = [
     path("emails/<int:email_id>/labels/add/", email_label_add, name="email_label_add"),
     path("emails/<int:email_id>/labels/<int:label_id>/remove/", email_label_remove, name="email_label_remove"),
     # Labels
-    path("labels/", labels_list, name="labels_list"),
     path("labels/create/", label_create, name="label_create"),
-    path("labels/<int:pk>/", label_detail, name="label_detail"),
+    path("labels/add-recommended/", labels_add_recommended, name="labels_add_recommended"),
     path("labels/<int:pk>/edit/", label_update, name="label_update"),
     path("labels/<int:pk>/delete/", label_delete, name="label_delete"),
     # Accounts
@@ -128,12 +128,12 @@ urlpatterns = [
     path("drafts/create/", draft_create, name="draft_create"),
     path("drafts/<int:pk>/", draft_detail, name="draft_detail"),
     path("drafts/<int:pk>/edit/", draft_update, name="draft_update"),
+    path("drafts/<int:pk>/rewrite/", draft_rewrite, name="draft_rewrite"),
     path("drafts/<int:pk>/delete/", draft_delete, name="draft_delete"),
     path("drafts/<int:pk>/send/", draft_send, name="draft_send"),
     # Actions
     path("actions/", actions_list, name="actions_list"),
     path("actions/create/", action_create, name="action_create"),
-    path("actions/<int:pk>/", action_detail, name="action_detail"),
     path("actions/<int:pk>/edit/", action_update, name="action_update"),
     path("actions/<int:pk>/delete/", action_delete, name="action_delete"),
     # Authentication

@@ -1,0 +1,94 @@
+{% comment %}
+Action detail modal component (XL size)
+Usage:
+  {% include 'actions/detail_modal.html' with action=action labels=labels %}
+{% endcomment %}
+{% load db_filters %}
+
+<el-dialog>
+  <dialog id="action-detail-{{ action.pk }}" aria-labelledby="action-detail-{{ action.pk }}-title" class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
+    <el-dialog-backdrop class="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/50 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
+
+    <div tabindex="0" class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center focus:outline-none sm:p-6">
+      <el-dialog-panel class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 w-full sm:w-full sm:max-w-5xl data-closed:sm:translate-y-0 data-closed:sm:scale-95 max-h-[95vh] overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 px-3 pt-4 pb-3 sm:px-4 sm:pt-5 sm:pb-4 sm:p-6">
+          <!-- Header -->
+          <div class="flex items-start sm:items-center justify-between gap-2 mb-4 sm:mb-6">
+            <h2 id="action-detail-{{ action.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 pr-2 truncate">{{ action.name }}</h2>
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <button type="button" onclick="if (window.openEditActionModal) window.openEditActionModal({{ action.pk }});" class="inline-flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
+                <i class="ti ti-pencil mr-1 -ml-0.5 size-3.5 sm:size-4 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true"></i>
+                <span class="hidden sm:inline">Edit</span>
+              </button>
+              <button type="button" command="close" commandfor="action-detail-{{ action.pk }}" class="relative rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
+                <span class="absolute -inset-2.5"></span>
+                <span class="sr-only">Close</span>
+                <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Information -->
+          <div>
+            <div class="border-t border-gray-200 dark:border-white/10">
+              <dl class="divide-y divide-gray-200 dark:divide-white/10">
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Account</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 break-words">{{ action.account.email }}</dd>
+                </div>
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Function</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 font-mono">{{ action.function }}</dd>
+                </div>
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Created</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">{{ action.created_at|aus_time:"d M Y H:i" }}</dd>
+                </div>
+                {% if action.instructions %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Instructions</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ action.instructions }}</dd>
+                </div>
+                {% endif %}
+                {% if action.mcp_tool_name %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">MCP Tool Name</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 font-mono">{{ action.mcp_tool_name }}</dd>
+                </div>
+                {% endif %}
+                {% if action.tool_description %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Tool Description</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0 whitespace-pre-wrap">{{ action.tool_description }}</dd>
+                </div>
+                {% endif %}
+                {% if labels %}
+                <div class="px-0 py-3 sm:py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <dt class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 mb-1 sm:mb-0">Linked Labels</dt>
+                  <dd class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 sm:col-span-2 sm:mt-0">
+                    <ul role="list" class="divide-y divide-gray-200 dark:divide-white/10 rounded-md border border-gray-200 dark:border-white/10">
+                      {% for label in labels %}
+                      <li class="flex items-center justify-between py-3 px-4 text-sm">
+                        <div class="flex w-0 flex-1 items-center">
+                          <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                            <button type="button" onclick="if (window.openLabelDetailModal) { window.openLabelDetailModal({{ label.pk }}); document.getElementById('action-detail-{{ action.pk }}').close(); }" class="truncate font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 no-underline">{{ label.name }}</button>
+                            <span class="shrink-0 text-gray-500 dark:text-gray-400">Priority: {{ label.priority|priority_word }}</span>
+                          </div>
+                        </div>
+                        <div class="ml-4 shrink-0">
+                          <button type="button" onclick="if (window.openLabelDetailModal) { window.openLabelDetailModal({{ label.pk }}); document.getElementById('action-detail-{{ action.pk }}').close(); }" class="font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 no-underline">View</button>
+                        </div>
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </dd>
+                </div>
+                {% endif %}
+              </dl>
+            </div>
+          </div>
+        </div>
+      </el-dialog-panel>
+    </div>
+  </dialog>
+</el-dialog>

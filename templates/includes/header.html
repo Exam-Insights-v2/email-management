@@ -5,13 +5,13 @@
       <div class="flex h-12 items-center justify-between">
         <div class="flex items-center">
           <div class="shrink-0">
-            <a href="{% url 'tasks_list' %}">
+            <a href="{% url 'tasks_list' %}" class="no-underline">
               <img src="{% static 'images/logo.png' %}" alt="Email IQ" class="h-6 w-auto" />
             </a>
           </div>
           <div class="ml-8 flex items-center space-x-2">
             <span class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50" aria-disabled="true" title="Jobs feature is currently disabled">Jobs</span>
-            <a href="{% url 'tasks_list' %}" class="{% if 'tasks' in request.path or request.path == '/' %}bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white{% endif %} px-3 py-1.5 rounded-md text-xs font-medium transition-colors">Tasks</a>
+            <a href="{% url 'tasks_list' %}" class="{% if 'tasks' in request.path or request.path == '/' %}bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white{% endif %} px-3 py-1.5 rounded-md text-xs font-medium transition-colors no-underline">Tasks</a>
           </div>
         </div>
         {% if user.is_authenticated %}
@@ -26,7 +26,7 @@
             <i id="theme-toggle-dark-icon" class="ti ti-moon size-4 block dark:hidden" aria-hidden="true"></i>
           </button>
           <!-- Settings Button -->
-          <a href="{% url 'settings' %}" class="relative inline-flex items-center justify-center rounded-full p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors {% if 'settings' in request.path %}text-gray-700 dark:text-gray-100 bg-gray-200 dark:bg-gray-700/50{% endif %}" aria-label="Settings">
+          <a href="{% url 'settings' %}" class="relative inline-flex items-center justify-center rounded-full p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors {% if 'settings' in request.path %}text-gray-700 dark:text-gray-100 bg-gray-200 dark:bg-gray-700/50{% endif %} no-underline" aria-label="Settings">
             <span class="absolute -inset-1"></span>
             <span class="sr-only">Settings</span>
             <i class="ti ti-settings size-4" aria-hidden="true"></i>
@@ -34,7 +34,7 @@
         </div>
         {% else %}
         <div>
-          <a href="{% url 'login' %}" class="rounded-md px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">Sign In</a>
+          <a href="{% url 'login' %}" class="rounded-md px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white no-underline">Sign In</a>
         </div>
         {% endif %}
       </div>

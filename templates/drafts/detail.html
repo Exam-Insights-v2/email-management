@@ -33,7 +33,7 @@
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Replying To</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
-              <a href="{% url 'email_detail' draft.email_message.pk %}" class="text-cyan-400 hover:text-cyan-300">{{ draft.email_message.subject|default:"No subject" }}</a>
+              <a href="#" onclick="if (window.openEmailDetailModal) { window.openEmailDetailModal({{ draft.email_message.pk }}); return false; }" class="text-cyan-400 hover:text-cyan-300">{{ draft.email_message.subject|default:"No subject" }}</a>
             </dd>
           </div>
           {% endif %}

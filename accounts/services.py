@@ -1,5 +1,7 @@
 import os
 import secrets
+import logging
+import warnings
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
@@ -14,6 +16,23 @@ from googleapiclient.discovery import build
 from msal import ConfidentialClientApplication
 
 from accounts.models import Account, OAuthToken, Provider
+
+# Suppress the file_cache warning from oauth2client
+warnings.filterwarnings('ignore', message='.*file_cache.*oauth2client.*', category=UserWarning)
+
+# Suppress INFO level logging for oauth2client file_cache messages
+# The warning comes from oauth2client library initialization
+for logger_name in ['oauth2client', 'oauth2client.client', '__init__']:
+    oauth2client_logger = logging.getLogger(logger_name)
+    oauth2client_logger.setLevel(logging.WARNING)  # Only show WARNING and above
+
+# Also suppress via logging filter for any logger that contains file_cache messages
+class FileCacheFilter(logging.Filter):
+    def filter(self, record):
+        return 'file_cache' not in str(record.getMessage()).lower()
+
+# Apply filter to root logger to catch all file_cache messages
+logging.getLogger().addFilter(FileCacheFilter())
 
 User = get_user_model()
 

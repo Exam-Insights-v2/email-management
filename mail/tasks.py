@@ -34,14 +34,26 @@ def sync_account_emails(account_id: int):
         # Use the synced_email_ids from the result to accurately track which emails were synced
         synced_email_ids = result.get("synced_email_ids", [])
         
+        # Import Task model to check for existing tasks
+        from jobs.models import Task
+        
+        # Find threads that already have tasks (to avoid re-processing emails whose tasks were consolidated)
+        threads_with_tasks = Task.objects.filter(
+            account=account,
+            thread__isnull=False
+        ).values_list('thread_id', flat=True).distinct()
+        
         # Always check for emails without tasks and process them
         # This ensures we don't miss any emails, even if synced_email_ids is empty or incorrect
+        # Exclude emails whose threads already have tasks (to prevent re-processing after consolidation)
         emails_without_tasks = EmailMessage.objects.filter(
             account=account
         ).annotate(
             task_count=Count('tasks')
         ).filter(
             task_count=0
+        ).exclude(
+            thread_id__in=threads_with_tasks
         ).order_by("-created_at")
         
         # If we have synced emails, prioritize those

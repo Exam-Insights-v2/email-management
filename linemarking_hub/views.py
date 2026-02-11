@@ -1,6 +1,9 @@
 import json
+import logging
 from datetime import datetime
 from django.contrib import messages
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
@@ -207,9 +210,9 @@ def tasks_list(request):
     # Get search query
     search_query = request.GET.get('search', '').strip()
     
-    # Get first available connected account for forms
+    # Get first available connected account for forms (from user's accounts)
     from accounts.models import Account
-    account = Account.objects.filter(is_connected=True).first()
+    account = request.user.accounts.filter(is_connected=True).first() if request.user.is_authenticated else None
     
     # Initialize filter form with GET parameters
     filter_form = TaskFilterForm(request.GET, user=request.user, account=account)
@@ -286,6 +289,65 @@ def tasks_list(request):
         priority = max(1, min(5, task.priority or 1))
         tasks_by_priority[priority].append(task)
     
+    # Preload email thread and draft data for tasks with email messages
+    task_email_data = {}
+    for task in all_tasks:
+        if task.email_message:
+            email = task.email_message
+            
+            # Check if task has labels with draft_reply action
+            has_draft_reply = False
+            for email_label in email.labels.all():
+                if email_label.label.actions.filter(function="draft_reply").exists():
+                    has_draft_reply = True
+                    break
+            
+            # Get thread messages if account is connected
+            thread_messages = []
+            if email.account.is_connected and email.thread:
+                try:
+                    from mail.services import GmailService
+                    gmail_service = GmailService()
+                    thread_messages = gmail_service.get_thread_messages(
+                        email.account, email.thread.external_thread_id
+                    )
+                    # Sort by date
+                    thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error fetching thread messages for task {task.pk}: {e}")
+            
+            # Get or create draft for this email
+            draft = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at").first()
+            
+            # If no draft exists and we should have one, create it
+            if not draft and has_draft_reply:
+                reply_subject = f"Re: {email.subject or 'No subject'}"
+                reply_to = [email.from_address]
+                reply_body = f"""
+<div>
+  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
+  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
+    {email.body_html or ''}
+  </blockquote>
+</div>
+"""
+                draft = Draft.objects.create(
+                    account=email.account,
+                    email_message=email,
+                    to_addresses=reply_to,
+                    subject=reply_subject,
+                    body_html=reply_body,
+                )
+            
+            task_email_data[task.pk] = {
+                "email": email,
+                "thread_messages": thread_messages,
+                "has_draft_reply": has_draft_reply,
+                "draft": draft,
+            }
+    
     form = TaskForm(user=request.user, account=account)
     
     return render(request, "tasks/list.html", {
@@ -293,7 +355,8 @@ def tasks_list(request):
         "all_tasks": all_tasks,
         "form": form,
         "filter_form": filter_form,
-        "search_query": search_query
+        "search_query": search_query,
+        "task_email_data": task_email_data,
     })
 
 
@@ -365,20 +428,62 @@ def task_delete(request, pk):
 # Emails CRUD
 @login_required
 def emails_list(request):
-    emails = EmailMessage.objects.select_related("account", "thread").prefetch_related(
-        "labels__label"
-    ).order_by("-date_sent", "-created_at")
-    return render(request, "emails/list.html", {"emails": emails})
+    emails = EmailMessage.objects.filter(
+        account__in=request.user.accounts.all()
+    ).select_related("account", "thread").prefetch_related("labels__label", "tasks").order_by("-date_sent", "-created_at")
+    
+    # Preload email thread and draft data for all emails
+    email_data = {}
+    for email in emails:
+        thread_messages = []
+        if email.account.is_connected and email.thread:
+            try:
+                from mail.services import GmailService
+                gmail_service = GmailService()
+                thread_messages = gmail_service.get_thread_messages(
+                    email.account, email.thread.external_thread_id
+                )
+                thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
+            except Exception as e:
+                logger.error(f"Error fetching thread messages for email {email.pk}: {e}")
+        
+        drafts = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at")
+        
+        email_data[email.pk] = {
+            "thread_messages": thread_messages,
+            "drafts": list(drafts),
+        }
+    
+    return render(request, "emails/list.html", {"emails": emails, "email_data": email_data})
 
 
 @login_required
 def email_detail(request, pk):
-    email = get_object_or_404(
-        EmailMessage.objects.select_related("account", "thread").prefetch_related(
-            "labels__label", "tasks"
+    """Redirect to emails list with modal parameter - email detail is now shown in modal"""
+    return redirect("{}?email={}".format(reverse("emails_list"), pk))
+
+
+@login_required
+def task_email_data(request, pk):
+    """API endpoint to get email thread and draft data for a task"""
+    task = get_object_or_404(
+        Task.objects.select_related("email_message__account", "email_message__thread").prefetch_related(
+            "email_message__labels__label"
         ),
         pk=pk,
     )
+    
+    if not task.email_message:
+        return JsonResponse({"error": "Task has no associated email"}, status=400)
+    
+    email = task.email_message
+    
+    # Check if task has labels with draft_reply action
+    has_draft_reply = False
+    for email_label in email.labels.all():
+        if email_label.label.actions.filter(function="draft_reply").exists():
+            has_draft_reply = True
+            break
     
     # Get thread messages if account is connected
     thread_messages = []
@@ -391,21 +496,61 @@ def email_detail(request, pk):
             )
             # Sort by date
             thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error fetching thread messages: {e}")
     
-    # Get drafts for this email
-    drafts = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at")
+    # Get or create draft for this email
+    draft = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at").first()
     
-    return render(
-        request,
-        "emails/detail.html",
-        {
-            "email": email,
-            "thread_messages": thread_messages,
-            "drafts": drafts,
+    # If no draft exists and we should have one, create it
+    if not draft and has_draft_reply:
+        reply_subject = f"Re: {email.subject or 'No subject'}"
+        reply_to = [email.from_address]
+        reply_body = f"""
+<div>
+  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
+  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
+    {email.body_html or ''}
+  </blockquote>
+</div>
+"""
+        draft = Draft.objects.create(
+            account=email.account,
+            email_message=email,
+            to_addresses=reply_to,
+            subject=reply_subject,
+            body_html=reply_body,
+        )
+    
+    # Serialize data
+    data = {
+        "email": {
+            "id": email.pk,
+            "subject": email.subject or "(No subject)",
+            "from_address": email.from_address,
+            "from_name": email.from_name or email.from_address,
+            "to_addresses": email.to_addresses or [],
+            "cc_addresses": email.cc_addresses or [],
+            "date_sent": email.date_sent.isoformat() if email.date_sent else None,
+            "body_html": email.body_html or "",
         },
-    )
+        "thread_messages": thread_messages,
+        "has_draft_reply": has_draft_reply,
+        "draft": None,
+    }
+    
+    if draft:
+        data["draft"] = {
+            "id": draft.pk,
+            "to_addresses": draft.to_addresses or [],
+            "cc_addresses": draft.cc_addresses or [],
+            "subject": draft.subject or "",
+            "body_html": draft.body_html or "",
+        }
+    
+    return JsonResponse(data)
 
 
 @login_required
@@ -437,7 +582,7 @@ def email_archive(request, pk):
     
     if not email.account.is_connected:
         messages.error(request, "Account is not connected to Gmail.")
-        return redirect("email_detail", pk=email.pk)
+        return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
     
     try:
         from mail.services import GmailService
@@ -447,7 +592,7 @@ def email_archive(request, pk):
     except Exception as e:
         messages.error(request, f"Error archiving email: {str(e)}")
     
-    return redirect("email_detail", pk=email.pk)
+    return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
 
 @login_required
@@ -458,7 +603,7 @@ def email_forward(request, pk):
     if request.method == "POST":
         if not email.account.is_connected:
             messages.error(request, "Account is not connected to Gmail.")
-            return redirect("email_detail", pk=email.pk)
+            return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
         
         to_addresses = request.POST.get("to_addresses", "").split(",")
         to_addresses = [addr.strip() for addr in to_addresses if addr.strip()]
@@ -493,7 +638,7 @@ def email_forward(request, pk):
             return redirect("draft_detail", pk=draft.pk)
         except Exception as e:
             messages.error(request, f"Error creating forward draft: {str(e)}")
-            return redirect("email_detail", pk=email.pk)
+            return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
     
     # GET request - show forward form
     return render(request, "emails/forward.html", {"email": email})
@@ -507,7 +652,7 @@ def email_reply(request, pk):
     
     if not email.account.is_connected:
         messages.error(request, "Account is not connected to Gmail.")
-        return redirect("email_detail", pk=email.pk)
+        return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
     
     # Create reply draft
     reply_subject = f"Re: {email.subject or 'No subject'}"
@@ -535,7 +680,7 @@ def email_reply(request, pk):
     except Exception as e:
         messages.error(request, f"Error creating reply draft: {str(e)}")
     
-    return redirect("email_detail", pk=email.pk)
+    return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
 
 @login_required
@@ -585,24 +730,6 @@ def draft_send(request, pk):
 
 # Labels CRUD
 @login_required
-def labels_list(request):
-    labels = Label.objects.select_related("account").prefetch_related("actions").order_by(
-        "name"
-    )
-    form = LabelForm()
-    return render(request, "labels/list.html", {"labels": labels, "form": form})
-
-
-@login_required
-def label_detail(request, pk):
-    label = get_object_or_404(
-        Label.objects.select_related("account").prefetch_related("actions"),
-        pk=pk,
-    )
-    return render(request, "labels/detail.html", {"label": label})
-
-
-@login_required
 def label_create(request):
     if request.method == "POST":
         form = LabelForm(request.POST)
@@ -610,7 +737,7 @@ def label_create(request):
             try:
                 label = form.save()
                 messages.success(request, f"Label '{label.name}' created successfully.")
-                return redirect("settings?tab=labels")
+                return redirect("{}?tab=labels".format(reverse("settings")))
             except ValidationError as e:
                 messages.error(request, str(e))
         else:
@@ -618,37 +745,143 @@ def label_create(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
-        return redirect("settings?tab=labels")
+        return redirect("{}?tab=labels".format(reverse("settings")))
     else:
         # If accessed directly (not via drawer), redirect to settings
-        return redirect("settings?tab=labels")
+        return redirect("{}?tab=labels".format(reverse("settings")))
 
 
 @login_required
 def label_update(request, pk):
     label = get_object_or_404(Label, pk=pk)
+    
+    # Get all labels with the same name (case-insensitive) for user's accounts
+    user_accounts = request.user.accounts.all() if request.user.is_authenticated else []
+    labels_to_update = Label.objects.filter(
+        name__iexact=label.name,
+        account__in=user_accounts
+    )
+    
     if request.method == "POST":
-        form = LabelForm(request.POST, instance=label)
+        form = LabelForm(request.POST, instance=label, user=request.user)
         if form.is_valid():
             try:
-                label = form.save()
-                messages.success(request, f"Label '{label.name}' updated successfully.")
-                return redirect("label_detail", pk=label.pk)
+                # Get the form data
+                updated_label = form.save(commit=False)
+                
+                # Update all labels with the same name
+                updated_count = 0
+                for lbl in labels_to_update:
+                    # Update fields that should be synced across all instances
+                    lbl.prompt = updated_label.prompt
+                    lbl.instructions = updated_label.instructions
+                    lbl.priority = updated_label.priority
+                    lbl.is_active = updated_label.is_active
+                    lbl.save()
+                    
+                    # Update actions for each label instance
+                    lbl.actions.set(updated_label.actions.all())
+                    
+                    # Update accounts ManyToMany - keep owner account's settings
+                    if lbl.account == label.account:
+                        # For the primary label, use the form's accounts
+                        lbl.accounts.set(updated_label.accounts.all())
+                    # For other instances, keep their existing accounts settings
+                    
+                    # If no accounts selected, automatically add the owner account
+                    if not lbl.accounts.exists():
+                        lbl.accounts.add(lbl.account)
+                    
+                    updated_count += 1
+                
+                messages.success(request, f"Label '{label.name}' updated successfully across {updated_count} account(s).")
+                # Redirect back to settings if coming from settings page
+                if request.GET.get('modal') == 'true' or request.GET.get('from') == 'settings' or request.headers.get('Referer', '').endswith('settings'):
+                    return redirect("{}?tab=labels".format(reverse("settings")))
+                return redirect("{}?tab=labels".format(reverse("settings")))
             except ValidationError as e:
                 messages.error(request, str(e))
     else:
-        form = LabelForm(instance=label)
+        form = LabelForm(instance=label, user=request.user)
+    
+    # If it's an AJAX request (for modal/drawer), return just the form content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('drawer') == 'true' or request.GET.get('modal') == 'true':
+        return render(request, "labels/form_content.html", {"form": form, "form_url": "label_update", "drawer_id": f"edit-label-{pk}", "object_pk": pk})
+    
     return render(request, "labels/form.html", {"form": form, "label": label, "title": "Edit Label"})
 
 
 @login_required
+def labels_add_recommended(request):
+    """Add recommended labels to user's accounts"""
+    if request.method != "POST":
+        return redirect("{}?tab=labels".format(reverse("settings")))
+    
+    from automation.recommended_labels import RECOMMENDED_LABELS
+    
+    # Get selected label names from POST data
+    selected_labels = request.POST.getlist('label_names')
+    
+    if not selected_labels:
+        messages.warning(request, "No labels selected.")
+        return redirect("{}?tab=labels".format(reverse("settings")))
+    
+    # Get user's accounts
+    user_accounts = request.user.accounts.all() if request.user.is_authenticated else Account.objects.none()
+    
+    if not user_accounts.exists():
+        messages.error(request, "No accounts found. Please connect an account first.")
+        return redirect("{}?tab=labels".format(reverse("settings")))
+    
+    # Create a mapping of label name to label data
+    label_data_map = {label['name']: label for label in RECOMMENDED_LABELS}
+    
+    created_count = 0
+    skipped_count = 0
+    
+    # For each account, add the selected labels
+    for account in user_accounts:
+        for label_name in selected_labels:
+            if label_name not in label_data_map:
+                continue
+            
+            label_data = label_data_map[label_name]
+            
+            # Check if label already exists (case-insensitive)
+            existing = Label.objects.filter(
+                account=account,
+                name__iexact=label_name
+            ).first()
+            
+            if existing:
+                skipped_count += 1
+                continue
+            
+            # Create the label
+            Label.objects.create(
+                account=account,
+                name=label_data['name'],
+                prompt=label_data['prompt'],
+                priority=label_data['priority'],
+                is_active=True
+            )
+            created_count += 1
+    
+    if created_count > 0:
+        messages.success(request, f"Successfully added {created_count} label(s).")
+    if skipped_count > 0:
+        messages.info(request, f"{skipped_count} label(s) already exist and were skipped.")
+    
+    return redirect("{}?tab=labels".format(reverse("settings")))
+
+
 @require_http_methods(["POST"])
 def label_delete(request, pk):
     label = get_object_or_404(Label, pk=pk)
     name = label.name
     label.delete()
     messages.success(request, f"Label '{name}' deleted successfully.")
-    return redirect("labels_list")
+    return redirect("{}?tab=labels".format(reverse("settings")))
 
 
 # Accounts CRUD
@@ -690,20 +923,32 @@ def account_create(request):
 def account_update(request, pk):
     account = get_object_or_404(Account, pk=pk)
     if request.method == "POST":
-        form = AccountForm(request.POST, instance=account)
+        # For settings page, only allow updating signature and writing_style
+        if request.GET.get('modal') == 'true' or request.GET.get('from') == 'settings':
+            form = AccountForm(request.POST, instance=account, fields=['signature_html', 'writing_style'])
+        else:
+            form = AccountForm(request.POST, instance=account)
         if form.is_valid():
             try:
                 account = form.save()
                 messages.success(request, f"Account '{account.email}' updated successfully.")
+                # Redirect back to settings if coming from settings page
+                if request.GET.get('from') == 'settings' or request.GET.get('modal') == 'true' or request.headers.get('Referer', '').endswith('settings'):
+                    return redirect("{}?tab=accounts".format(reverse("settings")))
                 return redirect("account_detail", pk=account.pk)
             except ValidationError as e:
                 messages.error(request, str(e))
     else:
-        form = AccountForm(instance=account)
+        # For settings page modal, only show signature and writing_style
+        if request.GET.get('modal') == 'true' or request.GET.get('from') == 'settings':
+            form = AccountForm(instance=account, fields=['signature_html', 'writing_style'])
+        else:
+            form = AccountForm(instance=account)
     
-    # If it's an AJAX request (for drawer), return just the form content
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('drawer') == 'true':
-        return render(request, "accounts/form_content.html", {"form": form, "form_url": "account_update", "drawer_id": f"edit-account-{pk}", "object_pk": pk})
+    # If it's an AJAX request (for modal/drawer), return just the form content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('drawer') == 'true' or request.GET.get('modal') == 'true':
+        modal_id = f"edit-account-{pk}"
+        return render(request, "accounts/form_content.html", {"form": form, "form_url": "account_update", "modal_id": modal_id, "drawer_id": modal_id, "object_pk": pk})
     
     return render(
         request, "accounts/form.html", {"form": form, "account": account, "title": "Edit Account"}
@@ -830,6 +1075,66 @@ def draft_update(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+def draft_rewrite(request, pk):
+    """Rewrite a draft using AI based on user feedback"""
+    from django.http import JsonResponse
+    from automation.services import OpenAIClient
+    
+    draft = get_object_or_404(Draft, pk=pk)
+    user_feedback = request.POST.get("feedback", "").strip()
+    
+    if not user_feedback:
+        return JsonResponse({"success": False, "error": "Feedback is required"}, status=400)
+    
+    if not draft.email_message:
+        return JsonResponse({"success": False, "error": "Draft must be associated with an email"}, status=400)
+    
+    # Build email context from thread
+    email = draft.email_message
+    email_context = f"Subject: {email.subject or '(No subject)'}\nFrom: {email.from_name or email.from_address} ({email.from_address})\nBody:\n{email.body_html or ''}"
+    
+    # Include thread messages if available
+    if email.account.is_connected and email.thread:
+        try:
+            from mail.services import GmailService
+            gmail_service = GmailService()
+            thread_messages = gmail_service.get_thread_messages(
+                email.account, email.thread.external_thread_id
+            )
+            if thread_messages:
+                thread_context = "\n\nEmail Thread:\n"
+                for msg in thread_messages[:5]:  # Limit to last 5 messages
+                    thread_context += f"From: {msg.get('from_name', msg.get('from_address', ''))}\n"
+                    thread_context += f"Subject: {msg.get('subject', '')}\n"
+                    thread_context += f"Body: {msg.get('body_html', '')[:500]}\n\n"
+                email_context += thread_context
+        except Exception as e:
+            logger.warning(f"Could not fetch thread messages for draft rewrite: {e}")
+    
+    # Get writing style if available
+    writing_style = email.account.writing_style if email.account.writing_style else None
+    
+    # Rewrite the draft
+    client = OpenAIClient()
+    rewritten_body = client.rewrite_draft(
+        email_context=email_context,
+        current_draft=draft.body_html or "",
+        user_feedback=user_feedback,
+        writing_style=writing_style
+    )
+    
+    # Update the draft
+    draft.body_html = rewritten_body
+    draft.save()
+    
+    return JsonResponse({
+        "success": True,
+        "body_html": rewritten_body
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
 def draft_delete(request, pk):
     draft = get_object_or_404(Draft, pk=pk)
     subject = draft.subject or f"Draft {draft.pk}"
@@ -844,14 +1149,6 @@ def actions_list(request):
     actions = Action.objects.select_related("account").order_by("name")
     form = ActionForm()
     return render(request, "actions/list.html", {"actions": actions, "form": form})
-
-
-@login_required
-def action_detail(request, pk):
-    action = get_object_or_404(Action.objects.select_related("account"), pk=pk)
-    # Get labels that use this action (now direct ManyToMany)
-    labels = action.labels.all().order_by("-priority", "name")
-    return render(request, "actions/detail.html", {"action": action, "labels": labels})
 
 
 @login_required
@@ -879,13 +1176,34 @@ def action_create(request):
 @login_required
 def action_update(request, pk):
     action = get_object_or_404(Action, pk=pk)
+    
+    # Get all actions with the same name (case-insensitive) for user's accounts
+    user_accounts = request.user.accounts.all() if request.user.is_authenticated else []
+    actions_to_update = Action.objects.filter(
+        name__iexact=action.name,
+        account__in=user_accounts
+    )
+    
     if request.method == "POST":
         form = ActionForm(request.POST, instance=action)
         if form.is_valid():
             try:
-                action = form.save()
-                messages.success(request, f"Action '{action.name}' updated successfully.")
-                return redirect("action_detail", pk=action.pk)
+                # Get the form data
+                updated_action = form.save(commit=False)
+                
+                # Update all actions with the same name
+                updated_count = 0
+                for act in actions_to_update:
+                    # Update fields that should be synced across all instances
+                    act.instructions = updated_action.instructions
+                    act.function = updated_action.function
+                    act.mcp_tool_name = updated_action.mcp_tool_name
+                    act.tool_description = updated_action.tool_description
+                    act.save()
+                    updated_count += 1
+                
+                messages.success(request, f"Action '{action.name}' updated successfully across {updated_count} account(s).")
+                return redirect("{}?tab=actions".format(reverse("settings")))
             except ValidationError as e:
                 messages.error(request, str(e))
     else:
@@ -917,7 +1235,7 @@ def email_label_add(request, email_id):
         label = get_object_or_404(Label, pk=label_id)
         EmailLabel.objects.get_or_create(email_message=email, label=label)
         messages.success(request, f"Label '{label.name}' added to email.")
-    return redirect("email_detail", pk=email.pk)
+    return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
 
 @login_required
@@ -927,7 +1245,7 @@ def email_label_remove(request, email_id, label_id):
     label = get_object_or_404(Label, pk=label_id)
     EmailLabel.objects.filter(email_message=email, label=label).delete()
     messages.success(request, f"Label '{label.name}' removed from email.")
-    return redirect("email_detail", pk=email.pk)
+    return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
 
 # Settings
@@ -937,18 +1255,80 @@ def settings_view(request):
     # Get data for each section
     tab = request.GET.get('tab', 'accounts')
     
-    # Actions list
-    actions = Action.objects.select_related("account").order_by("name")
+    # Get user's accounts
+    user_accounts = request.user.accounts.all() if request.user.is_authenticated else Account.objects.none()
     
-    # Labels list (now includes all SOP functionality)
-    labels = Label.objects.select_related("account").prefetch_related("actions").order_by("-priority", "name")
+    # Actions list - filter to show only actions for user's accounts
+    actions_queryset = Action.objects.filter(account__in=user_accounts).select_related("account").order_by("name")
     
-    # Accounts list
-    accounts = Account.objects.order_by("email")
+    # Group actions by name (case-insensitive)
+    actions_by_name = {}
+    for action in actions_queryset:
+        name_key = action.name.lower()
+        if name_key not in actions_by_name:
+            actions_by_name[name_key] = {
+                'name': action.name,
+                'instances': [],
+                'primary': action  # Use first instance as primary for display
+            }
+        actions_by_name[name_key]['instances'].append(action)
+    
+    # Convert to list of grouped actions and sort alphabetically by name
+    actions = sorted(list(actions_by_name.values()), key=lambda x: x['name'].lower())
+    
+    # Labels list - filter to show labels available to user's accounts
+    from django.db.models import Q
+    labels_queryset = Label.objects.filter(
+        Q(account__in=user_accounts) | Q(accounts__in=user_accounts)
+    ).select_related("account").prefetch_related("actions", "accounts").distinct().order_by("name")
+    
+    # Group labels by name (case-insensitive)
+    labels_by_name = {}
+    for label in labels_queryset:
+        name_key = label.name.lower()
+        if name_key not in labels_by_name:
+            labels_by_name[name_key] = {
+                'name': label.name,
+                'instances': [],
+                'primary': label  # Use first instance as primary for display
+            }
+        labels_by_name[name_key]['instances'].append(label)
+    
+    # Convert to list of grouped labels and sort alphabetically by name
+    labels = sorted(list(labels_by_name.values()), key=lambda x: x['name'].lower())
+    
+    # Accounts list - filter to show only user's accounts
+    accounts = user_accounts.order_by("email")
     
     # Forms for drawers
     action_form = ActionForm()
-    label_form = LabelForm()
+    label_form = LabelForm(user=request.user)
+    
+    # Get recommended labels and check which ones already exist
+    from automation.recommended_labels import RECOMMENDED_LABELS, LABELS_BY_CATEGORY, CATEGORIES
+    
+    # Get existing label names for the user's accounts (case-insensitive)
+    existing_label_names = set()
+    if request.user.is_authenticated:
+        existing_label_names = {
+            label_name.lower() 
+            for label_name in Label.objects.filter(account__in=user_accounts).values_list('name', flat=True)
+        }
+    
+    # Mark which recommended labels already exist
+    recommended_labels_with_status = []
+    for label_data in RECOMMENDED_LABELS:
+        label_data_copy = label_data.copy()
+        label_data_copy['exists'] = label_data['name'].lower() in existing_label_names
+        recommended_labels_with_status.append(label_data_copy)
+    
+    # Group by category with status
+    recommended_by_category = {}
+    for category in CATEGORIES:
+        recommended_by_category[category] = [
+            label for label in recommended_labels_with_status 
+            if label['category'] == category
+        ]
     
     return render(request, "settings.html", {
         "tab": tab,
@@ -957,4 +1337,7 @@ def settings_view(request):
         "accounts": accounts,
         "action_form": action_form,
         "label_form": label_form,
+        "recommended_labels": recommended_labels_with_status,
+        "recommended_by_category": recommended_by_category,
+        "recommended_categories": CATEGORIES,
     })
