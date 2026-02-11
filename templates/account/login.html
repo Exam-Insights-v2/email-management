@@ -7,12 +7,12 @@
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
   <div class="sm:mx-auto sm:w-full sm:max-w-sm">
     <img src="{% static 'images/logo.png' %}" alt="Email IQ" class="mx-auto h-10 w-auto" />
-    <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-white">Welcome to Email IQ</h2>
+    <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-white">Welcome to Email IQ</h2>
   </div>
 
   <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
       <div class="grid grid-cols-2 gap-3">
-        <a href="{% url 'google_oauth_login' %}" class="flex w-full justify-center items-center gap-3 rounded-md bg-white/5 px-3 py-1.5 text-sm/6 font-medium text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">
+        <a href="{% url 'google_oauth_login' %}" class="flex w-full justify-center items-center gap-3 rounded-md bg-gray-100 dark:bg-white/5 px-3 py-1.5 text-sm/6 font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
           <svg class="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -21,7 +21,7 @@
           </svg>
           Google
         </a>
-        <a href="{% url 'microsoft_oauth_login' %}" class="flex w-full justify-center items-center gap-3 rounded-md bg-white/5 px-3 py-1.5 text-sm/6 font-medium text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">
+        <a href="{% url 'microsoft_oauth_login' %}" class="flex w-full justify-center items-center gap-3 rounded-md bg-gray-100 dark:bg-white/5 px-3 py-1.5 text-sm/6 font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
           <svg class="w-5 h-5" viewBox="0 0 23 23" fill="none">
             <path d="M0 0h10.892v10.892H0V0z" fill="#F25022"/>
             <path d="M12.108 0H23v10.892H12.108V0z" fill="#7FBA00"/>
