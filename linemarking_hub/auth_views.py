@@ -100,7 +100,16 @@ def google_oauth_callback(request):
                     from automation.utils import setup_account_automation
                     setup_account_automation(account)
                 
-                messages.success(request, f"Welcome, {user.email}! Your Gmail account has been connected.")
+                # Trigger email sync after account connection
+                try:
+                    from mail.tasks import sync_account_emails
+                    sync_account_emails.delay(account.pk)
+                    messages.success(request, f"Welcome, {user.email}! Your Gmail account has been connected. Syncing emails...")
+                except Exception as sync_error:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error triggering email sync during login: {sync_error}")
+                    messages.success(request, f"Welcome, {user.email}! Your Gmail account has been connected. (Email sync will start shortly)")
             else:
                 messages.success(request, f"Welcome, {user.email}!")
         except Exception as account_error:
@@ -207,7 +216,16 @@ def microsoft_oauth_callback(request):
                     from automation.utils import setup_account_automation
                     setup_account_automation(account)
                 
-                messages.success(request, f"Welcome, {user.email}! Your Microsoft email account has been connected.")
+                # Trigger email sync after account connection
+                try:
+                    from mail.tasks import sync_account_emails
+                    sync_account_emails.delay(account.pk)
+                    messages.success(request, f"Welcome, {user.email}! Your Microsoft email account has been connected. Syncing emails...")
+                except Exception as sync_error:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error triggering email sync during login: {sync_error}")
+                    messages.success(request, f"Welcome, {user.email}! Your Microsoft email account has been connected. (Email sync will start shortly)")
             else:
                 messages.success(request, f"Welcome, {user.email}!")
         except Exception as account_error:

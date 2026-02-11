@@ -190,6 +190,17 @@ def account_gmail_oauth_callback(request):
             messages.info(
                 request, f"Gmail account {account.email} was already connected."
             )
+        
+        # Trigger email sync after account connection
+        try:
+            from mail.tasks import sync_account_emails
+            sync_account_emails.delay(account.pk)
+            messages.info(request, f"Email sync started for {account.email}. Emails will appear shortly.")
+        except Exception as sync_error:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error triggering email sync: {sync_error}")
+            messages.warning(request, f"Account connected but email sync failed to start. You can manually sync from the account page.")
         return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
         import traceback
@@ -349,6 +360,17 @@ def account_microsoft_oauth_callback(request):
             messages.info(
                 request, f"Microsoft account {account.email} was already connected."
             )
+        
+        # Trigger email sync after account connection
+        try:
+            from mail.tasks import sync_account_emails
+            sync_account_emails.delay(account.pk)
+            messages.info(request, f"Email sync started for {account.email}. Emails will appear shortly.")
+        except Exception as sync_error:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error triggering email sync: {sync_error}")
+            messages.warning(request, f"Account connected but email sync failed to start. You can manually sync from the account page.")
         return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
         import traceback
