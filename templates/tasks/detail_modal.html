@@ -11,8 +11,16 @@ Usage:
     <div tabindex="0" class="flex min-h-full items-center justify-center text-center focus:outline-none">
       <el-dialog-panel class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in w-full max-w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] m-4 sm:m-6 data-closed:sm:translate-y-0 data-closed:sm:scale-95 flex flex-col">
         <div class="bg-white dark:bg-gray-800 flex flex-col flex-1 min-h-0 overflow-hidden">
-          <!-- Header: title (left), Mark as Done + Close (right) -->
+          <!-- Header: navigation (left), title (center), Mark as Done + Close (right) -->
           <div class="flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 flex-shrink-0 border-b border-gray-200 dark:border-white/10">
+            <div class="flex items-center justify-center gap-1 flex-shrink-0">
+              <button type="button" class="task-nav-prev flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Previous task" data-task-pk="{{ task.pk }}">
+                <i class="ti ti-chevron-up size-4 sm:size-5" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="task-nav-next flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Next task" data-task-pk="{{ task.pk }}">
+                <i class="ti ti-chevron-down size-4 sm:size-5" aria-hidden="true"></i>
+              </button>
+            </div>
             <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 truncate">{{ task.title|default:"Untitled Task" }}</h2>
             <div class="flex items-center gap-2 flex-shrink-0">
               {% if task.status != 'done' %}
@@ -32,7 +40,7 @@ Usage:
                 </button>
               </form>
               {% endif %}
-              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="rounded-md p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
+              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="flex items-center justify-center rounded-md p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
                 <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
               </button>
             </div>
@@ -40,7 +48,7 @@ Usage:
 
           <!-- Two columns: description (left), task details (right) -->
           <div class="flex-1 overflow-y-auto min-h-0">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6 border-b border-gray-200 dark:border-white/10 pb-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6 border-b border-gray-200 dark:border-white/10">
               <!-- Left: Task description (2/3) -->
               <section class="px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 lg:col-span-2 lg:border-r lg:border-gray-200 dark:lg:border-white/10" aria-labelledby="task-detail-{{ task.pk }}-desc-heading">
                 <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
@@ -149,7 +157,7 @@ Usage:
                   <!-- Body -->
                   <div class="px-4 sm:px-5 py-4">
                     {% if msg.body_html %}
-                    <div class="email-body text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none prose-a:text-cyan-600 dark:prose-a:text-cyan-400 prose-p:my-2">
+                    <div class="email-body text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none prose-a:text-cyan-600 dark:prose-a:text-cyan-400 prose-p:my-2" style="contain: layout style paint; isolation: isolate;">
                       {{ msg.body_html|strip_quoted_email }}
                     </div>
                     {% else %}

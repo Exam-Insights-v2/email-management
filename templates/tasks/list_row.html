@@ -1,7 +1,7 @@
 {% comment %}
 List row component for tasks - reusable across priority sections
 {% endcomment %}
-<li class="grid grid-cols-[32px_1fr_24px_auto] sm:grid-cols-[40px_60px_24px_1fr_auto_120px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="if (window.openTaskDetailModal) window.openTaskDetailModal({{ task.pk }});">
+<li class="grid grid-cols-[32px_1fr_24px_auto] sm:grid-cols-[40px_60px_24px_1fr_auto_120px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer task-row" data-task-pk="{{ task.pk }}">
   <!-- Priority Bars Column -->
   <div class="flex items-center justify-center">
     <div class="flex items-end gap-0.5 h-4">

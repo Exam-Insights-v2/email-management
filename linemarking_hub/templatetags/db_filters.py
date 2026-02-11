@@ -11,7 +11,8 @@ register = template.Library()
 
 def _strip_quoted_email_html(html):
     """Remove quoted/reply content from email HTML (blockquotes, Gmail quote divs, and 'On ... wrote:' sections).
-    Also removes <style> and <script> tags to prevent them affecting the rest of the page."""
+    Also removes <style> and <script> tags to prevent them affecting the rest of the page.
+    Removes dangerous inline styles that can break page layout."""
     if not html or not isinstance(html, str):
         return html
     text = html.strip()
@@ -23,6 +24,34 @@ def _strip_quoted_email_html(html):
     
     # Remove <script> tags and their content (security and isolation)
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove dangerous inline styles that can break page layout
+    # Match style="..." and remove problematic CSS properties
+    def clean_style_attr(match):
+        style_content = match.group(1)
+        # Remove dangerous CSS properties that can break layout
+        dangerous_props = [
+            r'position\s*:\s*fixed',
+            r'position\s*:\s*absolute',
+            r'z-index\s*:\s*\d+',
+            r'top\s*:\s*[^;]+',
+            r'left\s*:\s*[^;]+',
+            r'right\s*:\s*[^;]+',
+            r'bottom\s*:\s*[^;]+',
+            r'width\s*:\s*100%',
+            r'height\s*:\s*100%',
+            r'width\s*:\s*100vw',
+            r'height\s*:\s*100vh',
+        ]
+        for prop in dangerous_props:
+            style_content = re.sub(prop + r'[;\s]*', '', style_content, flags=re.IGNORECASE)
+        # Clean up extra semicolons and spaces
+        style_content = re.sub(r'[;\s]+', '; ', style_content).strip('; ')
+        if style_content:
+            return f'style="{style_content}"'
+        return ''
+    
+    text = re.sub(r'style="([^"]*)"', clean_style_attr, text, flags=re.IGNORECASE)
 
     # Remove blockquote elements (repeat to handle nested; non-greedy gets innermost first)
     while True:
@@ -346,7 +375,8 @@ def strip_quoted_email(html):
 @register.filter(is_safe=True)
 def remove_global_style_script(html):
     """Remove <style> and <script> tags from HTML to prevent them affecting the rest of the page.
-    Keeps all other HTML and inline styles intact."""
+    Also removes dangerous inline styles that can break page layout.
+    Keeps safe HTML and inline styles intact."""
     if not html or not isinstance(html, str):
         return html
     text = html.strip()
@@ -358,6 +388,33 @@ def remove_global_style_script(html):
     
     # Remove <script> tags and their content (security and isolation)
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove dangerous inline styles that can break page layout
+    def clean_style_attr(match):
+        style_content = match.group(1)
+        # Remove dangerous CSS properties that can break layout
+        dangerous_props = [
+            r'position\s*:\s*fixed',
+            r'position\s*:\s*absolute',
+            r'z-index\s*:\s*\d+',
+            r'top\s*:\s*[^;]+',
+            r'left\s*:\s*[^;]+',
+            r'right\s*:\s*[^;]+',
+            r'bottom\s*:\s*[^;]+',
+            r'width\s*:\s*100%',
+            r'height\s*:\s*100%',
+            r'width\s*:\s*100vw',
+            r'height\s*:\s*100vh',
+        ]
+        for prop in dangerous_props:
+            style_content = re.sub(prop + r'[;\s]*', '', style_content, flags=re.IGNORECASE)
+        # Clean up extra semicolons and spaces
+        style_content = re.sub(r'[;\s]+', '; ', style_content).strip('; ')
+        if style_content:
+            return f'style="{style_content}"'
+        return ''
+    
+    text = re.sub(r'style="([^"]*)"', clean_style_attr, text, flags=re.IGNORECASE)
     
     result = text.strip() or html
     return mark_safe(result)

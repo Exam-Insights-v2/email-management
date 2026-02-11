@@ -217,9 +217,18 @@ def tasks_list(request):
     # Initialize filter form with GET parameters
     filter_form = TaskFilterForm(request.GET, user=request.user, account=account)
     
-    # Get all tasks
-    tasks = Task.objects.select_related("account", "job", "email_message").prefetch_related(
-        "email_message__labels__label"
+    # Get all tasks with optimized prefetching to avoid N+1 queries
+    from django.db.models import Prefetch
+    tasks = Task.objects.select_related(
+        "account", 
+        "job", 
+        "email_message",
+        "email_message__thread"
+    ).prefetch_related(
+        Prefetch(
+            "email_message__labels",
+            queryset=EmailLabel.objects.select_related("label").prefetch_related("label__actions")
+        )
     )
     
     # Filter tasks by search query if provided
@@ -290,46 +299,69 @@ def tasks_list(request):
         tasks_by_priority[priority].append(task)
     
     # Preload email thread and draft data for tasks with email messages
-    # Reuse GmailService instance per account for better caching
-    from mail.services import GmailService
-    gmail_services = {}  # Cache service instances per account ID
+    # Get thread messages from database (not Gmail API - much faster!)
+    
+    # Batch load all drafts for tasks with emails (one query instead of N)
+    email_messages = [task.email_message for task in all_tasks if task.email_message]
+    email_message_ids = [em.pk for em in email_messages]
+    
+    # Get all drafts in one query (then pick latest per email in Python)
+    drafts_by_email = {}
+    if email_message_ids:
+        all_drafts = Draft.objects.filter(
+            email_message_id__in=email_message_ids
+        ).order_by('email_message_id', '-updated_at')
+        # Keep only the latest draft per email_message_id
+        for draft in all_drafts:
+            if draft.email_message_id not in drafts_by_email:
+                drafts_by_email[draft.email_message_id] = draft
+    
+    # Batch load all thread messages (group by thread to avoid duplicates)
+    thread_ids = {em.thread_id for em in email_messages if em.thread_id}
+    threads_with_messages = {}
+    if thread_ids:
+        from mail.models import EmailThread
+        threads = EmailThread.objects.filter(pk__in=thread_ids).prefetch_related(
+            Prefetch(
+                "messages",
+                queryset=EmailMessage.objects.all().order_by('-date_sent', '-created_at')
+            )
+        )
+        for thread in threads:
+            threads_with_messages[thread.pk] = [
+                {
+                    "external_message_id": msg.external_message_id,
+                    "subject": msg.subject,
+                    "from_address": msg.from_address,
+                    "from_name": msg.from_name,
+                    "to_addresses": msg.to_addresses,
+                    "cc_addresses": msg.cc_addresses,
+                    "bcc_addresses": msg.bcc_addresses,
+                    "date_sent": msg.date_sent,
+                    "body_html": msg.body_html,
+                }
+                for msg in thread.messages.all()
+            ]
     
     task_email_data = {}
+    
     for task in all_tasks:
         if task.email_message:
             email = task.email_message
             
-            # Check if task has labels with draft_reply action
+            # Check if task has labels with draft_reply action (now using prefetched data)
             has_draft_reply = False
             for email_label in email.labels.all():
-                if email_label.label.actions.filter(function="draft_reply").exists():
+                # Check prefetched actions (no database query!)
+                if any(action.function == "draft_reply" for action in email_label.label.actions.all()):
                     has_draft_reply = True
                     break
             
-            # Get thread messages if account is connected
-            thread_messages = []
-            if email.account.is_connected and email.thread:
-                try:
-                    # Reuse service instance for this account
-                    account_id = email.account.pk
-                    if account_id not in gmail_services:
-                        gmail_services[account_id] = GmailService()
-                    
-                    gmail_service = gmail_services[account_id]
-                    thread_messages = gmail_service.get_thread_messages(
-                        email.account, email.thread.external_thread_id
-                    )
-                    # Sort by date
-                    thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
-                except Exception as e:
-                    # Clear cache for this account on error to force refresh next time
-                    account_id = email.account.pk
-                    GmailService.clear_cache(account_id)
-                    gmail_services.pop(account_id, None)
-                    logger.error(f"Error fetching thread messages for task {task.pk}: {e}")
+            # Get thread messages from prefetched data
+            thread_messages = threads_with_messages.get(email.thread_id, []) if email.thread_id else []
             
-            # Get or create draft for this email
-            draft = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at").first()
+            # Get draft from prefetched data
+            draft = drafts_by_email.get(email.pk)
             
             # If no draft exists and we should have one, create it
             if not draft and has_draft_reply:

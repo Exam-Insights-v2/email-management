@@ -95,6 +95,26 @@
         will-change: opacity;
       }
       
+      /* Ensure dialogs are visible when open */
+      dialog[open] {
+        display: block !important;
+      }
+      
+      /* Ensure el-dialog wrapper doesn't hide content */
+      el-dialog {
+        display: contents;
+      }
+      
+      /* Make sure dialog content is visible when open */
+      dialog[open] el-dialog-backdrop {
+        opacity: 1 !important;
+      }
+      
+      dialog[open] el-dialog-panel {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+      
       /* Toast animations */
       @keyframes slideInFromBottom {
         from {
@@ -264,6 +284,36 @@
       .email-body h5,
       .email-body h6 { 
         font-size: 15px; 
+      }
+      
+      /* Isolate email content to prevent it from breaking page layout */
+      .email-body {
+        contain: layout style paint;
+        isolation: isolate;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        max-width: 100%;
+      }
+      
+      /* Prevent email HTML from breaking modal structure */
+      dialog .email-body,
+      [role="dialog"] .email-body {
+        position: relative;
+        z-index: auto;
+      }
+      
+      /* Ensure email content doesn't escape its container */
+      .email-body * {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      
+      /* Prevent fixed/absolute positioning from email HTML */
+      .email-body [style*="position: fixed"],
+      .email-body [style*="position:absolute"],
+      .email-body [style*="position: fixed"],
+      .email-body [style*="position:absolute"] {
+        position: relative !important;
       }
       
       /* Email signature styling */
@@ -689,6 +739,57 @@
           {% endif %}
         });
       })();
+    </script>
+    <script>
+      // Global command handler for dialog close buttons
+      document.addEventListener('DOMContentLoaded', function() {
+        // Handle command="close" buttons
+        document.addEventListener('click', function(e) {
+          const button = e.target.closest('button[command="close"]');
+          if (!button) return;
+          
+          const commandFor = button.getAttribute('commandfor');
+          if (!commandFor) return;
+          
+          const dialog = document.getElementById(commandFor);
+          if (dialog && typeof dialog.close === 'function') {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Add data-closed attributes to hide the modal
+            const backdrop = dialog.querySelector('el-dialog-backdrop');
+            const panel = dialog.querySelector('el-dialog-panel');
+            
+            if (backdrop) {
+              backdrop.setAttribute('data-closed', '');
+            }
+            if (panel) {
+              panel.setAttribute('data-closed', '');
+            }
+            
+            // Wait for transition, then close
+            setTimeout(function() {
+              dialog.close();
+            }, 200);
+          }
+        });
+        
+        // Handle dialog close events to restore data-closed state
+        document.addEventListener('close', function(e) {
+          if (e.target.tagName === 'DIALOG') {
+            const dialog = e.target;
+            const backdrop = dialog.querySelector('el-dialog-backdrop');
+            const panel = dialog.querySelector('el-dialog-panel');
+            
+            if (backdrop) {
+              backdrop.setAttribute('data-closed', '');
+            }
+            if (panel) {
+              panel.setAttribute('data-closed', '');
+            }
+          }
+        });
+      });
     </script>
   </body>
 </html>

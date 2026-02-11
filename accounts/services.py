@@ -207,7 +207,11 @@ class GmailOAuthService:
         """Save OAuth token to database"""
         expires_at = None
         if credentials.expiry:
-            expires_at = credentials.expiry
+            # Make datetime timezone-aware if it's naive
+            if timezone.is_naive(credentials.expiry):
+                expires_at = timezone.make_aware(credentials.expiry)
+            else:
+                expires_at = credentials.expiry
 
         # Get the actual scopes granted (may include more than requested)
         granted_scopes = list(credentials.scopes) if credentials.scopes else GmailOAuthService.SCOPES

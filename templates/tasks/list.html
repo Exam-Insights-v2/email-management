@@ -135,35 +135,170 @@
 {% endfor %}
 
 <script>
-  // Global function to open task detail modal
-  window.openTaskDetailModal = function(taskPk) {
-    const modalId = 'task-detail-' + taskPk;
-    const modal = document.getElementById(modalId);
-    
-    if (!modal) {
-      console.error('Task detail modal not found:', modalId);
-      // If modal not found, redirect to tasks list with the task parameter
-      window.location.href = '{% url "tasks_list" %}?task=' + taskPk;
-      return;
+  // Task modal toggle handler
+  (function() {
+    // Close all open task modals
+    function closeAllTaskModals() {
+      document.querySelectorAll('dialog[id^="task-detail-"]').forEach(function(modal) {
+        if (modal.open) {
+          const backdrop = modal.querySelector('el-dialog-backdrop');
+          const panel = modal.querySelector('el-dialog-panel');
+          if (backdrop) backdrop.setAttribute('data-closed', '');
+          if (panel) panel.setAttribute('data-closed', '');
+          if (typeof modal.close === 'function') {
+            modal.close();
+          }
+        }
+      });
     }
     
-    modal.showModal();
-  };
-
-  // Auto-open modal if task parameter is in URL
-  document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const taskPk = urlParams.get('task');
-    if (taskPk && window.openTaskDetailModal) {
-      // Small delay to ensure modals are rendered
-      setTimeout(function() {
-        window.openTaskDetailModal(parseInt(taskPk));
-        // Clean up URL
-        const newUrl = window.location.pathname + (urlParams.toString().replace(/task=\d+&?/, '').replace(/&$/, '') ? '?' + urlParams.toString().replace(/task=\d+&?/, '').replace(/&$/, '') : '');
-        window.history.replaceState({}, '', newUrl);
-      }, 100);
+    // Open task detail modal
+    function openTaskModal(taskPk) {
+      const modalId = 'task-detail-' + taskPk;
+      const modal = document.getElementById(modalId);
+      
+      if (!modal) {
+        // Modal not found, redirect to ensure it's rendered
+        window.location.href = '{% url "tasks_list" %}?task=' + taskPk;
+        return;
+      }
+      
+      if (typeof modal.showModal !== 'function') {
+        return;
+      }
+      
+      // Check if any task modal is currently open
+      const hasOpenModal = Array.from(document.querySelectorAll('dialog[id^="task-detail-"]')).some(function(d) {
+        return d.open;
+      });
+      
+      if (hasOpenModal) {
+        // Close any other open task modals first
+        closeAllTaskModals();
+        
+        // Delay to ensure previous modal is closed before opening new one
+        setTimeout(function() {
+          openModalNow(modal);
+        }, 200);
+      } else {
+        // No modal open, open immediately
+        openModalNow(modal);
+      }
     }
-  });
+    
+    // Helper to actually open the modal
+    function openModalNow(modal) {
+      // Remove data-closed attributes to show modal
+      const backdrop = modal.querySelector('el-dialog-backdrop');
+      const panel = modal.querySelector('el-dialog-panel');
+      
+      if (backdrop) backdrop.removeAttribute('data-closed');
+      if (panel) panel.removeAttribute('data-closed');
+      
+      // Open the dialog
+      modal.showModal();
+    }
+    
+    // Expose globally for URL parameter handling
+    window.openTaskDetailModal = openTaskModal;
+    
+    // Task navigation - get all task PKs in order
+    const allTaskPks = [
+      {% for task in all_tasks %}
+      {{ task.pk }}{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    
+    // Navigate to next/previous task
+    function navigateToTask(currentTaskPk, direction) {
+      if (allTaskPks.length === 0) return;
+      
+      // Ensure currentTaskPk is a number for comparison
+      const currentPk = typeof currentTaskPk === 'string' ? parseInt(currentTaskPk, 10) : currentTaskPk;
+      
+      // Convert all PKs to numbers for comparison
+      const taskPksAsNumbers = allTaskPks.map(pk => typeof pk === 'string' ? parseInt(pk, 10) : pk);
+      const currentIndex = taskPksAsNumbers.indexOf(currentPk);
+      
+      if (currentIndex === -1) {
+        console.warn('Current task not found in list:', currentPk);
+        return;
+      }
+      
+      let newIndex;
+      if (direction === 'next') {
+        newIndex = (currentIndex + 1) % taskPksAsNumbers.length;
+      } else {
+        // Previous (up arrow)
+        newIndex = (currentIndex - 1 + taskPksAsNumbers.length) % taskPksAsNumbers.length;
+      }
+      
+      const newTaskPk = taskPksAsNumbers[newIndex];
+      
+      // Verify the new modal exists
+      const newModal = document.getElementById('task-detail-' + newTaskPk);
+      if (!newModal) {
+        console.warn('Next task modal not found:', newTaskPk);
+        return;
+      }
+      
+      // Use openTaskModal which handles closing other modals
+      openTaskModal(newTaskPk);
+    }
+    
+    // Event delegation for navigation buttons
+    document.addEventListener('click', function(e) {
+      const prevBtn = e.target.closest('.task-nav-prev');
+      const nextBtn = e.target.closest('.task-nav-next');
+      
+      if (prevBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const taskPk = parseInt(prevBtn.getAttribute('data-task-pk'));
+        if (taskPk) navigateToTask(taskPk, 'prev');
+      } else if (nextBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const taskPk = parseInt(nextBtn.getAttribute('data-task-pk'));
+        if (taskPk) navigateToTask(taskPk, 'next');
+      }
+    });
+    
+    // Event delegation for task row clicks
+    document.addEventListener('click', function(e) {
+      // Ignore clicks on interactive elements
+      if (e.target.closest('button, a, input, select, textarea, form')) {
+        return;
+      }
+      
+      const taskRow = e.target.closest('.task-row');
+      if (taskRow) {
+        const taskPk = taskRow.getAttribute('data-task-pk');
+        if (taskPk) {
+          e.preventDefault();
+          e.stopPropagation();
+          openTaskModal(parseInt(taskPk));
+        }
+      }
+    });
+    
+    // Auto-open modal from URL parameter
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const taskPk = urlParams.get('task');
+      
+      if (taskPk) {
+        setTimeout(function() {
+          openTaskModal(parseInt(taskPk));
+          // Clean up URL
+          const newParams = new URLSearchParams(urlParams);
+          newParams.delete('task');
+          const newUrl = window.location.pathname + (newParams.toString() ? '?' + newParams.toString() : '');
+          window.history.replaceState({}, '', newUrl);
+        }, 100);
+      }
+    });
+  })();
 
   // Refresh sync message functionality
   (function() {
