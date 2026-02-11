@@ -331,6 +331,7 @@ Usage:
                       class="draft-body-editor block w-full rounded-b-md bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/10 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
                       contenteditable="true"
                       data-placeholder="Write your reply..."
+                      data-signature="{{ task.account.signature_html|default:''|escapejs }}"
                       role="textbox"
                       aria-multiline="true"
                     >{% if email_data.draft %}{% load db_filters %}{{ email_data.draft.body_html|remove_global_style_script }}{% endif %}</div>
@@ -420,8 +421,28 @@ Usage:
                   const AUTOSAVE_DELAY_MS = 1500;
                   let autosaveTimer = null;
 
+                  // Get signature from data attribute
+                  const signatureHtml = bodyEditor ? (bodyEditor.getAttribute('data-signature') || '') : '';
+                  
+                  // Helper to ensure signature is appended to body
+                  function ensureSignature(bodyHtml) {
+                    if (!signatureHtml) return bodyHtml;
+                    // Check if signature is already in the body
+                    if (bodyHtml && bodyHtml.indexOf(signatureHtml) !== -1) {
+                      return bodyHtml;
+                    }
+                    // Append signature with separator
+                    const separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>';
+                    return (bodyHtml || '') + separator + signatureHtml;
+                  }
+                  
                   function syncBodyToHidden() {
-                    if (bodyEditor && bodyHtmlInput) bodyHtmlInput.value = bodyEditor.innerHTML || '';
+                    if (bodyEditor && bodyHtmlInput) {
+                      let bodyHtml = bodyEditor.innerHTML || '';
+                      // Ensure signature is included when saving
+                      bodyHtml = ensureSignature(bodyHtml);
+                      bodyHtmlInput.value = bodyHtml;
+                    }
                   }
                   var savedSel = null;
                   var DRAFT_LIST_DEBUG = false;
@@ -452,6 +473,11 @@ Usage:
                     }
                   }
                   if (bodyEditor && bodyHtmlInput) {
+                    // Ensure signature is in the initial display if draft exists
+                    if (bodyEditor.innerHTML && signatureHtml && bodyEditor.innerHTML.indexOf(signatureHtml) === -1) {
+                      const separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>';
+                      bodyEditor.innerHTML = bodyEditor.innerHTML + separator + signatureHtml;
+                    }
                     syncBodyToHidden();
                     bodyEditor.addEventListener('input', function() { syncBodyToHidden(); scheduleAutosave(); });
                     bodyEditor.addEventListener('paste', function() { setTimeout(syncBodyToHidden, 0); });
@@ -1035,7 +1061,13 @@ Usage:
                           return fetch('/drafts/' + draftId + '/rewrite/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function(r) { return r.json(); });
                         }).then(function(data) {
                           if (data && data.success && data.body_html !== undefined && bodyEditor) {
-                            bodyEditor.innerHTML = data.body_html;
+                            // Signature should already be in rewritten body from server, but ensure it's there
+                            let rewrittenHtml = data.body_html;
+                            if (signatureHtml && rewrittenHtml.indexOf(signatureHtml) === -1) {
+                              const separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>';
+                              rewrittenHtml = rewrittenHtml + separator + signatureHtml;
+                            }
+                            bodyEditor.innerHTML = rewrittenHtml;
                             syncBodyToHidden();
                             closeRewritePopup();
                           }

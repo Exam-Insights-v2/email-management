@@ -106,6 +106,11 @@ def execute_draft_reply(
     
     html_body = client.draft_reply(instructions, email_context)
     
+    # Append signature if available
+    if email.account.signature_html:
+        separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>'
+        html_body = html_body + separator + email.account.signature_html
+    
     draft = Draft.objects.create(
         account=email.account,
         email_message=email,

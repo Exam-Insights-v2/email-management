@@ -217,9 +217,11 @@ def tasks_list(request):
     # Initialize filter form with GET parameters
     filter_form = TaskFilterForm(request.GET, user=request.user, account=account)
     
-    # Get all tasks with optimized prefetching to avoid N+1 queries
+    # Get tasks only from accounts that belong to the logged-in user
     from django.db.models import Prefetch
-    tasks = Task.objects.select_related(
+    tasks = Task.objects.filter(
+        account__users=request.user
+    ).select_related(
         "account", 
         "job", 
         "email_message",
@@ -375,6 +377,10 @@ def tasks_list(request):
   </blockquote>
 </div>
 """
+                # Append signature if available
+                if email.account.signature_html:
+                    reply_body += f"\n<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
+                
                 draft = Draft.objects.create(
                     account=email.account,
                     email_message=email,
@@ -412,9 +418,9 @@ def task_detail(request, pk):
 
 @login_required
 def task_create(request):
-    # Get first available connected account
+    # Get first available connected account from user's accounts
     from accounts.models import Account
-    account = Account.objects.filter(is_connected=True).first()
+    account = request.user.accounts.filter(is_connected=True).first()
     
     if request.method == "POST":
         form = TaskForm(request.POST, user=request.user, account=account)
@@ -432,12 +438,13 @@ def task_create(request):
 
 @login_required
 def task_update(request, pk):
-    task = get_object_or_404(Task, pk=pk)
-    # Get account from task or first available
+    # Only allow updating tasks from user's accounts
+    task = get_object_or_404(Task, pk=pk, account__users=request.user)
+    # Get account from task or first available from user's accounts
     account = task.account if task.account else None
     if not account:
         from accounts.models import Account
-        account = Account.objects.filter(is_connected=True).first()
+        account = request.user.accounts.filter(is_connected=True).first()
     
     if request.method == "POST":
         form = TaskForm(request.POST, instance=task, user=request.user, account=account)
@@ -460,7 +467,8 @@ def task_update(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def task_delete(request, pk):
-    task = get_object_or_404(Task, pk=pk)
+    # Only allow deleting tasks from user's accounts
+    task = get_object_or_404(Task, pk=pk, account__users=request.user)
     title = task.title or f"Task {task.pk}"
     task.delete()
     messages.success(request, f"Task '{title}' deleted successfully.")
@@ -722,6 +730,10 @@ def email_reply(request, pk):
 </div>
 """
     
+    # Append signature if available
+    if email.account.signature_html:
+        reply_body += f"\n<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
+    
     try:
         draft = Draft.objects.create(
             account=email.account,
@@ -756,9 +768,16 @@ def draft_send(request, pk):
         
         # Create EmailMessage record for sent email
         from mail.models import EmailMessage, EmailThread
+        # If thread ID is missing/empty, use message ID as fallback to ensure unique threads
+        thread_id = result.get("threadId", "")
+        if not thread_id or thread_id.strip() == "":
+            # Use message ID as thread ID to ensure each email gets its own thread
+            message_id = result.get("id", f"sent-{draft.pk}")
+            thread_id = f"single-{message_id}"
+        
         thread, _ = EmailThread.objects.get_or_create(
             account=draft.account,
-            external_thread_id=result.get("threadId", ""),
+            external_thread_id=thread_id,
         )
         
         EmailMessage.objects.create(
@@ -1171,14 +1190,30 @@ def draft_rewrite(request, pk):
     # Get writing style if available
     writing_style = email.account.writing_style if email.account.writing_style else None
     
-    # Rewrite the draft
+    # Extract signature from current draft (if present) to preserve it
+    current_body = draft.body_html or ""
+    signature = email.account.signature_html or ""
+    body_without_signature = current_body
+    if signature and signature in current_body:
+        # Remove signature from body before rewriting
+        body_without_signature = current_body.replace(signature, "").strip()
+        # Also remove the separator if present
+        separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>'
+        body_without_signature = body_without_signature.replace(separator, "").strip()
+    
+    # Rewrite the draft (without signature)
     client = OpenAIClient()
     rewritten_body = client.rewrite_draft(
         email_context=email_context,
-        current_draft=draft.body_html or "",
+        current_draft=body_without_signature,
         user_feedback=user_feedback,
         writing_style=writing_style
     )
+    
+    # Append signature back to rewritten body
+    if signature:
+        separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>'
+        rewritten_body = rewritten_body + separator + signature
     
     # Update the draft
     draft.body_html = rewritten_body

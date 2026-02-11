@@ -5,10 +5,20 @@ from .serializers import JobSerializer, TaskSerializer
 
 
 class JobViewSet(viewsets.ModelViewSet):
-    queryset = Job.objects.all().select_related("account").prefetch_related("tasks")
     serializer_class = JobSerializer
+    
+    def get_queryset(self):
+        # Only show jobs from accounts that belong to the logged-in user
+        if self.request.user.is_authenticated:
+            return Job.objects.filter(account__users=self.request.user).select_related("account").prefetch_related("tasks")
+        return Job.objects.none()
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    queryset = Task.objects.all().select_related("account", "job")
     serializer_class = TaskSerializer
+    
+    def get_queryset(self):
+        # Only show tasks from accounts that belong to the logged-in user
+        if self.request.user.is_authenticated:
+            return Task.objects.filter(account__users=self.request.user).select_related("account", "job")
+        return Task.objects.none()

@@ -64,14 +64,20 @@ class OpenAIClient:
                     - Use Australian English spelling
 
                     2. TASK DESCRIPTION:
-                    - Summarise the email content clearly
-                    - Highlight the required action or response needed
-                    - Include important details: dates, locations, contact info, specific requests
-                    - Use \\n (newline characters) to separate different sections for readability
-                    - Structure with line breaks between: summary/context, required actions, important details.
-                    - Example format: "Summary text.\\n\\nRequired actions: list actions."
-                    - If this is a follow-up email (previous messages shown below), reference what it's following up on
+                    - Format MUST be exactly: one-line summary, blank line, then "Actions:" header, then bulleted list
+                    - First line: One concise sentence explaining what's happening (who, what, where, when, why)
+                    - Include key details: dates, locations, contact info, specific requests in the summary line
+                    - After a blank line, include "Actions:" header (exactly as shown)
+                    - List actions in logical order:
+                      * Completed/automatic actions first (e.g., "Draft reply created", "Email classified")
+                      * Actions requiring review/approval next (e.g., "Draft needs review", "Quote needs verification")
+                      * Future/pending actions last (e.g., "Follow up required if no response within 3 days", "Schedule site visit")
+                    - Use bullet points (dash "-") for each action
+                    - Be specific about what needs to be done or reviewed
+                    - If this is a follow-up email (previous messages shown below), reference what it's following up on in the summary
                     - For follow-ups: note if urgency has increased, if new information was provided, or if the situation has changed
+                    - Example format:
+                      "Customer inquiry for car park line marking quote at 123 Main Street, Melbourne. Requested quote for 50 parking spaces with timeline by end of month.\\n\\nActions:\\n- Draft reply created with pricing information\\n- Quote details need review before sending\\n- Follow up required if no response within 3 days"
 
                     3. PRIORITY (1-5 scale):
                     - 5 (Urgent): Immediate action required (e.g., urgent deadline, complaint, time-sensitive request)
@@ -142,6 +148,12 @@ Subject: {email_subject}
 From: {email_from}
 Body:
 {email_body[:3000]}{thread_context}
+
+IMPORTANT: When generating the task_description, consider what actions will likely be triggered by the labels you select. For example:
+- If selecting a label that triggers "draft_reply", include "Draft reply created" or "Draft reply will be created" in the Actions list
+- If the email requires a quote, include "Quote needs to be prepared" or "Quote details need review"
+- If follow-up is needed, include "Follow up required if no response within X days"
+- List actions in this order: 1) Automatic/completed actions, 2) Actions requiring review, 3) Future/pending actions
 
 Return JSON only, no additional text."""
 

@@ -645,9 +645,15 @@ class EmailSyncService:
         with transaction.atomic():
             for msg_data in messages:
                 # Get or create thread
+                # If thread ID is missing/empty, use message ID as fallback to ensure unique threads
+                external_thread_id = msg_data["external_thread_id"]
+                if not external_thread_id or external_thread_id.strip() == "":
+                    # Use message ID as thread ID to ensure each email gets its own thread
+                    external_thread_id = f"single-{msg_data['external_message_id']}"
+                
                 thread, _ = EmailThread.objects.get_or_create(
                     account=account,
-                    external_thread_id=msg_data["external_thread_id"],
+                    external_thread_id=external_thread_id,
                 )
 
                 # Get or create message
