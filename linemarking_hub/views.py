@@ -1142,7 +1142,7 @@ def draft_detail(request, pk):
         Draft.objects.select_related("account", "email_message").prefetch_related("attachments"),
         pk=pk,
     )
-    return render(request, "drafts/detail.html", {"draft": draft})
+    return render(request, "drafts/detail.html", {"draft": draft, "create_url": None})
 
 
 @login_required

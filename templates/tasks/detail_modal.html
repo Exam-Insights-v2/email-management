@@ -35,9 +35,8 @@ Usage:
                 {% load db_filters %}
                 <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
                 {% endif %}
-                <button type="submit" class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-colors">
-                  <i class="ti ti-circle-check mr-1.5 size-4" aria-hidden="true"></i>
-                  Mark as Done
+                <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Mark as Done">
+                  <i class="ti ti-circle-check size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
                 </button>
               </form>
               {% endif %}
@@ -205,20 +204,20 @@ Usage:
                 <input type="hidden" id="draft-to-json-{{ task.pk }}" name="to_addresses" value="">
                 <input type="hidden" id="draft-cc-json-{{ task.pk }}" name="cc_addresses" value="">
                 <input type="hidden" id="draft-bcc-json-{{ task.pk }}" name="bcc_addresses" value="">
-                <article class="rounded-lg border border-amber-200 dark:border-amber-500/40 bg-white dark:bg-gray-800/80 overflow-visible ring-1 ring-amber-500/20 dark:ring-amber-400/10">
+                <article class="rounded-lg border border-gray-200 dark:border-gray-500/40 bg-cyan-800 dark:bg-cyan-800/80 overflow-visible">
                   <!-- Clickable header: toggles dropdown for To / From / CC / BCC -->
-                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10 text-left hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors cursor-pointer" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
+                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10 text-left transition-colors cursor-pointer" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-amber-500 dark:bg-amber-600" aria-hidden="true">Y</span>
+                      <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-cyan-500 dark:bg-cyan-600" aria-hidden="true">Y</span>
                       <div class="min-w-0 text-sm">
-                        <span class="text-gray-500 dark:text-gray-400">You</span>
-                        <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
+                        <span class="text-gray-200 dark:text-gray-400">You</span>
+                        <span class="text-gray-200 dark:text-gray-400">to</span>
                         <span id="draft-to-summary-{{ task.pk }}" class="text-cyan-600 dark:text-cyan-400">{% if email_data.draft %}{{ email_data.draft.to_addresses|join:", " }}{% else %}{{ task.email_message.from_address }}{% endif %}</span>
                         <span id="draft-cc-bcc-summary-{{ task.pk }}" class="text-gray-500 dark:text-gray-400">{% if email_data.draft %}{% if email_data.draft.cc_addresses %}, CC: {{ email_data.draft.cc_addresses|join:", " }}{% endif %}{% if email_data.draft.bcc_addresses %}{% if email_data.draft.cc_addresses %}; {% endif %}BCC: {{ email_data.draft.bcc_addresses|join:", " }}{% endif %}{% endif %}</span>
                       </div>
                       <i class="ti ti-chevron-down size-5 text-gray-400 flex-shrink-0 transition-transform duration-200 draft-recipients-chevron" aria-hidden="true"></i>
                     </div>
-                    <span class="inline-flex items-center rounded-md bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300 border border-amber-400/30 flex-shrink-0 ml-2">Draft</span>
+                    <span class="inline-flex items-center rounded-md bg-cyan-500/20 px-2 py-1 text-xs font-medium text-cyan-200 dark:text-cyan-300 border border-cyan-400/30 flex-shrink-0 ml-2">Draft</span>
                   </button>
                   <div id="draft-recipients-dropdown-{{ task.pk }}" class="draft-recipients-dropdown hidden border-b border-gray-200 dark:border-white/10 bg-gray-100/50 dark:bg-white/5" aria-hidden="true">
                     <div class="px-4 sm:px-5 py-3 flex flex-wrap gap-x-4 gap-y-3">
@@ -237,21 +236,21 @@ Usage:
                     </div>
                   </div>
                   <!-- Subject (editable, same look as thread) -->
-                  <div class="px-4 sm:px-5 py-2 border-b border-gray-200 dark:border-white/10">
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                      <span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span>
+                  <div class="px-4 sm:px-5 py-2 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-900/80">
+                    <div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      <span class="font-medium text-gray-500 dark:text-gray-400 shrink-0">Subject:</span>
                       <input
                         type="text"
                         id="draft-subject-{{ task.pk }}"
                         name="subject"
                         value="{% if email_data.draft %}{{ email_data.draft.subject }}{% else %}Re: {{ task.email_message.subject|default:"No subject" }}{% endif %}"
-                        class="w-full min-w-0 bg-transparent border-0 px-0 py-0 text-gray-700 dark:text-gray-300 focus:ring-0 focus:outline-none placeholder:text-gray-400"
+                        class="flex-1 min-w-0 bg-transparent border-0 px-0 py-0 text-gray-700 dark:text-gray-300 focus:ring-0 focus:outline-none placeholder:text-gray-400"
                         placeholder="(No subject)"
                       />
-                    </p>
+                    </div>
                   </div>
                   <!-- Body (editable) + attachments inline. Rich text: looks like normal text, stored/sent as HTML. -->
-                  <div class="px-4 sm:px-5 py-4">
+                  <div class="px-4 sm:px-5 py-4 bg-white dark:bg-gray-900/80">
                     <input type="hidden" name="body_html" id="draft-body-html-{{ task.pk }}" value="">
                     <div class="flex flex-wrap items-center gap-1 mb-2 border border-gray-200 dark:border-white/10 rounded-t-md bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 border-b-0">
                       <span class="relative group/tooltip inline-block">
@@ -1254,7 +1253,7 @@ Usage:
                                   var bg = 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
                                   if (['jpg','jpeg','png','gif','webp','svg','bmp','ico'].indexOf(ext) >= 0) { icon = 'ti-photo'; bg = 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'; }
                                   else if (['mp4','webm','mov','avi','mkv','m4v'].indexOf(ext) >= 0) { icon = 'ti-video'; bg = 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400'; }
-                                  else if (['mp3','wav','ogg','m4a','flac','aac'].indexOf(ext) >= 0) { icon = 'ti-music'; bg = 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'; }
+                                  else if (['mp3','wav','ogg','m4a','flac','aac'].indexOf(ext) >= 0) { icon = 'ti-music'; bg = 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400'; }
                                   else if (ext === 'pdf') { icon = 'ti-file-text'; bg = 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'; }
                                   else if (['xls','xlsx','csv'].indexOf(ext) >= 0) { icon = 'ti-file-spreadsheet'; bg = 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'; }
                                   else if (['doc','docx','txt','rtf'].indexOf(ext) >= 0) { icon = 'ti-file-description'; bg = 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'; }
