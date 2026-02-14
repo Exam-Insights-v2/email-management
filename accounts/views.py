@@ -17,43 +17,52 @@ class AccountViewSet(viewsets.ModelViewSet):
 @login_required
 def account_connect_gmail(request):
     """Initiate Gmail OAuth connection"""
+    # Get email from POST or GET (query parameter)
+    email = None
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
+    else:
+        # Handle GET requests (for reconnect buttons)
+        email = request.GET.get("email", "").strip()
+        # If no email in query, try to find user's Gmail account that needs reconnecting
         if not email:
-            messages.error(request, "Email address is required.")
-            return redirect(f"{reverse('settings')}?tab=accounts")
+            gmail_account = request.user.accounts.filter(
+                provider=Provider.GMAIL
+            ).exclude(is_connected=True).first()
+            if gmail_account:
+                email = gmail_account.email
+    
+    if not email:
+        messages.error(request, "Email address is required.")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
-        # Get or create account
-        account, created = Account.objects.get_or_create(
-            provider=Provider.GMAIL, email=email, defaults={"sync_enabled": True}
-        )
-        
-        # Link account to user
-        if request.user.is_authenticated and request.user not in account.users.all():
-            account.users.add(request.user)
-        
-        # Set up recommended labels and actions for new accounts
-        if created:
-            from automation.utils import setup_account_automation
-            setup_account_automation(account)
+    # Get or create account
+    account, created = Account.objects.get_or_create(
+        provider=Provider.GMAIL, email=email, defaults={"sync_enabled": True}
+    )
+    
+    # Link account to user
+    if request.user.is_authenticated and request.user not in account.users.all():
+        account.users.add(request.user)
+    
+    # Set up recommended labels and actions for new accounts
+    if created:
+        from automation.utils import setup_account_automation
+        setup_account_automation(account)
 
-        if account.is_connected:
-            messages.info(request, f"Account {email} is already connected.")
-            return redirect("account_detail", pk=account.pk)
-
-        # Get authorization URL
-        redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
-        try:
-            auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri)
-            # Store state in session for verification
-            request.session["oauth_state"] = state
-            request.session["oauth_account_id"] = account.pk
-            return redirect(auth_url)
-        except Exception as e:
-            messages.error(request, f"Error initiating OAuth: {str(e)}")
-            return redirect(f"{reverse('settings')}?tab=accounts")
-
-    return redirect(f"{reverse('settings')}?tab=accounts")
+    # Force reconnection by using force_reauth=True
+    # Get authorization URL
+    redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
+    try:
+        # Use force_reauth=True to ensure user re-authenticates
+        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
+        # Store state in session for verification
+        request.session["oauth_state"] = state
+        request.session["oauth_account_id"] = account.pk
+        return redirect(auth_url)
+    except Exception as e:
+        messages.error(request, f"Error initiating OAuth: {str(e)}")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
 
 @login_required
@@ -238,43 +247,52 @@ def account_gmail_oauth_callback(request):
 @login_required
 def account_connect_microsoft(request):
     """Initiate Microsoft OAuth connection"""
+    # Get email from POST or GET (query parameter)
+    email = None
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
+    else:
+        # Handle GET requests (for reconnect buttons)
+        email = request.GET.get("email", "").strip()
+        # If no email in query, try to find user's Microsoft account that needs reconnecting
         if not email:
-            messages.error(request, "Email address is required.")
-            return redirect(f"{reverse('settings')}?tab=accounts")
+            microsoft_account = request.user.accounts.filter(
+                provider=Provider.MICROSOFT
+            ).exclude(is_connected=True).first()
+            if microsoft_account:
+                email = microsoft_account.email
+    
+    if not email:
+        messages.error(request, "Email address is required.")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
-        # Get or create account
-        account, created = Account.objects.get_or_create(
-            provider=Provider.MICROSOFT, email=email, defaults={"sync_enabled": True}
-        )
-        
-        # Link account to user
-        if request.user.is_authenticated and request.user not in account.users.all():
-            account.users.add(request.user)
-        
-        # Set up recommended labels and actions for new accounts
-        if created:
-            from automation.utils import setup_account_automation
-            setup_account_automation(account)
+    # Get or create account
+    account, created = Account.objects.get_or_create(
+        provider=Provider.MICROSOFT, email=email, defaults={"sync_enabled": True}
+    )
+    
+    # Link account to user
+    if request.user.is_authenticated and request.user not in account.users.all():
+        account.users.add(request.user)
+    
+    # Set up recommended labels and actions for new accounts
+    if created:
+        from automation.utils import setup_account_automation
+        setup_account_automation(account)
 
-        if account.is_connected:
-            messages.info(request, f"Account {email} is already connected.")
-            return redirect("account_detail", pk=account.pk)
-
-        # Get authorization URL
-        redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
-        try:
-            auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri)
-            # Store state in session for verification
-            request.session["oauth_state"] = state
-            request.session["oauth_account_id"] = account.pk
-            return redirect(auth_url)
-        except Exception as e:
-            messages.error(request, f"Error initiating OAuth: {str(e)}")
-            return redirect(f"{reverse('settings')}?tab=accounts")
-
-    return redirect(f"{reverse('settings')}?tab=accounts")
+    # Force reconnection by using force_reauth=True
+    # Get authorization URL
+    redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
+    try:
+        # Use force_reauth=True to ensure user re-authenticates
+        auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
+        # Store state in session for verification
+        request.session["oauth_state"] = state
+        request.session["oauth_account_id"] = account.pk
+        return redirect(auth_url)
+    except Exception as e:
+        messages.error(request, f"Error initiating OAuth: {str(e)}")
+        return redirect(f"{reverse('settings')}?tab=accounts")
 
 
 @login_required

@@ -11,7 +11,7 @@ from mail.models import Draft, EmailMessage, EmailThread
 
 
 class Command(BaseCommand):
-    help = "Seed demo data for the linemarking email ops tool."
+    help = "Seed demo data for Email IQ."
 
     def handle(self, *args, **options):
         account, _ = Account.objects.get_or_create(

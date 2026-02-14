@@ -1,13 +1,13 @@
-# LineMarking Email Ops
+# Email IQ
 
-Minimal Django project scaffolding for the LineMarking email operations tool.
+Email management and task automation tool.
 
 ## Getting started
 
 1. Create a `.env` file (or rely on defaults) with:
    - `DEBUG=True`
    - `SECRET_KEY=...`
-   - `DATABASE_URL=postgres://user:pass@localhost:5432/line_marking`
+   - `DATABASE_URL=postgres://user:pass@localhost:5432/email_iq`
    - `CELERY_BROKER_URL` and `CELERY_RESULT_BACKEND` pointing to Redis.
 2. Install dependencies in a virtualenv: `pip install -r requirements.txt`.
 3. Run `make build` — it runs migrations and collects static files.

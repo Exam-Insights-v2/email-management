@@ -68,16 +68,18 @@ class OpenAIClient:
                     - First line: One concise sentence explaining what's happening (who, what, where, when, why)
                     - Include key details: dates, locations, contact info, specific requests in the summary line
                     - After a blank line, include "Actions:" header (exactly as shown)
-                    - List actions in logical order:
-                      * Completed/automatic actions first (e.g., "Draft reply created", "Email classified")
-                      * Actions requiring review/approval next (e.g., "Draft needs review", "Quote needs verification")
-                      * Future/pending actions last (e.g., "Follow up required if no response within 3 days", "Schedule site visit")
+                    - List ONLY the essential actions that need to be done - keep it simple and direct
+                    - Focus on the main action(s) required, not detailed step-by-step processes
+                    - Avoid listing completed/automatic actions (e.g., don't mention "Email classified", "Draft reply created" unless it's relevant context)
+                    - Keep actions concise - typically 1-3 actions maximum
+                    - Be direct: "Review comment and act if needed" not "Review comment, determine if action needed, then act accordingly"
                     - Use bullet points (dash "-") for each action
-                    - Be specific about what needs to be done or reviewed
                     - If this is a follow-up email (previous messages shown below), reference what it's following up on in the summary
                     - For follow-ups: note if urgency has increased, if new information was provided, or if the situation has changed
-                    - Example format:
-                      "Customer inquiry for car park line marking quote at 123 Main Street, Melbourne. Requested quote for 50 parking spaces with timeline by end of month.\\n\\nActions:\\n- Draft reply created with pricing information\\n- Quote details need review before sending\\n- Follow up required if no response within 3 days"
+                    - Example formats:
+                      Simple: "John commented on document requesting project end date alignment.\\n\\nActions:\\n- Review comment and act if needed"
+                      Document: "SCSA sent proposed licence for review and signature.\\n\\nActions:\\n- Review document, sign if happy, and send back"
+                      Quote: "Customer inquiry for car park line marking quote at 123 Main Street, Melbourne. Requested quote for 50 parking spaces with timeline by end of month.\\n\\nActions:\\n- Prepare and send quote"
 
                     3. PRIORITY (1-5 scale):
                     - 5 (Urgent): Immediate action required (e.g., urgent deadline, complaint, time-sensitive request)
@@ -149,11 +151,11 @@ From: {email_from}
 Body:
 {email_body[:3000]}{thread_context}
 
-IMPORTANT: When generating the task_description, consider what actions will likely be triggered by the labels you select. For example:
-- If selecting a label that triggers "draft_reply", include "Draft reply created" or "Draft reply will be created" in the Actions list
-- If the email requires a quote, include "Quote needs to be prepared" or "Quote details need review"
-- If follow-up is needed, include "Follow up required if no response within X days"
-- List actions in this order: 1) Automatic/completed actions, 2) Actions requiring review, 3) Future/pending actions
+IMPORTANT: When generating the task_description, keep actions simple and direct. Focus on what the user actually needs to do:
+- Keep it to 1-3 essential actions maximum
+- Be direct and concise (e.g., "Review comment and act if needed" not a detailed step-by-step)
+- Don't list automatic/completed actions unless they provide important context
+- Focus on the main action required (e.g., "Review document", "Send quote", "Reply to inquiry")
 
 Return JSON only, no additional text."""
 

@@ -1,7 +1,7 @@
 {% comment %}
 List row component for tasks - reusable across priority sections
 {% endcomment %}
-<li class="grid grid-cols-[32px_1fr_24px_auto] sm:grid-cols-[40px_60px_24px_1fr_auto_120px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer task-row" data-task-pk="{{ task.pk }}">
+<li class="grid grid-cols-[32px_1fr_24px_auto_32px] sm:grid-cols-[40px_60px_24px_1fr_auto_120px_32px] gap-2 sm:gap-4 items-center py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer task-row" data-task-pk="{{ task.pk }}">
   <!-- Priority Bars Column -->
   <div class="flex items-center justify-center">
     <div class="flex items-end gap-0.5 h-4">
@@ -21,6 +21,32 @@ List row component for tasks - reusable across priority sections
       </div>
     </div>
   </div>
+  
+  <!-- Mark as Done Button Column (Mobile) -->
+  {% if task.status != 'done' %}
+  <div class="flex items-center justify-center sm:hidden">
+    <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
+      {% csrf_token %}
+      <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+      <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+      <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+      <input type="hidden" name="status" value="done">
+      {% if task.due_at %}
+      {% load db_filters %}
+      <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
+      {% endif %}
+      <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" aria-label="Mark as Done" title="Mark as Done">
+        <i class="ti ti-circle-check size-4" aria-hidden="true"></i>
+      </button>
+    </form>
+  </div>
+  {% else %}
+  <div class="flex items-center justify-center sm:hidden">
+    <div class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400" aria-label="Done" title="Done">
+      <i class="ti ti-circle-check size-4" aria-hidden="true"></i>
+    </div>
+  </div>
+  {% endif %}
   
   <!-- Desktop Layout -->
   <!-- ID Column (Desktop) -->
@@ -65,4 +91,30 @@ List row component for tasks - reusable across priority sections
     {% load db_filters %}
     <time datetime="{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|date:'Y-m-d' }}{% else %}{{ task.created_at|date:'Y-m-d' }}{% endif %}">{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|aus_time:"d M g:i A" }}{% else %}{{ task.created_at|aus_time:"d M g:i A" }}{% endif %}</time>
   </div>
+  
+  <!-- Mark as Done Button Column (Desktop) -->
+  {% if task.status != 'done' %}
+  <div class="hidden sm:flex items-center justify-center">
+    <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
+      {% csrf_token %}
+      <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+      <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+      <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+      <input type="hidden" name="status" value="done">
+      {% if task.due_at %}
+      {% load db_filters %}
+      <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
+      {% endif %}
+      <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" aria-label="Mark as Done" title="Mark as Done">
+        <i class="ti ti-circle-check size-4 sm:size-5" aria-hidden="true"></i>
+      </button>
+    </form>
+  </div>
+  {% else %}
+  <div class="hidden sm:flex items-center justify-center">
+    <div class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400" aria-label="Done" title="Done">
+      <i class="ti ti-circle-check size-4 sm:size-5" aria-hidden="true"></i>
+    </div>
+  </div>
+  {% endif %}
 </li>

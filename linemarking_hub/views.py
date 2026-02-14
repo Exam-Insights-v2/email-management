@@ -253,7 +253,14 @@ def tasks_list(request):
             if email_list:
                 email_q = Q()
                 for email in email_list:
-                    email_q |= Q(email_message__from_address__icontains=email) | Q(email_message__from_name__icontains=email)
+                    # Check from_address, from_name, and to_addresses (JSONField array)
+                    # For to_addresses, we check if the email appears in the JSON representation
+                    # This works because JSONField stores arrays as JSON strings
+                    email_q |= (
+                        Q(email_message__from_address__icontains=email) | 
+                        Q(email_message__from_name__icontains=email) |
+                        Q(email_message__to_addresses__icontains=email)
+                    )
                 tasks = tasks.filter(email_q)
         
         # Filter by date range
@@ -402,6 +409,59 @@ def tasks_list(request):
     
     form = TaskForm(user=request.user, account=account)
     
+    # Check account connection status and token validity for user's accounts
+    user_accounts = request.user.accounts.all() if request.user.is_authenticated else Account.objects.none()
+    account_statuses = {}
+    for acc in user_accounts:
+        has_token_error = False
+        token_error_message = None
+        
+        if acc.is_connected:
+            # Check if token is valid (refresh logic will handle proactive refresh)
+            # Don't mark as disconnected here - let the refresh logic handle that
+            try:
+                if acc.provider == 'gmail':
+                    from accounts.services import GmailOAuthService
+                    credentials = GmailOAuthService.get_valid_credentials(acc)
+                    if not credentials:
+                        has_token_error = True
+                        token_error_message = "Unable to get valid credentials. Please reconnect your account."
+                elif acc.provider == 'microsoft':
+                    from accounts.services import MicrosoftEmailOAuthService
+                    credentials = MicrosoftEmailOAuthService.get_valid_credentials(acc)
+                    if not credentials:
+                        has_token_error = True
+                        token_error_message = "Unable to get valid credentials. Please reconnect your account."
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error checking token for account {acc.pk}: {e}")
+                has_token_error = True
+                token_error_message = "Unable to verify token. Please reconnect your account."
+        
+        account_statuses[acc.pk] = {
+            'has_token_error': has_token_error,
+            'token_error_message': token_error_message or "Your account is not connected. Please reconnect to sync emails.",
+        }
+    
+    # Count active filters
+    active_filter_count = 0
+    if filter_form.is_valid():
+        if filter_form.cleaned_data.get('email'):
+            active_filter_count += 1
+        if filter_form.cleaned_data.get('date_from'):
+            active_filter_count += 1
+        if filter_form.cleaned_data.get('date_to'):
+            active_filter_count += 1
+        if filter_form.cleaned_data.get('status'):
+            active_filter_count += 1
+        if filter_form.cleaned_data.get('task_id'):
+            active_filter_count += 1
+        if filter_form.cleaned_data.get('priority'):
+            active_filter_count += 1
+        if filter_form.cleaned_data.get('label'):
+            active_filter_count += 1
+    
     return render(request, "tasks/list.html", {
         "tasks_by_priority": dict(tasks_by_priority),
         "all_tasks": all_tasks,
@@ -409,6 +469,9 @@ def tasks_list(request):
         "filter_form": filter_form,
         "search_query": search_query,
         "task_email_data": task_email_data,
+        "account_statuses": account_statuses,
+        "user_accounts": user_accounts,
+        "active_filter_count": active_filter_count,
     })
 
 
@@ -1396,6 +1459,40 @@ def settings_view(request):
     # Accounts list - filter to show only user's accounts
     accounts = user_accounts.order_by("email")
     
+    # Check account connection status and token validity
+    account_statuses = {}
+    for account in accounts:
+        has_token_error = False
+        token_error_message = None
+        
+        if account.is_connected:
+            # Check if token is valid (refresh logic will handle proactive refresh)
+            # Don't mark as disconnected here - let the refresh logic handle that
+            try:
+                if account.provider == 'gmail':
+                    from accounts.services import GmailOAuthService
+                    credentials = GmailOAuthService.get_valid_credentials(account)
+                    if not credentials:
+                        has_token_error = True
+                        token_error_message = "Unable to get valid credentials. Please reconnect your account."
+                elif account.provider == 'microsoft':
+                    from accounts.services import MicrosoftEmailOAuthService
+                    credentials = MicrosoftEmailOAuthService.get_valid_credentials(account)
+                    if not credentials:
+                        has_token_error = True
+                        token_error_message = "Unable to get valid credentials. Please reconnect your account."
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error checking token for account {account.pk}: {e}")
+                has_token_error = True
+                token_error_message = "Unable to verify token. Please reconnect your account."
+        
+        account_statuses[account.pk] = {
+            'has_token_error': has_token_error,
+            'token_error_message': token_error_message or "Your account is not connected. Please reconnect to sync emails.",
+        }
+    
     # Forms for drawers
     action_form = ActionForm()
     label_form = LabelForm(user=request.user)
@@ -1431,6 +1528,7 @@ def settings_view(request):
         "actions": actions,
         "labels": labels,
         "accounts": accounts,
+        "account_statuses": account_statuses,
         "action_form": action_form,
         "label_form": label_form,
         "recommended_labels": recommended_labels_with_status,

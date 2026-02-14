@@ -816,7 +816,21 @@ class EmailSyncService:
         since = account.last_synced_at
 
         # Fetch messages
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[Email Fetch] Fetching messages for account {account.email} (provider: {account.provider}, max_results: {max_results}, since: {since})")
         messages = provider_service.fetch_messages(account, max_results=max_results, since=since)
+        logger.info(f"[Email Fetch] Fetched {len(messages)} messages from provider")
+        
+        # Log details of fetched messages
+        if messages:
+            logger.info(f"[Email Fetch] Sample of fetched messages:")
+            for i, msg in enumerate(messages[:5]):  # Log first 5
+                logger.info(f"  [{i+1}] Subject: '{msg.get('subject', '(No subject)')}' | From: {msg.get('from_address', 'Unknown')} | ID: {msg.get('external_message_id', 'Unknown')}")
+            if len(messages) > 5:
+                logger.info(f"  ... and {len(messages) - 5} more messages")
+        else:
+            logger.warning(f"[Email Fetch] No messages fetched from provider")
 
         # Store in database
         created_count = 0
@@ -832,7 +846,7 @@ class EmailSyncService:
                     # Use message ID as thread ID to ensure each email gets its own thread
                     external_thread_id = f"single-{msg_data['external_message_id']}"
                 
-                thread, _ = EmailThread.objects.get_or_create(
+                thread, thread_created = EmailThread.objects.get_or_create(
                     account=account,
                     external_thread_id=external_thread_id,
                 )
@@ -859,8 +873,10 @@ class EmailSyncService:
 
                 if created:
                     created_count += 1
+                    logger.info(f"[Email Sync] Created email #{email_msg.pk}: '{msg_data.get('subject', '(No subject)')}' from {msg_data.get('from_address', 'Unknown')}")
                 else:
                     updated_count += 1
+                    logger.debug(f"[Email Sync] Updated email #{email_msg.pk}: '{msg_data.get('subject', '(No subject)')}'")
 
             # Update last_synced_at
             account.last_synced_at = timezone.now()

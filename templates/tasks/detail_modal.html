@@ -3,6 +3,7 @@ Task detail modal component (XL size)
 Usage:
   {% include 'tasks/detail_modal.html' with task=task %}
 {% endcomment %}
+{% load db_filters %}
 
 <el-dialog>
   <dialog id="task-detail-{{ task.pk }}" aria-labelledby="task-detail-{{ task.pk }}-title" class="fixed inset-0 size-auto max-h-none max-w-none bg-transparent backdrop:bg-transparent">
@@ -14,11 +15,11 @@ Usage:
           <!-- Header: navigation (left), title (center), Mark as Done + Close (right) -->
           <div class="flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 flex-shrink-0 border-b border-gray-200 dark:border-white/10">
             <div class="flex items-center justify-center gap-1 flex-shrink-0">
-              <button type="button" class="task-nav-prev flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Previous task" data-task-pk="{{ task.pk }}">
-                <i class="ti ti-chevron-up size-4 sm:size-5" aria-hidden="true"></i>
+              <button type="button" class="task-nav-prev inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Previous task" data-task-pk="{{ task.pk }}">
+                <i class="ti ti-chevron-up size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
               </button>
-              <button type="button" class="task-nav-next flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Next task" data-task-pk="{{ task.pk }}">
-                <i class="ti ti-chevron-down size-4 sm:size-5" aria-hidden="true"></i>
+              <button type="button" class="task-nav-next inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Next task" data-task-pk="{{ task.pk }}">
+                <i class="ti ti-chevron-down size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
               </button>
             </div>
             <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 truncate">{{ task.title|default:"Untitled Task" }}</h2>
@@ -40,8 +41,8 @@ Usage:
                 </button>
               </form>
               {% endif %}
-              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="flex items-center justify-center rounded-md p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
-                <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
+              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
+                <i class="ti ti-x size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
               </button>
             </div>
           </div>
@@ -53,7 +54,7 @@ Usage:
               <section class="px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 lg:col-span-2 lg:border-r lg:border-gray-200 dark:lg:border-white/10" aria-labelledby="task-detail-{{ task.pk }}-desc-heading">
                 <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
                 <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
-                  {% if task.description %}{{ task.description }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
+                  {% if task.description %}{{ task.description|strip_whitespace }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
                 </div>
               </section>
 
@@ -68,22 +69,24 @@ Usage:
                   <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
                     <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Priority</dt>
                     <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
-                      <span class="inline-flex items-center gap-2">
+                      {% if task.priority %}
+                      <button type="button" class="priority-filter-link inline-flex items-center gap-2 text-gray-900 dark:text-white hover:underline cursor-pointer" data-priority="{{ task.priority }}">
                         {% include 'tasks/priority_bars.html' with priority=task.priority %}
                         {% if task.priority == 5 %}Urgent{% elif task.priority == 4 %}High{% elif task.priority == 3 %}Medium{% elif task.priority == 2 %}Low{% elif task.priority == 1 %}Lowest{% else %}—{% endif %}
-                      </span>
+                      </button>
+                      {% else %}—{% endif %}
                     </dd>
                   </div>
                   <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
                     <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
                     <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
-                      <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium
+                      <button type="button" class="status-filter-link inline-flex items-center rounded-md px-2 py-1 text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity
                         {% if task.status == 'done' %}bg-green-400/10 text-green-400
                         {% elif task.status == 'in_progress' %}bg-blue-400/10 text-blue-400
                         {% elif task.status == 'cancelled' %}bg-red-400/10 text-red-400
-                        {% else %}bg-yellow-400/10 text-yellow-500{% endif %}">
+                        {% else %}bg-yellow-400/10 text-yellow-500{% endif %}" data-status="{{ task.status }}">
                         {{ task.get_status_display }}
-                      </span>
+                      </button>
                     </dd>
                   </div>
                   <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
@@ -93,10 +96,10 @@ Usage:
                       <div class="flex flex-wrap gap-2">
                         {% load db_filters %}
                         {% for email_label in task.email_message.labels.all %}
-                        <span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium {{ email_label.label.name|label_color_bg }}">
+                        <button type="button" class="label-filter-link inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity {{ email_label.label.name|label_color_bg }}" data-label-id="{{ email_label.label.pk }}">
                           <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
                           {{ email_label.label.name }}
-                        </span>
+                        </button>
                         {% endfor %}
                       </div>
                       {% else %}—{% endif %}
@@ -104,18 +107,30 @@ Usage:
                   </div>
                   <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
                     <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Sent from</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">{% if task.email_message %}{{ task.email_message.from_address }}{% else %}—{% endif %}</dd>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">
+                      {% if task.email_message %}
+                        <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ task.email_message.from_address }}">{{ task.email_message.from_address }}</button>
+                      {% else %}—{% endif %}
+                    </dd>
                   </div>
                   <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
                     <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Sent to</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">{% if task.email_message and task.email_message.to_addresses %}{{ task.email_message.to_addresses|join:", " }}{% else %}—{% endif %}</dd>
+                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">
+                      {% if task.email_message and task.email_message.to_addresses %}
+                        {% for email in task.email_message.to_addresses %}
+                          <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                      {% else %}—{% endif %}
+                    </dd>
                   </div>
                   <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
                     <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Time received</dt>
                     <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
                       {% if task.email_message and task.email_message.date_sent %}
                       {% load db_filters %}
-                      {{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}
+                      <span class="time-received-display" data-datetime="{{ task.email_message.date_sent|date:'c' }}">
+                        {{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}
+                      </span>
                       {% else %}—{% endif %}
                     </dd>
                   </div>
@@ -125,9 +140,9 @@ Usage:
 
             <!-- Email Thread & Draft Section (same scroll area) -->
             {% if task.email_message and email_data %}
-            <div class="mt-6 px-4 pb-4 sm:px-6 sm:pb-6">
+            <div class="">
             <!-- Scrollable area: thread (oldest→newest) then draft; scroll to bottom so current email + draft are in view; scroll up to see older messages -->
-            <div id="task-email-thread-draft-{{ task.pk }}" class="mt-4 overflow-y-auto rounded-lg border border-gray-200 dark:border-white/10 max-h-[70vh]">
+            <div id="task-email-thread-draft-{{ task.pk }}" class="overflow-y-auto dark:border-white/10 max-h-[70vh]">
             <!-- Email Thread Section (shown first, oldest first so current email is at bottom) -->
             {% if email_data.thread_messages %}
             <section class="p-4 sm:p-6">
@@ -135,15 +150,21 @@ Usage:
                 {% for msg in email_data.thread_messages reversed %}
                 <article class="rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden">
                   <!-- Header: sender to recipient | timestamp + menu -->
-                  <div class="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
+                  <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                       <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold {% if msg.external_message_id == task.email_message.external_message_id %}bg-cyan-500{% else %}bg-gray-500 dark:bg-gray-600{% endif %}" aria-hidden="true">
                         {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
                       </span>
                       <div class="min-w-0 text-sm">
-                        <span class="text-cyan-600 dark:text-cyan-400">{{ msg.from_address }}</span>
+                        <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
                         <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
-                        <span class="text-cyan-600 dark:text-cyan-400">{% if msg.to_addresses %}{{ msg.to_addresses|join:", " }}{% else %}—{% endif %}</span>
+                        <span class="text-gray-900 dark:text-white">
+                          {% if msg.to_addresses %}
+                            {% for email in msg.to_addresses %}
+                              <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                          {% else %}—{% endif %}
+                        </span>
                       </div>
                     </div>
                     <div class="flex items-center flex-shrink-0">
@@ -151,7 +172,7 @@ Usage:
                     </div>
                   </div>
                   <!-- Subject -->
-                  <div class="px-4 sm:px-5 py-2 border-b border-gray-200 dark:border-white/10">
+                  <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/10">
                     <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
                   </div>
                   <!-- Body -->
@@ -163,15 +184,6 @@ Usage:
                     {% else %}
                     <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
                     {% endif %}
-                  </div>
-                  <!-- Actions: reply, forward -->
-                  <div class="px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-white/10 flex justify-end gap-2">
-                    <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10" aria-label="Reply">
-                      <i class="ti ti-arrow-back-up size-4" aria-hidden="true"></i>
-                    </button>
-                    <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10" aria-label="Forward">
-                      <i class="ti ti-arrow-forward-up size-4" aria-hidden="true"></i>
-                    </button>
                   </div>
                 </article>
                 {% endfor %}
@@ -383,14 +395,14 @@ Usage:
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
                       {% if user_connected_accounts|length > 1 %}
-                        <label for="draft-from-account-{{ task.pk }}" class="text-[10px] text-gray-500 dark:text-gray-400 shrink-0">From:</label>
-                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="text-[10px] rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-0.5 pr-5 pl-1 focus:ring-1 focus:ring-cyan-500 max-w-[11rem]" title="Choose which account to send from" aria-label="Send from account">
+                        <label for="draft-from-account-{{ task.pk }}" class="text-sm text-gray-500 dark:text-gray-400 shrink-0">From:</label>
+                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="text-sm rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-0.5 pr-5 pl-1 focus:ring-1 focus:ring-cyan-500 max-w-[11rem]" title="Choose which account to send from" aria-label="Send from account">
                           {% for acc in user_connected_accounts %}
                             <option value="{{ acc.pk }}" {% if email_data.draft %}{% if acc.pk == email_data.draft.account_id %}selected{% endif %}{% else %}{% if acc.pk == task.account_id %}selected{% endif %}{% endif %}>{{ acc.email }}</option>
                           {% endfor %}
                         </select>
                       {% else %}
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mr-1 shrink-0">From: {{ task.account.email }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mr-1 shrink-0">From: {{ task.account.email }}</p>
                       {% endif %}
                       <span class="relative group/tooltip inline-block">
                         <button type="button" id="draft-send-btn-{{ task.pk }}" class="rounded-md bg-slate-600 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Send Email</button>
@@ -1293,6 +1305,160 @@ Usage:
     </div>
   </dialog>
 </el-dialog>
+
+<script>
+  // Filter link functionality (email, priority, status, label)
+  (function() {
+    // Use event delegation to handle clicks on filter links
+    document.addEventListener('click', function(e) {
+      // Email filter
+      const emailLink = e.target.closest('.email-filter-link');
+      if (emailLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const email = emailLink.getAttribute('data-email');
+        if (!email) return;
+        
+        const tasksListPath = '{% url "tasks_list" %}';
+        const separator = tasksListPath.indexOf('?') === -1 ? '?' : '&';
+        const url = tasksListPath + separator + 'email=' + encodeURIComponent(email);
+        
+        window.location.href = url;
+        return;
+      }
+      
+      // Priority filter
+      const priorityLink = e.target.closest('.priority-filter-link');
+      if (priorityLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const priority = priorityLink.getAttribute('data-priority');
+        if (!priority) return;
+        
+        const tasksListPath = '{% url "tasks_list" %}';
+        const separator = tasksListPath.indexOf('?') === -1 ? '?' : '&';
+        const url = tasksListPath + separator + 'priority=' + encodeURIComponent(priority);
+        
+        window.location.href = url;
+        return;
+      }
+      
+      // Status filter
+      const statusLink = e.target.closest('.status-filter-link');
+      if (statusLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const status = statusLink.getAttribute('data-status');
+        if (!status) return;
+        
+        const tasksListPath = '{% url "tasks_list" %}';
+        const separator = tasksListPath.indexOf('?') === -1 ? '?' : '&';
+        const url = tasksListPath + separator + 'status=' + encodeURIComponent(status);
+        
+        window.location.href = url;
+        return;
+      }
+      
+      // Label filter
+      const labelLink = e.target.closest('.label-filter-link');
+      if (labelLink) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const labelId = labelLink.getAttribute('data-label-id');
+        if (!labelId) return;
+        
+        const tasksListPath = '{% url "tasks_list" %}';
+        const separator = tasksListPath.indexOf('?') === -1 ? '?' : '&';
+        const url = tasksListPath + separator + 'label=' + encodeURIComponent(labelId);
+        
+        window.location.href = url;
+        return;
+      }
+    });
+  })();
+
+  // Relative time display functionality
+  (function() {
+    function formatRelativeTime(datetime) {
+      const now = new Date();
+      const date = new Date(datetime);
+      const diffMs = now - date;
+      const diffSeconds = Math.floor(diffMs / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      const diffHours = Math.floor(diffMinutes / 60);
+      const diffDays = Math.floor(diffHours / 24);
+      
+      if (diffDays > 0) {
+        return diffDays === 1 ? '(1 day ago)' : '(' + diffDays + ' days ago)';
+      } else if (diffHours > 0) {
+        return diffHours === 1 ? '(1 hour ago)' : '(' + diffHours + ' hours ago)';
+      } else if (diffMinutes > 0) {
+        return diffMinutes === 1 ? '(1 minute ago)' : '(' + diffMinutes + ' minutes ago)';
+      } else {
+        return '(just now)';
+      }
+    }
+    
+    function updateRelativeTimes() {
+      const timeDisplays = document.querySelectorAll('.time-received-display');
+      timeDisplays.forEach(function(display) {
+        const datetime = display.getAttribute('data-datetime');
+        if (!datetime) return;
+        
+        const relativeTime = formatRelativeTime(datetime);
+        let currentText = display.textContent.trim();
+        
+        // Remove existing relative time if present (matches pattern like "(X days ago)" or "(X hours ago)")
+        currentText = currentText.replace(/\s*\([^)]*(?:day|hour|minute|just now)[^)]*\)\s*$/, '');
+        
+        // Remove any existing relative time span
+        const existingSpan = display.querySelector('.relative-time-text');
+        if (existingSpan) {
+          existingSpan.remove();
+        }
+        
+        // Create a span with lighter color for the relative time
+        const relativeTimeSpan = document.createElement('span');
+        relativeTimeSpan.className = 'relative-time-text text-gray-500 dark:text-gray-400';
+        relativeTimeSpan.textContent = ' ' + relativeTime;
+        
+        // Add the relative time span
+        display.textContent = currentText;
+        display.appendChild(relativeTimeSpan);
+      });
+    }
+    
+    // Update on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', updateRelativeTimes);
+    } else {
+      updateRelativeTimes();
+    }
+    
+    // Also update when modals are opened (for dynamically loaded content)
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        mutation.addedNodes.forEach(function(node) {
+          if (node.nodeType === 1 && node.querySelectorAll) {
+            const timeDisplays = node.querySelectorAll('.time-received-display');
+            if (timeDisplays.length > 0) {
+              setTimeout(updateRelativeTimes, 100);
+            }
+          }
+        });
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  })();
+</script>
 
 {% if task.email_message and email_data %}
 <script>

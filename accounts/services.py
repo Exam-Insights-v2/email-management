@@ -245,9 +245,14 @@ class GmailOAuthService:
         if not token_scopes:
             token_scopes = GmailOAuthService.SCOPES
 
-        # Check if token is expired using both DB expiry and credentials.expired
-        # This prevents using expired tokens that might cause 401s
+        # Check if token is expired or will expire soon (within 5 minutes)
+        # This prevents using expired tokens and refreshes proactively
         is_token_expired = oauth_token.is_expired()
+        expires_soon = False
+        if oauth_token.expires_at:
+            time_until_expiry = oauth_token.expires_at - timezone.now()
+            # Refresh if token expires within 5 minutes
+            expires_soon = time_until_expiry.total_seconds() < 300
         
         # If token is expired and we don't have a refresh token, fail fast
         if is_token_expired and not oauth_token.refresh_token:
@@ -266,13 +271,17 @@ class GmailOAuthService:
         if oauth_token.expires_at:
             credentials.expiry = oauth_token.expires_at
 
-        # Refresh token if expired (check both DB and credentials object)
-        if (is_token_expired or credentials.expired) and credentials.refresh_token:
+        # Refresh token if expired or expiring soon (proactive refresh)
+        # This ensures tokens are always fresh and users never see expiration errors
+        if (is_token_expired or expires_soon or credentials.expired) and credentials.refresh_token:
             try:
                 # Refresh the token
                 credentials.refresh(Request())
                 # Update stored token and scopes (in case they changed)
                 oauth_token.access_token = credentials.token
+                # Always save the refresh token in case it was updated
+                if credentials.refresh_token:
+                    oauth_token.refresh_token = credentials.refresh_token
                 if credentials.expiry:
                     oauth_token.expires_at = credentials.expiry
                 # Update scopes if they changed during refresh
@@ -280,10 +289,23 @@ class GmailOAuthService:
                     oauth_token.set_scopes_list(list(credentials.scopes))
                 oauth_token.save()
             except Exception as e:
-                # If refresh fails, mark account as disconnected to prevent retry loops
+                # Only disconnect if the refresh token itself is invalid
+                # Temporary network errors or rate limits should not disconnect the account
                 error_str = str(e).lower()
-                if any(keyword in error_str for keyword in ["scope", "invalid_grant", "invalid_token", "unauthorized", "401"]):
+                # Check for permanent errors that indicate refresh token is invalid
+                permanent_errors = ["invalid_grant", "invalid_token", "unauthorized_client"]
+                if any(keyword in error_str for keyword in permanent_errors):
+                    # Log the error for debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Gmail refresh token invalid for account {account.pk}: {e}")
                     GmailOAuthService.disconnect_account(account)
+                # For other errors (network, rate limits, etc.), log but don't disconnect
+                # The token might still be valid, just couldn't refresh right now
+                else:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Gmail token refresh failed (non-fatal) for account {account.pk}: {e}")
                 return None
 
         return credentials
@@ -501,11 +523,18 @@ class MicrosoftEmailOAuthService:
         if not token_scopes:
             token_scopes = MicrosoftEmailOAuthService.SCOPES
 
-        # Check if token is expired
+        # Check if token is expired or will expire soon (within 5 minutes)
+        # This prevents using expired tokens and refreshes proactively
         is_expired = oauth_token.is_expired()
+        expires_soon = False
+        if oauth_token.expires_at:
+            time_until_expiry = oauth_token.expires_at - timezone.now()
+            # Refresh if token expires within 5 minutes
+            expires_soon = time_until_expiry.total_seconds() < 300
 
-        # If expired and we have a refresh token, refresh it
-        if is_expired and oauth_token.refresh_token:
+        # If expired/expiring soon and we have a refresh token, refresh it proactively
+        # This ensures tokens are always fresh and users never see expiration errors
+        if (is_expired or expires_soon) and oauth_token.refresh_token:
             try:
                 tenant = settings.MICROSOFT_OAUTH_TENANT_ID
                 authority = f"https://login.microsoftonline.com/{tenant}"
@@ -522,12 +551,26 @@ class MicrosoftEmailOAuthService:
                 )
                 
                 if "error" in result:
-                    # If refresh fails, disconnect the account
-                    MicrosoftEmailOAuthService.disconnect_account(account)
+                    error_code = result.get("error", "").lower()
+                    error_description = result.get("error_description", "").lower()
+                    # Only disconnect for permanent errors (invalid refresh token)
+                    # Temporary errors should not disconnect the account
+                    permanent_errors = ["invalid_grant", "invalid_client", "unauthorized_client"]
+                    if any(err in error_code for err in permanent_errors) or any(err in error_description for err in permanent_errors):
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Microsoft refresh token invalid for account {account.pk}: {result.get('error_description', result.get('error'))}")
+                        MicrosoftEmailOAuthService.disconnect_account(account)
+                    else:
+                        # Log non-fatal errors but don't disconnect
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Microsoft token refresh failed (non-fatal) for account {account.pk}: {result.get('error_description', result.get('error'))}")
                     return None
                 
                 # Update stored token
                 access_token = result.get("access_token")
+                # Always save the refresh token in case it was updated
                 refresh_token = result.get("refresh_token", oauth_token.refresh_token)
                 expires_in = result.get("expires_in")
                 
@@ -552,9 +595,19 @@ class MicrosoftEmailOAuthService:
                     "token_type": "Bearer",
                 }
             except Exception as e:
-                # If refresh fails due to scope mismatch, disconnect the account
-                if "scope" in str(e).lower() or "invalid_grant" in str(e).lower():
+                # Only disconnect for permanent errors indicating refresh token is invalid
+                error_str = str(e).lower()
+                permanent_errors = ["invalid_grant", "invalid_client", "unauthorized_client"]
+                if any(err in error_str for err in permanent_errors):
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Microsoft refresh token invalid for account {account.pk}: {e}")
                     MicrosoftEmailOAuthService.disconnect_account(account)
+                else:
+                    # Log non-fatal errors but don't disconnect
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Microsoft token refresh failed (non-fatal) for account {account.pk}: {e}")
                 return None
 
         # Return current token

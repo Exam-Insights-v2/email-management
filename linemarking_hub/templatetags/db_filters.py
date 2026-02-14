@@ -9,6 +9,14 @@ import builtins
 register = template.Library()
 
 
+@register.filter
+def strip_whitespace(value):
+    """Strip leading and trailing whitespace while preserving internal formatting"""
+    if not value or not isinstance(value, str):
+        return value
+    return value.strip()
+
+
 def _strip_quoted_email_html(html):
     """Remove quoted/reply content from email HTML (blockquotes, Gmail quote divs, and 'On ... wrote:' sections).
     Also removes <style> and <script> tags to prevent them affecting the rest of the page.

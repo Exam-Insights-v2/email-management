@@ -32,21 +32,25 @@ def process_email(email_message_id: int):
     Process an email message: classify with AI and create task.
     Uses a single AI call to get all classification data.
     """
+    logger.info(f"[Process Email] Starting processing for email #{email_message_id}")
     try:
         email = EmailMessage.objects.select_related("thread", "account").get(
             pk=email_message_id
         )
+        logger.info(f"[Process Email] Email #{email_message_id}: '{email.subject or '(No subject)'}' from {email.from_address} (account: {email.account.email})")
     except EmailMessage.DoesNotExist:
-        logger.warning(f"Email message {email_message_id} not found")
+        logger.warning(f"[Process Email] Email message {email_message_id} not found")
         return
     except Exception as e:
-        logger.error(f"Error fetching email {email_message_id}: {e}", exc_info=True)
+        logger.error(f"[Process Email] Error fetching email {email_message_id}: {e}", exc_info=True)
         return
     
     # Early exit: If this email already has a task, skip processing
     # This prevents re-processing when tasks are consolidated
-    if email.tasks.exists():
-        logger.debug(f"Email {email_message_id} already has a task, skipping processing")
+    existing_tasks = email.tasks.all()
+    if existing_tasks.exists():
+        task_ids = [t.pk for t in existing_tasks]
+        logger.info(f"[Process Email] Email {email_message_id} already has {existing_tasks.count()} task(s) (IDs: {task_ids}), skipping processing")
         return
 
     # Get available labels for this account
@@ -130,10 +134,13 @@ def process_email(email_message_id: int):
             should_consolidate = not has_replied and existing_tasks.exists()
             
             if should_consolidate:
+                existing_task_count = existing_tasks.count()
+                logger.info(f"[Process Email] Consolidating tasks: Found {existing_task_count} existing active task(s) in thread {email.thread.pk} (has_replied: {has_replied})")
                 # Get the "best" existing task to keep (prefer in_progress, then most recent)
                 task_to_keep = existing_tasks.filter(status=TaskStatus.IN_PROGRESS).first()
                 if not task_to_keep:
                     task_to_keep = existing_tasks.first()
+                logger.info(f"[Process Email] Keeping task #{task_to_keep.pk} for consolidation")
                 
                 # Use only the latest classification description (emails are linked via thread, no need to duplicate)
                 # Check if this is part of a multi-email thread
@@ -229,11 +236,14 @@ def process_email(email_message_id: int):
                         task_to_keep.save()
                         
                         # Delete other tasks
+                        deleted_count = all_thread_tasks.exclude(pk=task_to_keep.pk).count()
                         all_thread_tasks.exclude(pk=task_to_keep.pk).delete()
+                        logger.info(f"[Process Email] Consolidated tasks: kept task #{task_to_keep.pk}, deleted {deleted_count} other task(s) in thread")
                         task = task_to_keep
                         created = False
                 else:
                     # Normal create/update path
+                    logger.info(f"[Process Email] No consolidation needed - creating/updating task for email #{email_message_id}")
                     task, created = Task.objects.get_or_create(
                         account=email.account,
                         email_message=email,
@@ -246,6 +256,11 @@ def process_email(email_message_id: int):
                             "status": TaskStatus.PENDING,
                         },
                     )
+
+                    if created:
+                        logger.info(f"[Process Email] ✅ Created task #{task.pk} for email #{email_message_id}: '{task.title}' (priority: {task.priority})")
+                    else:
+                        logger.info(f"[Process Email] Updated existing task #{task.pk} for email #{email_message_id}")
 
                     # Update task if it already existed
                     if not created:
@@ -267,6 +282,8 @@ def process_email(email_message_id: int):
                         ).exclude(pk=task.pk)
                         
                         if other_tasks.exists():
+                            other_count = other_tasks.count()
+                            logger.info(f"[Process Email] Post-creation consolidation: Found {other_count} other task(s) in thread, merging into task #{task.pk}")
                             
                             # Use the current task as the one to keep (it's the latest)
                             task_to_keep = task
@@ -306,7 +323,9 @@ def process_email(email_message_id: int):
                             
                             # Delete other tasks
                             if other_task_ids:
+                                deleted_count = other_tasks.count()
                                 other_tasks.delete()
+                                logger.info(f"[Process Email] Post-creation consolidation: Deleted {deleted_count} other task(s) (IDs: {other_task_ids})")
 
             # Apply labels to email if any matched
             for label in labels_to_apply:
