@@ -25,8 +25,10 @@ This guide walks you through setting up Microsoft Single Sign-On (SSO) for user 
 4. **Configure App Registration**
    - **Name**: Enter a name for your app (e.g., "EmailIQ")
    - **Supported account types**: Choose one of the following:
-     - **"Accounts in any organisational directory and personal Microsoft accounts"** (Recommended for multi-tenant)
-     - **"Single tenant"** (Only for your organisation)
+     - **"Any Entra ID Tenant + Personal Microsoft accounts"** ⭐ **Recommended** - Allows users from any organisation AND personal Microsoft accounts (e.g., @outlook.com, @hotmail.com)
+     - **"Multiple Entra ID tenants"** - Only allows users from other organisational directories (NOT personal accounts)
+     - **"Single tenant only - Default Directory"** - Only allows users from your specific organisation
+     - **"Personal accounts only"** - Only allows personal Microsoft accounts (NOT organisational accounts)
    - **Redirect URI**: Leave blank for now (we'll add this later)
    - Click **"Register"**
 
@@ -59,14 +61,14 @@ This guide walks you through setting up Microsoft Single Sign-On (SSO) for user 
    - Select **"Web"**
 
 2. **Add Redirect URIs**
-   Add the following redirect URIs (replace `your-domain.com` with your actual domain):
+   Add the following redirect URIs (replace `email-iq.clarent.io` with your actual domain):
 
    **For User Login:**
-   - `https://your-domain.com/auth/microsoft/callback/`
+   - `https://email-iq.clarent.io/auth/microsoft/callback/`
    - `http://localhost:8000/auth/microsoft/callback/` (for local development)
 
    **For Email Account Connection:**
-   - `https://your-domain.com/accounts/microsoft/callback/`
+   - `https://email-iq.clarent.io/accounts/microsoft/callback/`
    - `http://localhost:8000/accounts/microsoft/callback/` (for local development)
 
 3. **Configure Implicit Grant (if needed)**
@@ -200,6 +202,89 @@ MICROSOFT_OAUTH_TENANT_ID=common
   - Check that admin consent is granted (for organisational accounts)
   - Ensure the user granted consent when connecting their account
   - Check application logs for specific error messages
+
+### Issue: "AADSTS50020: User account from identity provider does not exist in tenant"
+- **What it means**: Your app registration's **Supported account types** setting doesn't allow the account you're trying to sign in with. This happens when:
+  - You selected **"Single tenant only"** but are signing in with an account from a different organisation
+  - You selected **"Multiple Entra ID tenants"** but are signing in with a personal Microsoft account (e.g., @outlook.com)
+  - You selected **"Personal accounts only"** but are signing in with an organisational account
+- **Solution**: Change your app registration to allow the account type you need:
+  1. Go to [Azure Portal](https://portal.azure.com)
+  2. Navigate to **Azure Active Directory** → **App registrations**
+  3. Click on your app (e.g., "EmailIQ")
+  4. Click **"Authentication"** in the left sidebar
+  5. Under **"Supported account types"**, click **"Edit"**
+  6. Select **"Any Entra ID Tenant + Personal Microsoft accounts"** (this allows both organisational and personal accounts)
+  7. Click **"Save"**
+  8. Also ensure your `MICROSOFT_OAUTH_TENANT_ID` environment variable is set to `common` (not a specific tenant ID)
+- **Why this happens**: Each account type option restricts which users can sign in. For maximum compatibility, use **"Any Entra ID Tenant + Personal Microsoft accounts"**.
+
+### Issue: "Property api.requestedAccessTokenVersion is invalid"
+- **What it means**: The app manifest has an invalid or missing `requestedAccessTokenVersion` property. This can happen when changing account types or updating the app registration.
+- **Solution**: Fix the access token version in the app manifest:
+  1. Go to [Azure Portal](https://portal.azure.com)
+  2. Navigate to **Azure Active Directory** → **App registrations**
+  3. Click on your app (e.g., "EmailIQ")
+  4. Click **"Manifest"** in the left sidebar (this opens a JSON editor)
+  5. Look for the `"api"` section in the JSON
+  6. Find or add the `"requestedAccessTokenVersion"` property
+  7. Set it to `2` (for v2.0 tokens) - this is the recommended value:
+     ```json
+     "api": {
+         "requestedAccessTokenVersion": 2
+     }
+     ```
+  8. If the `"api"` section doesn't exist, add it at the root level of the manifest
+  9. Click **"Save"** at the top
+  10. After saving the manifest, try updating the **"Supported account types"** again
+- **Why this happens**: Azure AD requires a valid token version setting. Setting it to `2` ensures you're using the latest v2.0 tokens which support all modern features.
+
+### Issue: "Need admin approval" - Admin consent required for other organisations
+- **What it means**: When your app is configured as multi-tenant (allowing users from any organisation), each organisation's administrator must grant consent **once** before their users can sign in. The permissions `Mail.Read` and `Mail.ReadWrite` require admin consent - this is a Microsoft security requirement that cannot be bypassed.
+- **This is expected behaviour**: For multi-tenant apps, admin consent is required per organisation. This is by design to protect organisational email data.
+- **Solution for other organisations**: Provide them with an admin consent URL. Each organisation's admin needs to visit this URL once:
+
+  **Admin Consent URL Format:**
+  ```
+  https://login.microsoftonline.com/{their-tenant-id}/adminconsent?client_id={your-client-id}
+  ```
+  
+  **Or use the common endpoint (works for any tenant):**
+  ```
+  https://login.microsoftonline.com/common/adminconsent?client_id={your-client-id}
+  ```
+  
+  Replace `{your-client-id}` with your Application (client) ID (e.g., `630dfbe3-effb-465c-becf-b95e42e404fa`)
+  
+  **Example:**
+  ```
+  https://login.microsoftonline.com/common/adminconsent?client_id=630dfbe3-effb-465c-becf-b95e42e404fa
+  ```
+
+  **What happens:**
+  1. Admin from the other organisation visits the URL
+  2. They sign in with their admin account
+  3. They see a consent screen asking to approve your app
+  4. After approval, **all users** in that organisation can sign in without individual approval
+  5. The consent is permanent (until revoked by an admin)
+
+- **For your own organisation**: If you're an admin, you can grant consent directly:
+  1. Go to [Azure Portal](https://portal.azure.com)
+  2. Navigate to **Azure Active Directory** → **App registrations**
+  3. Click on your app (e.g., "EmailIQ")
+  4. Click **"API permissions"** in the left sidebar
+  5. Click **"Grant admin consent for [Your Organisation Name]"** button at the top
+  6. Click **"Yes"** to confirm
+
+- **For personal Microsoft accounts**: Personal accounts (e.g., `@outlook.com`, `@hotmail.com`) can grant consent themselves and don't require admin approval.
+
+- **Why this happens**: Microsoft protects organisational data by requiring administrators to approve apps that access sensitive resources like email. This is a security feature that cannot be disabled.
+
+- **Important notes**:
+  - Admin consent is required **once per organisation** - after that, all users in that organisation can use the app
+  - You cannot bypass this requirement for organisational accounts
+  - Personal Microsoft accounts can always consent themselves
+  - Consider providing clear instructions to your users on how to request admin consent from their IT department
 
 ## Security Best Practices
 

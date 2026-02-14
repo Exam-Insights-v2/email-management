@@ -11,11 +11,21 @@ Minimal Django project scaffolding for the LineMarking email operations tool.
    - `CELERY_BROKER_URL` and `CELERY_RESULT_BACKEND` pointing to Redis.
 2. Install dependencies in a virtualenv: `pip install -r requirements.txt`.
 3. Run `make build` — it runs migrations and collects static files.
-4. Start the development server with `make run` or use the Docker command above.
+4. Start the development server with `make run` or use the Docker command below.
 
-## Docker run commands
+## Running the project
 
-- `docker compose up
+### Using Make (local development)
+```bash
+make run
+```
+This starts the Django development server on `http://0.0.0.0:8000`.
+
+### Using Docker Compose
+```bash
+docker compose up
+```
+This starts all services (web server, Celery worker, Celery beat, and Redis) in containers.
 
 ## Structure
 

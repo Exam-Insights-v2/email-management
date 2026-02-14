@@ -300,9 +300,9 @@ class MicrosoftOAuthService:
     """Unified OAuth service for both user login and email access"""
 
     # Scopes for user login (identity only)
+    # Note: 'openid' and 'profile' are reserved scopes automatically included by Microsoft OAuth
+    # They should not be explicitly requested
     LOGIN_SCOPES = [
-        "openid",
-        "profile",
         "email",
         "User.Read",
     ]
@@ -438,12 +438,11 @@ class MicrosoftEmailOAuthService:
     """Service for handling Microsoft email OAuth flow and token management"""
 
     # Combine Mail scopes with userinfo scopes to get email address
+    # Note: 'openid', 'profile', and 'offline_access' are reserved scopes automatically included by Microsoft OAuth
+    # They should not be explicitly requested
     SCOPES = [
-        "openid",
-        "profile",
         "email",
         "User.Read",
-        "offline_access",
     ] + MicrosoftOAuthService.MAIL_SCOPES
 
     @staticmethod
