@@ -286,7 +286,16 @@ Usage:
                   {% if draft.body_html %}
                   <div class="mt-3 p-3 sm:p-5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-auto max-h-64">
                     <div class="email-body text-xs sm:text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none prose-a:no-underline">
-                      {% load db_filters %}{{ draft.body_html|remove_global_style_script|truncatewords:80 }}
+                      {% load db_filters %}
+                      {% with body_html=draft.body_html|remove_global_style_script|truncatewords:80 %}
+                        {% if draft.account.signature_html and draft.account.signature_html not in body_html %}
+                          {{ body_html|safe }}
+                          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>
+                          {{ draft.account.signature_html|safe }}
+                        {% else %}
+                          {{ body_html|safe }}
+                        {% endif %}
+                      {% endwith %}
                     </div>
                   </div>
                   {% else %}

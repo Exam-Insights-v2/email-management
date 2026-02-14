@@ -5,14 +5,15 @@
 {% block header_title %}Tasks{% endblock %}
 
 {% block header_center %}
-  <div id="refresh-sync-message" class="hidden sm:block">
+  <!-- Desktop version - shows in header center on sm+ screens -->
+  <div id="refresh-sync-message" class="hidden sm:flex items-center justify-center" style="display: none !important;">
     <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-xs sm:text-sm leading-none">
       <i class="ti ti-refresh w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
       Refresh to sync
     </button>
   </div>
-  <!-- Mobile version - fixed centered on screen -->
-  <div id="refresh-sync-message-mobile" class="hidden sm:hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+  <!-- Mobile version - fixed centered on screen, shows on small screens only -->
+  <div id="refresh-sync-message-mobile" class="hidden sm:hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none" style="display: none !important;">
     <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-sm leading-none shadow-lg pointer-events-auto">
       <i class="ti ti-refresh w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
       Refresh to sync
@@ -310,66 +311,96 @@
   // Refresh sync message functionality
   (function() {
     const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-    const refreshMessage = document.getElementById('refresh-sync-message');
-    const refreshMessageMobile = document.getElementById('refresh-sync-message-mobile');
     
-    if (!refreshMessage && !refreshMessageMobile) return;
-    
-    // Reset page load time on every page load/reload
-    const resetPageLoadTime = () => {
-      const now = Date.now();
-      sessionStorage.setItem('pageLoadTime', now.toString());
-      return now;
-    };
-    
-    // Get page load time (read only, don't reset)
-    const getPageLoadTime = () => {
-      const stored = sessionStorage.getItem('pageLoadTime');
-      if (stored) {
-        return parseInt(stored, 10);
-      }
-      // Fallback: if not set, set it now
-      return resetPageLoadTime();
-    };
-    
-    // Check if 10 minutes have passed
-    const checkRefreshNeeded = () => {
-      const loadTime = getPageLoadTime();
-      const now = Date.now();
-      const elapsed = now - loadTime;
+    function initRefreshSync() {
+      const refreshMessage = document.getElementById('refresh-sync-message');
+      const refreshMessageMobile = document.getElementById('refresh-sync-message-mobile');
       
-      if (elapsed >= REFRESH_INTERVAL_MS) {
-        if (refreshMessage) refreshMessage.classList.remove('hidden');
-        if (refreshMessageMobile) refreshMessageMobile.classList.remove('hidden');
-      } else {
-        if (refreshMessage) refreshMessage.classList.add('hidden');
-        if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
-        // Schedule check for when 10 minutes will have passed
-        const remaining = REFRESH_INTERVAL_MS - elapsed;
-        setTimeout(() => {
-          if (refreshMessage) refreshMessage.classList.remove('hidden');
-          if (refreshMessageMobile) refreshMessageMobile.classList.remove('hidden');
-        }, remaining);
-      }
-    };
+      if (!refreshMessage && !refreshMessageMobile) return;
+      
+      // Ensure both are hidden initially
+      if (refreshMessage) refreshMessage.classList.add('hidden');
+      if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
+      
+      // Reset page load time on every page load/reload
+      const resetPageLoadTime = () => {
+        const now = Date.now();
+        sessionStorage.setItem('pageLoadTime', now.toString());
+        return now;
+      };
+      
+      // Get page load time (read only, don't reset)
+      const getPageLoadTime = () => {
+        const stored = sessionStorage.getItem('pageLoadTime');
+        if (stored) {
+          return parseInt(stored, 10);
+        }
+        // Fallback: if not set, set it now
+        return resetPageLoadTime();
+      };
+      
+      // Check if 10 minutes have passed
+      const checkRefreshNeeded = () => {
+        const loadTime = getPageLoadTime();
+        const now = Date.now();
+        const elapsed = now - loadTime;
+        
+        if (elapsed >= REFRESH_INTERVAL_MS) {
+          if (refreshMessage) {
+            refreshMessage.classList.remove('hidden');
+            refreshMessage.style.display = '';
+          }
+          if (refreshMessageMobile) {
+            refreshMessageMobile.classList.remove('hidden');
+            refreshMessageMobile.style.display = '';
+          }
+        } else {
+          if (refreshMessage) {
+            refreshMessage.classList.add('hidden');
+            refreshMessage.style.display = 'none';
+          }
+          if (refreshMessageMobile) {
+            refreshMessageMobile.classList.add('hidden');
+            refreshMessageMobile.style.display = 'none';
+          }
+          // Schedule check for when 10 minutes will have passed
+          const remaining = REFRESH_INTERVAL_MS - elapsed;
+          setTimeout(() => {
+            if (refreshMessage) {
+              refreshMessage.classList.remove('hidden');
+              refreshMessage.style.display = '';
+            }
+            if (refreshMessageMobile) {
+              refreshMessageMobile.classList.remove('hidden');
+              refreshMessageMobile.style.display = '';
+            }
+          }, remaining);
+        }
+      };
+      
+      // Reset timer on page load - this ensures fresh start on every reload
+      resetPageLoadTime();
+      
+      // Initial check (will be 0 elapsed, so message stays hidden)
+      checkRefreshNeeded();
+      
+      // Check every minute to be safe
+      setInterval(checkRefreshNeeded, 60 * 1000);
+      
+      // Reset on page visibility change (user comes back to tab)
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          checkRefreshNeeded();
+        }
+      });
+    }
     
-    // Reset timer on page load - this ensures fresh start on every reload
-    resetPageLoadTime();
-    if (refreshMessage) refreshMessage.classList.add('hidden');
-    if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
-    
-    // Initial check (will be 0 elapsed, so message stays hidden)
-    checkRefreshNeeded();
-    
-    // Check every minute to be safe
-    setInterval(checkRefreshNeeded, 60 * 1000);
-    
-    // Reset on page visibility change (user comes back to tab)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        checkRefreshNeeded();
-      }
-    });
+    // Run when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initRefreshSync);
+    } else {
+      initRefreshSync();
+    }
   })();
 </script>
 {% endblock %}

@@ -58,7 +58,16 @@
             <dt class="text-sm/6 font-medium text-gray-100">Body</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">
               <div class="prose prose-invert max-w-none email-body">
-                {% load db_filters %}{{ draft.body_html|remove_global_style_script }}
+                {% load db_filters %}
+                {% with body_html=draft.body_html|remove_global_style_script %}
+                  {% if draft.account.signature_html and draft.account.signature_html not in body_html %}
+                    {{ body_html|safe }}
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>
+                    {{ draft.account.signature_html|safe }}
+                  {% else %}
+                    {{ body_html|safe }}
+                  {% endif %}
+                {% endwith %}
               </div>
             </dd>
           </div>

@@ -26,6 +26,24 @@
               {{ field }}
             {% endif %}
           </div>
+          {% if field.name == 'signature_html' %}
+          <!-- Preview for signature HTML -->
+          <div class="mt-2">
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Preview
+            </label>
+            <div 
+              id="signature_preview_{{ field.id_for_label|default:field.auto_id }}" 
+              class="min-h-[60px] rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 px-3 py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
+            >
+              {% if field.value %}
+                {{ field.value|safe }}
+              {% else %}
+                <span class="text-gray-400 dark:text-gray-500 italic">Preview will appear here...</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
           {% if field.help_text %}
           <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">{{ field.help_text }}</p>
           {% endif %}

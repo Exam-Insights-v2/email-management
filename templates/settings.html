@@ -89,6 +89,22 @@
                 class="block w-full rounded-md bg-gray-100 dark:bg-white/5 px-3 py-2 text-xs sm:text-sm text-gray-900 dark:text-white border-0 placeholder:text-gray-500 focus:ring-2 focus:ring-cyan-600 font-mono"
                 placeholder="Enter your HTML signature (e.g., &lt;div&gt;Your Name&lt;br&gt;Your Title&lt;/div&gt;)"
               >{{ account.signature_html|default:"" }}</textarea>
+              <!-- Preview -->
+              <div class="mt-4">
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                  Preview
+                </label>
+                <div 
+                  id="signature_preview_{{ account.pk }}" 
+                  class="min-h-[60px] rounded-md bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-3 py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
+                >
+                  {% if account.signature_html %}
+                    {{ account.signature_html|safe }}
+                  {% else %}
+                    <span class="text-gray-400 dark:text-gray-500 italic">Preview will appear here...</span>
+                  {% endif %}
+                </div>
+              </div>
             </div>
             
             <!-- Writing Style Field -->
@@ -380,6 +396,95 @@
         });
     }
   };
+  
+  // Signature HTML preview functionality
+  (function() {
+    function updateSignaturePreview(textarea, preview) {
+      if (!textarea || !preview) return;
+      
+      function updatePreview() {
+        const html = textarea.value.trim();
+        if (html) {
+          preview.innerHTML = html;
+        } else {
+          preview.innerHTML = '<span class="text-gray-400 dark:text-gray-500 italic">Preview will appear here...</span>';
+        }
+      }
+      
+      // Remove existing listeners to avoid duplicates
+      const newTextarea = textarea.cloneNode(true);
+      textarea.parentNode.replaceChild(newTextarea, textarea);
+      
+      // Update on input
+      newTextarea.addEventListener('input', updatePreview);
+      // Initial update
+      updatePreview();
+      
+      return newTextarea;
+    }
+    
+    function setupSignaturePreviews(container) {
+      // Find all signature textareas in the container
+      const signatureTextareas = container.querySelectorAll('textarea[id*="signature_html"]');
+      signatureTextareas.forEach(function(textarea) {
+        // Try to find the preview div - it should be in the same parent or nearby
+        let preview = null;
+        
+        // First, try to find by ID pattern
+        const textareaId = textarea.id;
+        if (textareaId) {
+          // Try different ID patterns
+          const idPatterns = [
+            'signature_preview_' + textareaId.replace('id_signature_html_', '').replace('signature_html_', ''),
+            'signature_preview_' + textareaId.split('_').pop(),
+            textareaId.replace('signature_html', 'signature_preview')
+          ];
+          
+          for (const pattern of idPatterns) {
+            preview = document.getElementById(pattern);
+            if (preview) break;
+          }
+        }
+        
+        // If not found by ID, look for preview div near the textarea
+        if (!preview) {
+          const fieldContainer = textarea.closest('dd') || textarea.parentElement;
+          if (fieldContainer) {
+            preview = fieldContainer.querySelector('[id*="signature_preview"]');
+          }
+        }
+        
+        if (preview) {
+          updateSignaturePreview(textarea, preview);
+        }
+      });
+    }
+    
+    // Set up previews on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setupSignaturePreviews(document);
+      });
+    } else {
+      setupSignaturePreviews(document);
+    }
+    
+    // Also set up for dynamically loaded forms (when modals are opened)
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        mutation.addedNodes.forEach(function(node) {
+          if (node.nodeType === 1) { // Element node
+            setupSignaturePreviews(node);
+          }
+        });
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  })();
 </script>
 
 {% endblock %}
