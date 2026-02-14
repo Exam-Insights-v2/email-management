@@ -5,9 +5,16 @@
 {% block header_title %}Tasks{% endblock %}
 
 {% block header_center %}
-  <div id="refresh-sync-message" class="hidden">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-xs sm:text-sm">
+  <div id="refresh-sync-message" class="hidden sm:block">
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-xs sm:text-sm leading-none">
       <i class="ti ti-refresh w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+      Refresh to sync
+    </button>
+  </div>
+  <!-- Mobile version - fixed centered on screen -->
+  <div id="refresh-sync-message-mobile" class="hidden sm:hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-sm leading-none shadow-lg pointer-events-auto">
+      <i class="ti ti-refresh w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
       Refresh to sync
     </button>
   </div>
@@ -16,12 +23,12 @@
 {% block header_action %}
   <div class="flex items-center gap-2">
     <!-- Filter Button -->
-    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm">
+    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm leading-none">
       <i class="ti ti-filter w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
       Filter
     </button>
     <!-- Search Button -->
-    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm">
+    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm leading-none">
       <i class="ti ti-search w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
       Search
     </button>
@@ -304,8 +311,9 @@
   (function() {
     const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
     const refreshMessage = document.getElementById('refresh-sync-message');
+    const refreshMessageMobile = document.getElementById('refresh-sync-message-mobile');
     
-    if (!refreshMessage) return;
+    if (!refreshMessage && !refreshMessageMobile) return;
     
     // Reset page load time on every page load/reload
     const resetPageLoadTime = () => {
@@ -331,20 +339,24 @@
       const elapsed = now - loadTime;
       
       if (elapsed >= REFRESH_INTERVAL_MS) {
-        refreshMessage.classList.remove('hidden');
+        if (refreshMessage) refreshMessage.classList.remove('hidden');
+        if (refreshMessageMobile) refreshMessageMobile.classList.remove('hidden');
       } else {
-        refreshMessage.classList.add('hidden');
+        if (refreshMessage) refreshMessage.classList.add('hidden');
+        if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
         // Schedule check for when 10 minutes will have passed
         const remaining = REFRESH_INTERVAL_MS - elapsed;
         setTimeout(() => {
-          refreshMessage.classList.remove('hidden');
+          if (refreshMessage) refreshMessage.classList.remove('hidden');
+          if (refreshMessageMobile) refreshMessageMobile.classList.remove('hidden');
         }, remaining);
       }
     };
     
     // Reset timer on page load - this ensures fresh start on every reload
     resetPageLoadTime();
-    refreshMessage.classList.add('hidden');
+    if (refreshMessage) refreshMessage.classList.add('hidden');
+    if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
     
     // Initial check (will be 0 elapsed, so message stays hidden)
     checkRefreshNeeded();

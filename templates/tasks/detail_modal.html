@@ -535,39 +535,176 @@ Usage:
                       sel.removeAllRanges();
                       sel.addRange(r);
                     }
+                    
+                    // Check if we're already in a list
+                    var anchorNode = sel.anchorNode;
+                    var currentNode = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentNode : anchorNode;
+                    var listParent = null;
+                    while (currentNode && currentNode !== bodyEditor) {
+                      if (currentNode.nodeName === 'OL' || currentNode.nodeName === 'UL') {
+                        listParent = currentNode;
+                        break;
+                      }
+                      currentNode = currentNode.parentNode;
+                    }
+                    
+                    // If already in a list of the same type, remove list formatting
+                    if (listParent && ((ordered && listParent.nodeName === 'OL') || (!ordered && listParent.nodeName === 'UL'))) {
+                      try {
+                        var listItems = Array.from(listParent.querySelectorAll('li'));
+                        var fragment = document.createDocumentFragment();
+                        listItems.forEach(function(li) {
+                          var p = document.createElement('p');
+                          p.innerHTML = li.innerHTML || '<br>';
+                          fragment.appendChild(p);
+                        });
+                        listParent.parentNode.replaceChild(fragment, listParent);
+                        if (DRAFT_LIST_DEBUG) console.log('[draft list] removed list formatting');
+                        return;
+                      } catch (err) {
+                        if (DRAFT_LIST_DEBUG) console.warn('[draft list] error removing list', err);
+                      }
+                    }
+                    
                     expandSelectionToBlock();
                     var range = sel.getRangeAt(0);
                     if (DRAFT_LIST_DEBUG) console.log('[draft list] applyListCommand: range text length', range.toString().length, 'collapsed', range.collapsed);
+                    
                     try {
                       var tag = ordered ? 'ol' : 'ul';
-                      var html = '';
+                      
+                      // Get the selected content
+                      var selectedContent = '';
                       try {
                         var frag = range.cloneContents();
                         var div = document.createElement('div');
                         div.appendChild(frag);
-                        html = div.innerHTML;
+                        selectedContent = div.innerHTML;
                       } catch (err) {
-                        html = range.toString() || '';
+                        selectedContent = range.toString() || '';
                       }
-                      if (!html.trim()) html = '<br>';
-                      var inner = html.replace(/<br\s*\/?>/gi, '</li><li>');
-                      if (inner.lastIndexOf('</li><li>') === inner.length - 9) inner = inner.slice(0, -9);
-                      var listHtml = '<' + tag + '><li>' + inner + '</li></' + tag + '>';
-                      if (DRAFT_LIST_DEBUG) console.log('[draft list] listHtml length', listHtml.length);
+                      
+                      // If empty, create a single list item
+                      if (!selectedContent.trim()) {
+                        selectedContent = '<br>';
+                      }
+                      
+                      // Convert content to list items
+                      // Handle block elements (p, div) and line breaks
+                      var tempDiv = document.createElement('div');
+                      tempDiv.innerHTML = selectedContent;
+                      
+                      // Extract text from block elements and create list items
+                      var listItems = [];
+                      
+                      // First, try to find existing list items
+                      var existingLis = tempDiv.querySelectorAll('li');
+                      if (existingLis.length > 0) {
+                        existingLis.forEach(function(li) {
+                          listItems.push(li.innerHTML || li.textContent.trim() || '');
+                        });
+                      } else {
+                        // Find block elements (p, div) or split by line breaks
+                        var blockElements = tempDiv.querySelectorAll('p, div');
+                        if (blockElements.length > 0) {
+                          blockElements.forEach(function(block) {
+                            var content = block.innerHTML || block.textContent.trim();
+                            if (content) {
+                              listItems.push(content);
+                            }
+                          });
+                        }
+                        
+                        // If still no items, split by <br> tags or line breaks
+                        if (listItems.length === 0) {
+                          // Replace <br> with a marker, then split
+                          var htmlWithMarker = selectedContent.replace(/<br\s*\/?>/gi, '|||BR|||');
+                          var textContent = tempDiv.textContent || range.toString();
+                          
+                          // Try splitting by the marker first
+                          if (htmlWithMarker.indexOf('|||BR|||') !== -1) {
+                            var parts = htmlWithMarker.split('|||BR|||');
+                            parts.forEach(function(part) {
+                              var trimmed = part.trim();
+                              if (trimmed) {
+                                listItems.push(trimmed);
+                              }
+                            });
+                          } else if (textContent) {
+                            // Split by actual line breaks in text
+                            var lines = textContent.split(/\r?\n/).filter(function(line) { return line.trim(); });
+                            if (lines.length > 0) {
+                              listItems = lines;
+                            }
+                          }
+                        }
+                      }
+                      
+                      // If still no items, create a single empty item
+                      if (listItems.length === 0) {
+                        listItems = [''];
+                      }
+                      
+                      // Create the list HTML
+                      var listHtml = '<' + tag + '>';
+                      listItems.forEach(function(item) {
+                        // Preserve HTML if it looks like HTML, otherwise escape
+                        var itemContent = item || '<br>';
+                        listHtml += '<li>' + itemContent + '</li>';
+                      });
+                      listHtml += '</' + tag + '>';
+                      
+                      if (DRAFT_LIST_DEBUG) console.log('[draft list] listHtml:', listHtml);
+                      
+                      // Insert the list
                       range.deleteContents();
                       var wrap = document.createElement('div');
                       wrap.innerHTML = listHtml;
                       var listEl = wrap.firstElementChild;
-                      range.insertNode(listEl);
+                      
+                      if (!listEl) {
+                        if (DRAFT_LIST_DEBUG) console.warn('[draft list] failed to create list element');
+                        return;
+                      }
+                      
+                      // Insert the list at the range position
+                      try {
+                        range.insertNode(listEl);
+                      } catch (insertErr) {
+                        // Fallback: try to insert at a valid position
+                        if (DRAFT_LIST_DEBUG) console.warn('[draft list] insertNode failed, trying fallback', insertErr);
+                        var startContainer = range.startContainer;
+                        if (startContainer.nodeType === Node.TEXT_NODE) {
+                          var parent = startContainer.parentNode;
+                          if (parent && parent !== bodyEditor) {
+                            parent.insertBefore(listEl, startContainer);
+                          } else {
+                            bodyEditor.appendChild(listEl);
+                          }
+                        } else if (startContainer.nodeType === Node.ELEMENT_NODE) {
+                          startContainer.appendChild(listEl);
+                        } else {
+                          bodyEditor.appendChild(listEl);
+                        }
+                      }
+                      
+                      // Set cursor after the list
                       sel.removeAllRanges();
                       var r = document.createRange();
                       r.setStartAfter(listEl);
                       r.collapse(true);
                       sel.addRange(r);
+                      
                       if (DRAFT_LIST_DEBUG) console.log('[draft list] list inserted OK');
                     } catch (err) {
                       if (DRAFT_LIST_DEBUG) console.warn('[draft list] applyListCommand catch', err);
-                      document.execCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+                      // Fallback: try execCommand (may not work in modern browsers)
+                      try {
+                        bodyEditor.focus();
+                        document.execCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+                      } catch (execErr) {
+                        if (DRAFT_LIST_DEBUG) console.error('[draft list] execCommand also failed', execErr);
+                      }
                     }
                   }
                   if (form) {

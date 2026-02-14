@@ -37,16 +37,14 @@
       <div>
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Accounts</h2>
       </div>
-      <div class="flex items-center gap-2 w-full sm:w-auto">
-        <a href="{% url 'logout' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+      <div class="flex items-center gap-2">
+        <a href="{% url 'logout' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm leading-none">
           <i class="ti ti-logout w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
-          <span class="hidden sm:inline">Logout</span>
-          <span class="sm:hidden">Logout</span>
+          Logout
         </a>
-        <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+        <a href="{% url 'account_create' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm leading-none">
           <i class="ti ti-bolt w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
-          <span class="hidden sm:inline">Connect</span>
-          <span class="sm:hidden">Connect</span>
+          Connect
         </a>
       </div>
     </div>
@@ -137,11 +135,10 @@
       <div>
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Actions</h2>
       </div>
-      <div class="flex gap-2 w-full sm:w-auto">
-        <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+      <div class="flex gap-2">
+        <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm leading-none">
           <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:w-4 flex-shrink-0" aria-hidden="true"></i>
-          <span class="hidden sm:inline">Create</span>
-          <span class="sm:hidden">Create</span>
+          Create
         </button>
       </div>
     </div>
@@ -187,10 +184,9 @@
       <div>
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Labels</h2>
       </div>
-      <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm w-full sm:w-auto justify-center">
+      <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-cyan-600 text-white rounded-md font-semibold hover:bg-cyan-500 transition-colors text-xs sm:text-sm leading-none">
         <i class="ti ti-plus w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
-        <span class="hidden sm:inline">Create</span>
-        <span class="sm:hidden">Create</span>
+        Create
       </button>
     </div>
     <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-white/10 shadow-sm dark:shadow-none overflow-hidden">

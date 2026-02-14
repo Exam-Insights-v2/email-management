@@ -39,18 +39,21 @@ jobs:
             image=moby/buildkit:latest
 
       - name: Install doctl
+        id: install_doctl
+        continue-on-error: true
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Log in to DigitalOcean Container Registry
+        if: steps.install_doctl.outcome == 'success'
         run: doctl registry login --expiry-seconds 1200
 
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          push: ${{ steps.install_doctl.outcome == 'success' }}
           tags: registry.digitalocean.com/linemarking/email-management:${{ needs.determine-vars.outputs.tag }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
