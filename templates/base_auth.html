@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
+      body { font-weight: 400; }
+      .font-semibold { font-weight: 500 !important; }
+      .font-bold { font-weight: 600 !important; }
       .material-icons { font-family: 'Material Icons'; font-weight: normal; font-style: normal; font-size: 24px; display: inline-block; line-height: 1; vertical-align: middle; }
       .material-icons.size-4 { font-size: 1rem; }
       .material-icons.size-5 { font-size: 1.25rem; }
@@ -100,7 +103,7 @@
           const toastId = `toast-${toastIdCounter++}`;
           const toast = document.createElement('div');
           toast.id = toastId;
-          toast.className = `pointer-events-auto flex items-start gap-3 rounded-lg border p-4 shadow-lg transition-all duration-300 animate-in slide-in-from-bottom-2 ${
+          toast.className = `pointer-events-auto flex items-start gap-3 rounded-lg border p-4 shadow-sm transition-all duration-300 animate-in slide-in-from-bottom-2 ${
             type === 'success' 
               ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-emerald-200 dark:border-emerald-800' 
               : type === 'error'

@@ -49,20 +49,20 @@ Usage:
     <el-dialog-backdrop class="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/50 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
 
     <div tabindex="0" class="flex min-h-full items-center justify-center text-center focus:outline-none">
-      <el-dialog-panel class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl outline -outline-offset-1 outline-gray-200 dark:outline-white/10 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in w-full max-w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] m-4 sm:m-6 data-closed:sm:translate-y-0 data-closed:sm:scale-95 flex flex-col">
-        <div class="bg-white dark:bg-gray-800 flex flex-col flex-1 min-h-0 overflow-hidden">
-          <!-- Header: navigation (left), title (center), Mark as Done + Close (right) -->
-          <div class="flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 flex-shrink-0 border-b border-gray-200 dark:border-white/10">
-            <div class="flex items-center justify-center gap-1 flex-shrink-0">
-              <button type="button" class="task-nav-prev inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Previous task" data-task-pk="{{ task.pk }}">
-                <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">expand_less</span>
+      <el-dialog-panel class="relative transform overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800 text-left shadow-sm transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in w-full max-w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] m-4 sm:m-6 data-closed:sm:translate-y-0 data-closed:sm:scale-95 flex flex-col">
+        <div class="bg-gray-50 dark:bg-gray-800 flex flex-col flex-1 min-h-0 overflow-hidden">
+          <!-- Header: nav, title, actions (mark done, edit, reprocess, close) -->
+          <div class="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5 flex-shrink-0 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80">
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <button type="button" class="task-nav-prev inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Previous task" data-task-pk="{{ task.pk }}">
+                <span class="material-icons size-5" aria-hidden="true">chevron_left</span>
               </button>
-              <button type="button" class="task-nav-next inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Next task" data-task-pk="{{ task.pk }}">
-                <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">expand_more</span>
+              <button type="button" class="task-nav-next inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Next task" data-task-pk="{{ task.pk }}">
+                <span class="material-icons size-5" aria-hidden="true">chevron_right</span>
               </button>
             </div>
-            <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 truncate">{{ task.title|default:"Untitled Task" }}</h2>
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <h2 id="task-detail-{{ task.pk }}-title" class="text-base sm:text-lg font-medium text-gray-900 dark:text-white flex-1 min-w-0 truncate px-2">{{ task.title|default:"Untitled Task" }}</h2>
+            <div class="flex items-center gap-1 flex-shrink-0">
               {% if task.status != 'done' %}
               <form method="post" action="{% url 'task_update' task.pk %}" class="inline">
                 {% csrf_token %}
@@ -70,12 +70,9 @@ Usage:
                 <input type="hidden" name="description" value="{{ task.description|default:'' }}">
                 <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
                 <input type="hidden" name="status" value="done">
-                {% if task.due_at %}
-                {% load db_filters %}
-                <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
-                {% endif %}
-                <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Mark as Done">
-                  <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">check_circle</span>
+                {% if task.due_at %}{% load db_filters %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
+                <button type="submit" class="inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" aria-label="Mark as Done" title="Mark as Done">
+                  <span class="material-icons size-5" aria-hidden="true">check_circle</span>
                 </button>
               </form>
               {% else %}
@@ -85,126 +82,124 @@ Usage:
                 <input type="hidden" name="description" value="{{ task.description|default:'' }}">
                 <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
                 <input type="hidden" name="status" value="pending">
-                {% if task.due_at %}
-                {% load db_filters %}
-                <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
-                {% endif %}
-                <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors" aria-label="Undone" title="Undone">
-                  <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">radio_button_unchecked</span>
+                {% if task.due_at %}{% load db_filters %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
+                <button type="submit" class="inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" aria-label="Mark undone" title="Mark undone">
+                  <span class="material-icons size-5" aria-hidden="true">radio_button_unchecked</span>
                 </button>
               </form>
               {% endif %}
+              <button type="button" onclick="if (window.openEditTaskModal) window.openEditTaskModal({{ task.pk }});" class="edit-task-btn inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-gray-500 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors" aria-label="Edit task" title="Edit task" data-task-pk="{{ task.pk }}">
+                <span class="material-icons size-5" aria-hidden="true">edit</span>
+              </button>
               {% if task.email_message %}
               <form method="post" action="{% url 'task_reprocess' task.pk %}" class="inline" onsubmit="return confirm('Reprocess this task? The current task will be removed and the email will be reclassified. Refresh the page in a few seconds to see the new task.');">
                 {% csrf_token %}
-                <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors" aria-label="Reprocess email and task" title="Reprocess: re-run classification and create a new task">
-                  <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">refresh</span>
+                <button type="submit" class="inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" aria-label="Reprocess" title="Reprocess email and task">
+                  <span class="material-icons size-5" aria-hidden="true">refresh</span>
                 </button>
               </form>
               {% endif %}
-              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
-                <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">close</span>
+              <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-gray-500 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors" aria-label="Close">
+                <span class="material-icons size-5" aria-hidden="true">close</span>
               </button>
             </div>
           </div>
 
-          <!-- Two columns: description (left), task details (right) -->
           <div class="flex-1 overflow-y-auto min-h-0">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6 border-b border-gray-200 dark:border-white/10">
-              <!-- Left: Task description (2/3) -->
-              <section class="px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 lg:col-span-2 lg:border-r lg:border-gray-200 dark:lg:border-white/10" aria-labelledby="task-detail-{{ task.pk }}-desc-heading">
-                <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
-                <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
-                  {% if task.description %}{{ task.description|strip_whitespace }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
-                </div>
-              </section>
-
-              <!-- Right: Task details (1/3) -->
-              <section class="px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 lg:col-span-1" aria-labelledby="task-detail-{{ task.pk }}-details-heading">
-                <h3 id="task-detail-{{ task.pk }}-details-heading" class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Details</h3>
-                <dl class="divide-y divide-gray-200 dark:divide-white/10">
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Task ID</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">TASK-{{ task.account_task_number|default:task.pk }}</dd>
-                  </div>
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Priority</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
-                      {% if task.priority %}
-                      <button type="button" class="priority-filter-link inline-flex items-center gap-2 text-gray-900 dark:text-white hover:underline cursor-pointer" data-priority="{{ task.priority }}">
-                        {% include 'tasks/priority_bars.html' with priority=task.priority %}
-                        {% if task.priority == 5 %}Urgent{% elif task.priority == 4 %}High{% elif task.priority == 3 %}Medium{% elif task.priority == 2 %}Low{% elif task.priority == 1 %}Lowest{% else %}—{% endif %}
-                      </button>
-                      {% else %}—{% endif %}
-                    </dd>
-                  </div>
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
-                      <button type="button" class="status-filter-link inline-flex items-center rounded-md px-2 py-1 text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity
-                        {% if task.status == 'done' %}bg-green-400/10 text-green-400
-                        {% elif task.status == 'in_progress' %}bg-blue-400/10 text-blue-400
-                        {% elif task.status == 'cancelled' %}bg-red-400/10 text-red-400
-                        {% else %}bg-yellow-400/10 text-yellow-500{% endif %}" data-status="{{ task.status }}">
-                        {{ task.get_status_display }}
-                      </button>
-                    </dd>
-                  </div>
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Labels</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
-                      {% if task.email_message and task.email_message.labels.all %}
-                      <div class="flex flex-wrap gap-2">
-                        {% load db_filters %}
-                        {% for email_label in task.email_message.labels.all %}
-                        <button type="button" class="label-filter-link inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity {{ email_label.label.name|label_color_bg }}" data-label-id="{{ email_label.label.pk }}">
-                          <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
-                          {{ email_label.label.name }}
-                        </button>
-                        {% endfor %}
-                      </div>
-                      {% else %}—{% endif %}
-                    </dd>
-                  </div>
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Sent from</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">
-                      {% if task.email_message %}
-                        <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ task.email_message.from_address }}">{{ task.email_message.from_address }}</button>
-                      {% else %}—{% endif %}
-                    </dd>
-                  </div>
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Sent to</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0 break-words">
-                      {% if task.email_message and task.email_message.to_addresses %}
-                        {% for email in task.email_message.to_addresses %}
-                          <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
-                        {% endfor %}
-                      {% else %}—{% endif %}
-                    </dd>
-                  </div>
-                  <div class="py-3 sm:py-3.5 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Time received</dt>
-                    <dd class="text-xs sm:text-sm text-gray-900 dark:text-white sm:col-span-2 sm:mt-0">
-                      {% if task.email_message and task.email_message.date_sent %}
-                      {% load db_filters %}
-                      <span class="time-received-display" data-datetime="{{ task.email_message.date_sent|date:'c' }}">
-                        {{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}
-                      </span>
-                      {% else %}—{% endif %}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
+            <!-- Meta bar: status, priority, from, date (scannable at a glance) -->
+            <div class="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/50">
+              <button type="button" class="status-filter-link inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity
+                {% if task.status == 'done' %}bg-emerald-500/15 text-emerald-700 dark:text-emerald-400
+                {% elif task.status == 'in_progress' %}bg-blue-500/15 text-blue-700 dark:text-blue-400
+                {% elif task.status == 'cancelled' %}bg-red-500/15 text-red-700 dark:text-red-400
+                {% else %}bg-amber-500/15 text-amber-700 dark:text-amber-400{% endif %}" data-status="{{ task.status }}">
+                {{ task.get_status_display }}
+              </button>
+              {% if task.priority %}
+              <button type="button" class="priority-filter-link inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-white/10 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:opacity-90 cursor-pointer" data-priority="{{ task.priority }}">
+                {% include 'tasks/priority_bars.html' with priority=task.priority %}
+                {% if task.priority == 5 %}Urgent{% elif task.priority == 4 %}High{% elif task.priority == 3 %}Medium{% elif task.priority == 2 %}Low{% elif task.priority == 1 %}Lowest{% else %}—{% endif %}
+              </button>
+              {% endif %}
+              <span class="text-xs text-gray-500 dark:text-gray-400">TASK-{{ task.account_task_number|default:task.pk }}</span>
+              {% if task.email_message %}
+              <span class="text-xs text-gray-500 dark:text-gray-400">·</span>
+              <button type="button" class="email-filter-link text-xs text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:underline cursor-pointer" data-email="{{ task.email_message.from_address }}">{{ task.email_message.from_name|default:task.email_message.from_address }}</button>
+              {% if task.email_message.date_sent %}
+              {% load db_filters %}
+              <span class="text-xs text-gray-500 dark:text-gray-400">·</span>
+              <span class="time-received-display text-xs text-gray-500 dark:text-gray-400" data-datetime="{{ task.email_message.date_sent|date:'c' }}">{{ task.email_message.date_sent|aus_time:"d M Y, g:i A" }}</span>
+              {% endif %}
+              {% endif %}
+              {% if task.email_message and task.email_message.labels.all %}
+              <span class="text-xs text-gray-400 dark:text-gray-500">·</span>
+              <div class="flex flex-wrap gap-1">
+                {% load db_filters %}
+                {% for email_label in task.email_message.labels.all %}
+                <button type="button" class="label-filter-link inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity {{ email_label.label.name|label_color_bg }}" data-label-id="{{ email_label.label.pk }}">
+                  <span class="w-1.5 h-1.5 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
+                  {{ email_label.label.name }}
+                </button>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
 
-            <!-- Email Thread & Draft: one flat list of boxes (oldest message → newest message → draft), each its own article -->
+            <!-- Description: AI summary (when task has email and a description) -->
+            {% if task.email_message and task.description %}
+            <section class="px-4 sm:px-5 pt-0" aria-labelledby="task-detail-{{ task.pk }}-desc-heading">
+              <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                <div class="px-4 sm:px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
+                  <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-medium text-gray-800 dark:text-gray-200">Description</h3>
+                </div>
+                <div class="px-4 sm:px-5 py-4">
+                  <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{{ task.description|strip_whitespace }}</div>
+                </div>
+              </div>
+            </section>
+            {% endif %}
+
+            <!-- Message: email body or task description (when no email) -->
+            <section class="p-4 sm:p-5" aria-labelledby="task-detail-{{ task.pk }}-message-heading">
+              <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                <div class="px-4 sm:px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
+                  <h3 id="task-detail-{{ task.pk }}-message-heading" class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {% if task.email_message %}Message{% else %}Description{% endif %}
+                  </h3>
+                </div>
+                <div class="px-4 sm:px-5 py-4">
+                  {% if task.email_message %}
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    <button type="button" class="email-filter-link hover:underline cursor-pointer" data-email="{{ task.email_message.from_address }}">{{ task.email_message.from_address }}</button>
+                    {% if task.email_message.to_addresses %} → {% for e in task.email_message.to_addresses %}<button type="button" class="email-filter-link hover:underline cursor-pointer" data-email="{{ e }}">{{ e }}</button>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}
+                    {% if task.email_message.date_sent %} · {% load db_filters %}{{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}{% endif %}
+                  </p>
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{{ task.email_message.subject|default:"(No subject)" }}</p>
+                  <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none">
+                    {% if task.email_message.body_html %}
+                    <div class="email-body" style="contain: layout style paint; isolation: isolate;">
+                      {{ task.email_message.body_html|remove_global_style_script|strip_quoted_email }}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 dark:text-gray-400 italic">No body content</p>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                    {% if task.description %}{{ task.description|strip_whitespace }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </section>
+
+            <!-- Email Thread & Draft -->
             {% if task.email_message and email_data %}
-            <div class="p-4 sm:p-6">
-            <div id="task-email-thread-draft-{{ task.pk }}" class="overflow-y-auto dark:border-white/10 max-h-[70vh]">
-            <div class="space-y-4" role="list">
-              {% for msg in email_data.thread_messages %}
+            <div class="px-4 sm:px-5 pb-4 sm:pb-5">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Conversation</h3>
+              <div id="task-email-thread-draft-{{ task.pk }}" class="overflow-y-auto dark:border-white/10 max-h-[70vh]">
+              <div class="space-y-4" role="list">
+                {% for msg in email_data.thread_messages %}
               <article class="task-thread-message-box rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden" role="listitem">
                 <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
                   <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -243,6 +238,7 @@ Usage:
               {% endfor %}
 
               {% if email_data.has_draft_reply %}
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-3">Reply</h3>
               {% if email_data.draft %}
               <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_update' email_data.draft.pk %}" data-draft-id="{{ email_data.draft.pk }}">
               {% else %}
@@ -254,9 +250,9 @@ Usage:
                 <input type="hidden" id="draft-to-json-{{ task.pk }}" name="to_addresses" value="">
                 <input type="hidden" id="draft-cc-json-{{ task.pk }}" name="cc_addresses" value="">
                 <input type="hidden" id="draft-bcc-json-{{ task.pk }}" name="bcc_addresses" value="">
-                <article class="task-thread-draft-box rounded-lg border border-gray-200 dark:border-gray-500/40 bg-cyan-800 dark:bg-cyan-800/80 overflow-visible" role="listitem">
+                <article class="task-thread-draft-box rounded-xl border border-cyan-300 dark:border-cyan-500/50 bg-cyan-50 dark:bg-cyan-900/30 overflow-visible" role="listitem">
                   <!-- Clickable header: toggles dropdown for To / From / CC / BCC -->
-                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10 text-left transition-colors cursor-pointer" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
+                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-cyan-200 dark:border-cyan-500/30 text-left transition-colors cursor-pointer hover:bg-cyan-100/50 dark:hover:bg-cyan-900/20" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                       <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-cyan-500 dark:bg-cyan-600" aria-hidden="true">Y</span>
                       <div class="min-w-0 text-sm">
@@ -323,7 +319,7 @@ Usage:
                           <span class="material-icons size-3.5 text-gray-400 shrink-0">expand_more</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Text colour</span>
-                        <div id="draft-fore-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-lg p-3" role="menu">
+                        <div id="draft-fore-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm p-3" role="menu">
                           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-0.5">Text colour</p>
                           <div class="draft-fore-presets grid grid-cols-6 gap-2 w-max" data-role="fore-presets"></div>
                         </div>
@@ -335,7 +331,7 @@ Usage:
                           <span class="material-icons size-3.5 text-gray-400 shrink-0">expand_more</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Highlight colour</span>
-                        <div id="draft-back-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-lg p-3" role="menu">
+                        <div id="draft-back-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm p-3" role="menu">
                           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-0.5">Highlight colour</p>
                           <div class="draft-back-presets grid grid-cols-6 gap-2 w-max" data-role="back-presets"></div>
                         </div>
@@ -354,7 +350,7 @@ Usage:
                         <button type="button" class="draft-insert-link p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" title="Insert link" aria-label="Insert link" id="draft-link-btn-{{ task.pk }}" tabindex="-1"><span class="material-icons size-4">link</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Insert link</span>
                         <!-- Insert link popup (small, next to button) -->
-                        <div id="draft-link-popup-{{ task.pk }}" class="hidden absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-link-popup-title-{{ task.pk }}" role="dialog">
+                        <div id="draft-link-popup-{{ task.pk }}" class="hidden absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-link-popup-title-{{ task.pk }}" role="dialog">
                           <h3 id="draft-link-popup-title-{{ task.pk }}" class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Insert link</h3>
                           <label for="draft-link-url-{{ task.pk }}" class="sr-only">URL</label>
                           <input type="url" id="draft-link-url-{{ task.pk }}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" placeholder="https://" autocomplete="url">
@@ -424,7 +420,7 @@ Usage:
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Rewrite with AI</span>
                         <!-- Rewrite with AI popup (fixed position so not clipped by scroll container) -->
-                        <div id="draft-rewrite-popup-{{ task.pk }}" class="hidden fixed z-[100] w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-rewrite-popup-title-{{ task.pk }}" role="dialog" style="top: 0; left: 0;">
+                        <div id="draft-rewrite-popup-{{ task.pk }}" class="hidden fixed z-[100] w-64 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-rewrite-popup-title-{{ task.pk }}" role="dialog" style="top: 0; left: 0;">
                           <h3 id="draft-rewrite-popup-title-{{ task.pk }}" class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Rewrite with AI</h3>
                           <label for="draft-rewrite-prompt-{{ task.pk }}" class="sr-only">Your instructions</label>
                           <textarea id="draft-rewrite-prompt-{{ task.pk }}" rows="2" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g. Make it more concise"></textarea>
@@ -466,8 +462,8 @@ Usage:
                 </article>
               </form>
               {% endif %}
-            </div>
-            </div>
+              </div>
+              </div>
             </div>
             <script>
                 (function() {

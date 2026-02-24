@@ -1,0 +1,34 @@
+{% comment %}
+Renders a single form field with label, control, help text and errors. Use inside modal forms.
+Usage: {% include 'includes/modal_form_field.html' with field=field %}
+{% endcomment %}
+<div class="modal-form-field">
+  <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+    {{ field.label }}
+    {% if field.field.required %}<span class="text-red-400" aria-hidden="true">*</span>{% endif %}
+  </label>
+  <div class="input-wrapper mt-1">
+    {% if field.name == 'priority' %}
+      {% include 'includes/priority_slider.html' with field=field %}
+    {% elif field.field.widget.input_type == 'datetime-local' or field.field.widget.input_type == 'date' %}
+      {% include 'includes/custom_date_picker.html' with field=field %}
+    {% else %}
+      <div class="field-control [&_input]:block [&_input]:w-full [&_input]:rounded-lg [&_input]:bg-gray-100 [&_input]:dark:bg-white/5 [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:text-gray-900 [&_input]:dark:text-white [&_input]:border-0 [&_input]:placeholder:text-gray-500 [&_input]:focus:ring-2 [&_input]:focus:ring-cyan-500 [&_textarea]:block [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:bg-gray-100 [&_textarea]:dark:bg-white/5 [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-sm [&_textarea]:min-h-[80px] [&_select]:block [&_select]:w-full [&_select]:rounded-lg [&_select]:bg-gray-100 [&_select]:dark:bg-white/5 [&_select]:px-3 [&_select]:py-2 [&_select]:text-sm [&_select]:border-0 [&_select]:focus:ring-2 [&_select]:focus:ring-cyan-500 [&_select]:appearance-none">
+        {% if field.field.widget.input_type == 'select' and field.name != 'actions' and field.name != 'accounts' %}
+          <div class="grid grid-cols-1 select-wrapper">
+            {{ field }}
+            <span class="material-icons pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-500 dark:text-gray-400" aria-hidden="true">expand_more</span>
+          </div>
+        {% else %}
+          {{ field }}
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+  {% if field.help_text %}
+    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text }}</p>
+  {% endif %}
+  {% if field.errors %}
+    <p class="mt-1 text-xs text-red-500 dark:text-red-400" role="alert">{{ field.errors.0 }}</p>
+  {% endif %}
+</div>

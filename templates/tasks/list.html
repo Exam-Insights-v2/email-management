@@ -6,14 +6,34 @@
 {% block header_title %}Tasks{% endblock %}
 
 {% block header_center %}
-  <div id="refresh-sync-message" class="hidden sm:flex items-center justify-center" style="display: none !important;">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50/90 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-200/50 dark:border-cyan-700/50 shadow-sm transition-colors">
-      <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
-      Refresh to sync
-    </button>
+  <div class="flex items-center gap-3 flex-wrap justify-center">
+    <div id="refresh-sync-message" class="hidden sm:flex items-center justify-center" style="display: none !important;">
+      <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50/90 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-200/50 dark:border-cyan-700/50 shadow-sm transition-colors">
+        <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
+        Refresh to sync
+      </button>
+    </div>
+    <div class="inline-flex rounded-full bg-gray-100 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist" aria-label="Task view">
+      <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="panel-list" data-view="list" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+        <span class="material-icons size-4" aria-hidden="true">view_list</span>
+        List
+      </button>
+      <button type="button" role="tab" id="tab-email" aria-selected="false" aria-controls="panel-email" data-view="email" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+        <span class="material-icons size-4" aria-hidden="true">inbox</span>
+        Inbox
+      </button>
+      <button type="button" role="tab" id="tab-cards" aria-selected="false" aria-controls="panel-cards" data-view="cards" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+        <span class="material-icons size-4" aria-hidden="true">grid_view</span>
+        Cards
+      </button>
+      <button type="button" role="tab" id="tab-board" aria-selected="false" aria-controls="panel-board" data-view="board" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+        <span class="material-icons size-4" aria-hidden="true">view_kanban</span>
+        Board
+      </button>
+    </div>
   </div>
   <div id="refresh-sync-message-mobile" class="hidden sm:hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none" style="display: none !important;">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50/95 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 text-sm font-medium shadow-lg border border-cyan-200/50 dark:border-cyan-700/50 pointer-events-auto transition-colors">
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50/95 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 text-sm font-medium shadow-sm border border-cyan-200/50 dark:border-cyan-700/50 pointer-events-auto transition-colors">
       <span class="material-icons w-4 h-4 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
       Refresh to sync
     </button>
@@ -22,17 +42,17 @@
 
 {% block header_action %}
   <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200/80 dark:border-white/10 text-gray-600 dark:text-gray-400 text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">filter_list</span>
       Filter{% if active_filter_count > 0 %} ({{ active_filter_count }}){% endif %}
     </button>
     {% if active_filter_count > 0 %}
-    <a href="{% url 'tasks_list' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50/90 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200/50 dark:border-red-800/50 shadow-sm transition-colors no-underline">
+    <a href="{% url 'tasks_list' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/50 shadow-sm transition-colors no-underline">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">close</span>
       Clear
     </a>
     {% endif %}
-    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200/80 dark:border-white/10 text-gray-600 dark:text-gray-400 text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">search</span>
       Search
     </button>
@@ -79,33 +99,12 @@
   {% endfor %}
 {% endif %}
 
-<!-- View switcher tabs -->
-<div class="mt-4 flex items-center justify-between gap-4 flex-wrap">
-  <div class="inline-flex rounded-full bg-white/80 dark:bg-white/5 p-1 border border-gray-200/80 dark:border-white/10 shadow-sm" role="tablist" aria-label="Task view">
-    <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="panel-list" data-view="list" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-      <span class="material-icons size-4" aria-hidden="true">view_list</span>
-      List
-    </button>
-    <button type="button" role="tab" id="tab-email" aria-selected="false" aria-controls="panel-email" data-view="email" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-      <span class="material-icons size-4" aria-hidden="true">mail</span>
-      Email
-    </button>
-    <button type="button" role="tab" id="tab-cards" aria-selected="false" aria-controls="panel-cards" data-view="cards" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-      <span class="material-icons size-4" aria-hidden="true">grid_view</span>
-      Cards
-    </button>
-    <button type="button" role="tab" id="tab-board" aria-selected="false" aria-controls="panel-board" data-view="board" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-      <span class="material-icons size-4" aria-hidden="true">view_kanban</span>
-      Board
-    </button>
-  </div>
-  <p class="text-xs text-gray-500 dark:text-gray-400">{{ all_tasks|length }} task{{ all_tasks|length|pluralize }}</p>
-</div>
+<p class="mt-4 text-xs text-gray-500 dark:text-gray-400">{{ all_tasks|length }} task{{ all_tasks|length|pluralize }}</p>
 
 <!-- List view -->
 <section id="panel-list" role="tabpanel" aria-labelledby="tab-list" class="tasks-view-panel mt-4" data-view="list">
   {% if tasks_by_priority.5 %}
-  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
       <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Urgent</h3>
       <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.5|length }} task{{ tasks_by_priority.5|length|pluralize }}</span>
@@ -116,7 +115,7 @@
   </div>
   {% endif %}
   {% if tasks_by_priority.4 %}
-  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
       <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">High</h3>
       <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.4|length }} task{{ tasks_by_priority.4|length|pluralize }}</span>
@@ -127,7 +126,7 @@
   </div>
   {% endif %}
   {% if tasks_by_priority.3 %}
-  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
       <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Medium</h3>
       <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.3|length }} task{{ tasks_by_priority.3|length|pluralize }}</span>
@@ -138,7 +137,7 @@
   </div>
   {% endif %}
   {% if tasks_by_priority.2 %}
-  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
       <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Low</h3>
       <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.2|length }} task{{ tasks_by_priority.2|length|pluralize }}</span>
@@ -149,7 +148,7 @@
   </div>
   {% endif %}
   {% if tasks_by_priority.1 %}
-  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
       <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Lowest</h3>
       <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.1|length }} task{{ tasks_by_priority.1|length|pluralize }}</span>
@@ -161,9 +160,9 @@
   {% endif %}
 </section>
 
-<!-- Email view (inbox-style) -->
-<section id="panel-email" role="tabpanel" aria-labelledby="tab-email" class="tasks-view-panel hidden" data-view="email" hidden>
-  <div class="rounded-xl bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+<!-- Inbox view (inbox-style list) -->
+<section id="panel-email" role="tabpanel" aria-labelledby="tab-email" class="tasks-view-panel mt-4 hidden" data-view="email" hidden>
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
     <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
       {% for task in all_tasks %}
         {% include 'tasks/email_row.html' with task=task %}
@@ -173,7 +172,7 @@
 </section>
 
 <!-- Cards view -->
-<section id="panel-cards" role="tabpanel" aria-labelledby="tab-cards" class="tasks-view-panel hidden" data-view="cards" hidden>
+<section id="panel-cards" role="tabpanel" aria-labelledby="tab-cards" class="tasks-view-panel mt-4 hidden" data-view="cards" hidden>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for task in all_tasks %}
       {% include 'tasks/card_item.html' with task=task %}
@@ -181,53 +180,53 @@
   </div>
 </section>
 
-<!-- Board view -->
-<section id="panel-board" role="tabpanel" aria-labelledby="tab-board" class="tasks-view-panel hidden" data-view="board" hidden>
+<!-- Board view: full height, white bg, cards gray-100 -->
+<section id="panel-board" role="tabpanel" aria-labelledby="tab-board" class="tasks-view-panel board-panel hidden min-h-[calc(100vh-12rem)] bg-white dark:bg-gray-900 -mx-4 px-4 sm:-mx-6 sm:px-6 -mb-4 pb-4" data-view="board" hidden>
   {% if all_tasks %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pt-6 pb-2">
-      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto min-h-[calc(100vh-14rem)] py-4">
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden flex flex-col min-h-[calc(100vh-16rem)]">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-amber-50 dark:bg-amber-900/10">
           <span class="material-icons size-4 text-amber-600 dark:text-amber-400">schedule</span>
           <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Pending</h3>
           <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-pending">0</span>
         </div>
-        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="pending">
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2 min-h-0" data-status="pending">
           {% for task in all_tasks %}{% if task.status == 'pending' %}
           {% include 'tasks/card_item.html' with task=task %}
           {% endif %}{% endfor %}
         </ul>
       </div>
-      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden flex flex-col min-h-[calc(100vh-16rem)]">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-blue-50 dark:bg-blue-900/10">
           <span class="material-icons size-4 text-blue-600 dark:text-blue-400">play_circle</span>
           <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">In progress</h3>
           <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-in_progress">0</span>
         </div>
-        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="in_progress">
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2 min-h-0" data-status="in_progress">
           {% for task in all_tasks %}{% if task.status == 'in_progress' %}
           {% include 'tasks/card_item.html' with task=task %}
           {% endif %}{% endfor %}
         </ul>
       </div>
-      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden flex flex-col min-h-[calc(100vh-16rem)]">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-emerald-50 dark:bg-emerald-900/10">
           <span class="material-icons size-4 text-emerald-600 dark:text-emerald-400">check_circle</span>
           <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Done</h3>
           <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-done">0</span>
         </div>
-        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="done">
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2 min-h-0" data-status="done">
           {% for task in all_tasks %}{% if task.status == 'done' %}
           {% include 'tasks/card_item.html' with task=task %}
           {% endif %}{% endfor %}
         </ul>
       </div>
-      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden flex flex-col min-h-[calc(100vh-16rem)]">
         <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-red-50 dark:bg-red-900/10">
           <span class="material-icons size-4 text-red-600 dark:text-red-400">cancel</span>
           <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Cancelled</h3>
           <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-cancelled">0</span>
         </div>
-        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="cancelled">
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2 min-h-0" data-status="cancelled">
           {% for task in all_tasks %}{% if task.status == 'cancelled' %}
           {% include 'tasks/card_item.html' with task=task %}
           {% endif %}{% endfor %}
@@ -237,11 +236,16 @@
   {% endif %}
 </section>
 
+<style>
+  .board-panel .task-card { background-color: rgb(243 244 246); }
+  .dark .board-panel .task-card { background-color: rgb(31 41 55); }
+</style>
+
 {% if not all_tasks %}
-  <div class="mt-6 py-12 text-center rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-white/50 dark:bg-gray-800/30 shadow-sm">
-    <span class="material-icons size-12 text-gray-300 dark:text-gray-600 mb-3">task_alt</span>
-    <p class="text-gray-600 dark:text-gray-400 text-sm">No tasks yet.</p>
-    <p class="text-gray-500 dark:text-gray-500 text-xs mt-1">Create a task or connect an account to sync emails.</p>
+  <div class="mt-6 py-12 text-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/60 shadow-sm">
+    <span class="material-icons size-12 text-gray-400 dark:text-gray-500 mb-3">task_alt</span>
+    <p class="text-gray-600 dark:text-gray-300 text-sm">No tasks yet.</p>
+    <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">Create a task or connect an account to sync emails.</p>
   </div>
 {% endif %}
 

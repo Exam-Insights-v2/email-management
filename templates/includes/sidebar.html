@@ -2,15 +2,15 @@
 {% comment %}
 Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from viewport with rounded corners and soft shadow.
 {% endcomment %}
-<aside id="app-sidebar" class="sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-r-xl border border-white/[0.06] shadow-xl" aria-label="Main navigation" style="background: linear-gradient(180deg, #2d6470 0%, #234a54 50%, #1e3d46 100%); box-shadow: 0 4px 24px -4px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05);">
+<aside id="app-sidebar" class="sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-r-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm" aria-label="Main navigation">
   {% if user.is_authenticated %}
   <!-- Brand -->
-  <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-white/[0.06]">
+  <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-gray-100 dark:border-white/10">
     <a href="{% url 'tasks_list' %}" class="flex items-center gap-2 no-underline min-w-0 group">
-      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#33B0D2]/20 ring-1 ring-[#33B0D2]/20 transition group-hover:bg-[#33B0D2]/30">
+      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/10 ring-1 ring-cyan-500/20 transition group-hover:bg-cyan-500/20 group-hover:ring-cyan-500/30">
         <img src="{% static 'images/logo.png' %}" alt="" class="h-4 w-4 object-contain" />
       </span>
-      <span class="truncate text-[13px] font-semibold tracking-tight text-white">Email IQ</span>
+      <span class="truncate text-[13px] font-medium tracking-tight text-gray-900 dark:text-white">Email IQ</span>
     </a>
   </div>
 
@@ -18,16 +18,16 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
   <nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Primary">
     <ul class="space-y-0.5">
       <li>
-        <a href="{% url 'jobs_list' %}" class="sidebar-nav-link flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-medium text-white/90 no-underline transition-all duration-200 {% if request.path == '/jobs/' or request.path|slice:':5' == '/jobs' %}sidebar-nav-active{% else %}hover:bg-white/[0.08] hover:text-white{% endif %}">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors {% if request.path == '/jobs/' or request.path|slice:':5' == '/jobs' %}bg-[#33B0D2]/25 text-[#7dd3f0]{% else %}bg-white/[0.06] text-white/80{% endif %}">
+        <span class="sidebar-nav-link flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal text-gray-400 dark:text-gray-500 no-underline cursor-not-allowed pointer-events-none" aria-disabled="true" title="Jobs coming soon">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500">
             <span class="material-icons size-4" aria-hidden="true">work</span>
           </span>
           <span>Jobs</span>
-        </a>
+        </span>
       </li>
       <li>
-        <a href="{% url 'tasks_list' %}" class="sidebar-nav-link flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-medium text-white/90 no-underline transition-all duration-200 {% if 'tasks' in request.path or request.path == '/' %}sidebar-nav-active{% else %}hover:bg-white/[0.08] hover:text-white{% endif %}">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors {% if 'tasks' in request.path or request.path == '/' %}bg-[#33B0D2]/25 text-[#7dd3f0]{% else %}bg-white/[0.06] text-white/80{% endif %}">
+        <a href="{% url 'tasks_list' %}" class="sidebar-nav-link flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal no-underline transition-all duration-200 {% if 'tasks' in request.path or request.path == '/' %}sidebar-nav-active bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-l-2 border-cyan-500 -ml-0.5 pl-3{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white{% endif %}">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors {% if 'tasks' in request.path or request.path == '/' %}bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400{% endif %}">
             <span class="material-icons size-4" aria-hidden="true">view_list</span>
           </span>
           <span>Tasks</span>
@@ -38,23 +38,23 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
 
   <!-- User block -->
   <div class="flex-shrink-0 p-2">
-    <div class="rounded-lg border border-white/[0.06] bg-black/10 px-2.5 py-2">
+    <div class="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/80 px-2.5 py-2">
       <div class="flex items-center gap-2">
-        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#33B0D2] to-[#2a8fa8] text-[10px] font-semibold text-white ring-1 ring-white/10" aria-hidden="true">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[10px] font-medium text-cyan-600 dark:text-cyan-400 ring-1 ring-cyan-500/20" aria-hidden="true">
           {% if user.get_full_name %}{{ user.get_full_name|slice:":2"|upper }}{% else %}{{ user.username|slice:":2"|upper }}{% endif %}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-[11px] font-medium text-white">
+          <p class="truncate text-[11px] font-medium text-gray-900 dark:text-white">
             {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}
           </p>
-          <p class="truncate text-[10px] text-white/50">Account</p>
+          <p class="truncate text-[10px] text-gray-500 dark:text-gray-400">Account</p>
         </div>
         <div class="flex shrink-0 items-center gap-0">
-          <button type="button" onclick="toggleTheme()" class="rounded-md p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white focus:outline-2 focus:outline-offset-1 focus:outline-[#33B0D2]" aria-label="Toggle theme">
+          <button type="button" onclick="toggleTheme()" class="rounded-md p-1.5 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-2 focus:outline-offset-1 focus:outline-cyan-500" aria-label="Toggle theme">
             <span id="theme-toggle-light-icon" class="material-icons size-3.5 hidden dark:block" aria-hidden="true">wb_sunny</span>
             <span id="theme-toggle-dark-icon" class="material-icons size-3.5 block dark:hidden" aria-hidden="true">nights_stay</span>
           </button>
-          <a href="{% url 'settings' %}" class="rounded-md p-1.5 text-white/60 no-underline transition-colors hover:bg-white/10 hover:text-white focus:outline-2 focus:outline-offset-1 focus:outline-[#33B0D2] {% if 'settings' in request.path %}bg-white/10 text-white{% endif %}" aria-label="Settings">
+          <a href="{% url 'settings' %}" class="rounded-md p-1.5 text-gray-500 dark:text-gray-400 no-underline transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-2 focus:outline-offset-1 focus:outline-cyan-500 {% if 'settings' in request.path %}bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400{% endif %}" aria-label="Settings">
             <span class="material-icons size-3.5" aria-hidden="true">settings</span>
           </a>
         </div>
@@ -62,29 +62,25 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
     </div>
   </div>
   {% else %}
-  <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-white/[0.06]">
+  <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-gray-100 dark:border-white/10">
     <a href="{% url 'tasks_list' %}" class="flex items-center gap-2 no-underline min-w-0">
-      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#33B0D2]/20 ring-1 ring-[#33B0D2]/20">
+      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/10 ring-1 ring-cyan-500/20">
         <img src="{% static 'images/logo.png' %}" alt="" class="h-4 w-4 object-contain" />
       </span>
-      <span class="truncate text-[13px] font-semibold tracking-tight text-white">Email IQ</span>
+      <span class="truncate text-[13px] font-medium tracking-tight text-gray-900 dark:text-white">Email IQ</span>
     </a>
   </div>
   <div class="flex-1"></div>
   <div class="flex-shrink-0 p-2">
-    <a href="{% url 'login' %}" class="block rounded-md bg-[#33B0D2]/20 py-2 text-center text-[12px] font-medium text-white no-underline transition-colors hover:bg-[#33B0D2]/30 ring-1 ring-[#33B0D2]/20">Sign In</a>
+    <a href="{% url 'login' %}" class="block rounded-lg bg-cyan-600 py-2 text-center text-[12px] font-medium text-white no-underline transition-colors hover:bg-cyan-500 focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500">Sign In</a>
   </div>
   {% endif %}
 </aside>
 
 <style>
   .sidebar-modern .sidebar-nav-link { position: relative; }
-  .sidebar-modern .sidebar-nav-active {
-    background: linear-gradient(90deg, rgba(51, 176, 210, 0.2) 0%, rgba(51, 176, 210, 0.06) 100%);
-    color: #fff;
-    box-shadow: inset 2px 0 0 #33B0D2;
-  }
-  .sidebar-modern .sidebar-nav-link:hover span:first-of-type { background: rgba(255,255,255,0.1); color: #fff; }
+  .sidebar-modern .sidebar-nav-link:hover span:first-of-type:not(.bg-cyan-500/20) { background: rgb(226 232 240); color: rgb(71 85 105); }
+  .dark .sidebar-modern .sidebar-nav-link:hover span:first-of-type:not(.bg-cyan-500/20) { background: rgba(255,255,255,0.1); color: rgb(226 232 240); }
 </style>
 
 <!-- Command Palette -->
