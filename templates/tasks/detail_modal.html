@@ -55,10 +55,10 @@ Usage:
           <div class="flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4 flex-shrink-0 border-b border-gray-200 dark:border-white/10">
             <div class="flex items-center justify-center gap-1 flex-shrink-0">
               <button type="button" class="task-nav-prev inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Previous task" data-task-pk="{{ task.pk }}">
-                <i class="ti ti-chevron-up size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">expand_less</span>
               </button>
               <button type="button" class="task-nav-next inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Next task" data-task-pk="{{ task.pk }}">
-                <i class="ti ti-chevron-down size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">expand_more</span>
               </button>
             </div>
             <h2 id="task-detail-{{ task.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 truncate">{{ task.title|default:"Untitled Task" }}</h2>
@@ -75,7 +75,7 @@ Usage:
                 <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
                 {% endif %}
                 <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Mark as Done">
-                  <i class="ti ti-circle-check size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                  <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">check_circle</span>
                 </button>
               </form>
               {% else %}
@@ -90,7 +90,7 @@ Usage:
                 <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
                 {% endif %}
                 <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors" aria-label="Undone" title="Undone">
-                  <i class="ti ti-circle-dashed size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                  <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">radio_button_unchecked</span>
                 </button>
               </form>
               {% endif %}
@@ -98,12 +98,12 @@ Usage:
               <form method="post" action="{% url 'task_reprocess' task.pk %}" class="inline" onsubmit="return confirm('Reprocess this task? The current task will be removed and the email will be reclassified. Refresh the page in a few seconds to see the new task.');">
                 {% csrf_token %}
                 <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors" aria-label="Reprocess email and task" title="Reprocess: re-run classification and create a new task">
-                  <i class="ti ti-refresh size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                  <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">refresh</span>
                 </button>
               </form>
               {% endif %}
               <button type="button" command="close" commandfor="task-detail-{{ task.pk }}" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Close">
-                <i class="ti ti-x size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                <span class="material-icons size-5 sm:size-6 block pt-1" aria-hidden="true">close</span>
               </button>
             </div>
           </div>
@@ -265,7 +265,7 @@ Usage:
                         <span id="draft-to-summary-{{ task.pk }}" class="text-cyan-600 dark:text-cyan-400">{% if email_data.draft %}{{ email_data.draft.to_addresses|join:", " }}{% else %}{{ task.email_message.from_address }}{% endif %}</span>
                         <span id="draft-cc-bcc-summary-{{ task.pk }}" class="text-gray-500 dark:text-gray-400">{% if email_data.draft %}{% if email_data.draft.cc_addresses %}, CC: {{ email_data.draft.cc_addresses|join:", " }}{% endif %}{% if email_data.draft.bcc_addresses %}{% if email_data.draft.cc_addresses %}; {% endif %}BCC: {{ email_data.draft.bcc_addresses|join:", " }}{% endif %}{% endif %}</span>
                       </div>
-                      <i class="ti ti-chevron-down size-5 text-gray-400 flex-shrink-0 transition-transform duration-200 draft-recipients-chevron" aria-hidden="true"></i>
+                      <span class="material-icons size-5 text-gray-400 flex-shrink-0 transition-transform duration-200 draft-recipients-chevron" aria-hidden="true">expand_more</span>
                     </div>
                     <span class="inline-flex items-center rounded-md bg-cyan-500/20 px-2 py-1 text-xs font-medium text-cyan-200 dark:text-cyan-300 border border-cyan-400/30 flex-shrink-0 ml-2">Draft</span>
                   </button>
@@ -304,23 +304,23 @@ Usage:
                     <input type="hidden" name="body_html" id="draft-body-html-{{ task.pk }}" value="">
                     <div class="flex flex-wrap items-center gap-1 mb-2 border border-gray-200 dark:border-white/10 rounded-t-md bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 border-b-0">
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="bold" title="Bold" aria-label="Bold"><i class="ti ti-bold size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="bold" title="Bold" aria-label="Bold"><span class="material-icons size-4">format_bold</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Bold</span>
                       </span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="italic" title="Italic" aria-label="Italic"><i class="ti ti-italic size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="italic" title="Italic" aria-label="Italic"><span class="material-icons size-4">format_italic</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Italic</span>
                       </span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="underline" title="Underline" aria-label="Underline"><i class="ti ti-underline size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="underline" title="Underline" aria-label="Underline"><span class="material-icons size-4">format_underline</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Underline</span>
                       </span>
                       <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
                       <span class="relative inline-block group/tooltip">
                         <button type="button" class="draft-trigger-fore-color flex items-center gap-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700 border border-transparent hover:border-gray-300 dark:hover:border-gray-600" title="Text colour" aria-label="Text colour" aria-expanded="false" aria-haspopup="true" data-current-color="#000000">
-                          <i class="ti ti-letter-a size-4 shrink-0 text-gray-600 dark:text-gray-300" aria-hidden="true"></i>
+                          <span class="material-icons size-4 shrink-0 text-gray-600 dark:text-gray-300" aria-hidden="true">format_size</span>
                           <span class="draft-fore-swatch w-4 h-4 rounded border border-gray-300 dark:border-gray-500 shrink-0" style="background-color:#000000" aria-hidden="true"></span>
-                          <i class="ti ti-chevron-down size-3.5 text-gray-400 shrink-0"></i>
+                          <span class="material-icons size-3.5 text-gray-400 shrink-0">expand_more</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Text colour</span>
                         <div id="draft-fore-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-lg p-3" role="menu">
@@ -330,9 +330,9 @@ Usage:
                       </span>
                       <span class="relative inline-block group/tooltip">
                         <button type="button" class="draft-trigger-back-color flex items-center gap-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700 border border-transparent hover:border-gray-300 dark:hover:border-gray-600" title="Highlight colour" aria-label="Highlight colour" aria-expanded="false" aria-haspopup="true" data-current-color="#fef08a">
-                          <i class="ti ti-highlight size-4 shrink-0 text-gray-600 dark:text-gray-300" aria-hidden="true"></i>
+                          <span class="material-icons size-4 shrink-0 text-gray-600 dark:text-gray-300" aria-hidden="true">highlight</span>
                           <span class="draft-back-swatch w-4 h-4 rounded border border-gray-300 dark:border-gray-500 shrink-0" style="background-color:#fef08a" aria-hidden="true"></span>
-                          <i class="ti ti-chevron-down size-3.5 text-gray-400 shrink-0"></i>
+                          <span class="material-icons size-3.5 text-gray-400 shrink-0">expand_more</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Highlight colour</span>
                         <div id="draft-back-palette-{{ task.pk }}" class="draft-color-palette hidden absolute left-0 top-full mt-1.5 z-20 min-w-[220px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-lg p-3" role="menu">
@@ -342,16 +342,16 @@ Usage:
                       </span>
                       <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertUnorderedList" title="Bullet list" aria-label="Bullet list" tabindex="-1"><i class="ti ti-list size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertUnorderedList" title="Bullet list" aria-label="Bullet list" tabindex="-1"><span class="material-icons size-4">format_list_bulleted</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Bullet list</span>
                       </span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertOrderedList" title="Numbered list" aria-label="Numbered list" tabindex="-1"><i class="ti ti-list-numbers size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertOrderedList" title="Numbered list" aria-label="Numbered list" tabindex="-1"><span class="material-icons size-4">format_list_numbered</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Numbered list</span>
                       </span>
                       <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-insert-link p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" title="Insert link" aria-label="Insert link" id="draft-link-btn-{{ task.pk }}" tabindex="-1"><i class="ti ti-link size-4"></i></button>
+                        <button type="button" class="draft-insert-link p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" title="Insert link" aria-label="Insert link" id="draft-link-btn-{{ task.pk }}" tabindex="-1"><span class="material-icons size-4">link</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Insert link</span>
                         <!-- Insert link popup (small, next to button) -->
                         <div id="draft-link-popup-{{ task.pk }}" class="hidden absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-link-popup-title-{{ task.pk }}" role="dialog">
@@ -401,14 +401,14 @@ Usage:
                       {% if email_data.draft %}{% load db_filters %}{% for att in email_data.draft.attachments.all %}
                       <li class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 text-sm" data-attachment-id="{{ att.pk }}">
                         <span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md {{ att.filename|attachment_icon_bg }}">
-                          <i class="ti {{ att.filename|attachment_icon }} size-5 block" aria-hidden="true"></i>
+                          <span class="material-icons size-5 block" aria-hidden="true">{{ att.filename|attachment_icon }}</span>
                         </span>
                         <div class="min-w-0 flex-1">
                           <span class="text-gray-700 dark:text-gray-300 truncate block" title="{{ att.filename }}">{{ att.filename }}</span>
                           {% if att.size_bytes %}<span class="text-xs text-gray-500 dark:text-gray-400">{{ att.size_bytes|filesizeformat }}</span>{% endif %}
                         </div>
-                        <a href="{% url 'draft_attachment_download' email_data.draft.pk att.pk %}" class="draft-attachment-download flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download {{ att.filename }}" title="Download"><i class="ti ti-download size-4"></i></a>
-                        <button type="button" class="draft-attachment-remove flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-attachment-id="{{ att.pk }}" aria-label="Remove {{ att.filename }}"><i class="ti ti-x size-4"></i></button>
+                        <a href="{% url 'draft_attachment_download' email_data.draft.pk att.pk %}" class="draft-attachment-download flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download {{ att.filename }}" title="Download"><span class="material-icons size-4">download</span></a>
+                        <button type="button" class="draft-attachment-remove flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-attachment-id="{{ att.pk }}" aria-label="Remove {{ att.filename }}"><span class="material-icons size-4">close</span></button>
                       </li>
                       {% endfor %}{% endif %}
                       </ul>
@@ -420,7 +420,7 @@ Usage:
                     <div class="flex items-center gap-1">
                       <span class="relative group/tooltip inline-block">
                         <button type="button" class="p-2 rounded-md text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors" title="Rewrite with AI" aria-label="Rewrite with AI" id="draft-rewrite-btn-{{ task.pk }}">
-                          <i class="ti ti-sparkles size-4" aria-hidden="true"></i>
+                          <span class="material-icons size-4" aria-hidden="true">auto_awesome</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Rewrite with AI</span>
                         <!-- Rewrite with AI popup (fixed position so not clipped by scroll container) -->
@@ -436,7 +436,7 @@ Usage:
                       </span>
                       <span class="relative group/tooltip inline-block">
                         <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors" title="Add attachment" aria-label="Add attachment" id="draft-attachment-btn-{{ task.pk }}">
-                          <i class="ti ti-paperclip size-4" aria-hidden="true"></i>
+                          <span class="material-icons size-4" aria-hidden="true">attach_file</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Add attachment</span>
                       </span>
@@ -1358,20 +1358,20 @@ Usage:
                                 if (data && data.success && data.attachment) {
                                   var name = data.attachment.filename || 'file';
                                   var ext = name.indexOf('.') >= 0 ? name.split('.').pop().toLowerCase() : '';
-                                  var icon = 'ti-file';
+                                  var icon = 'insert_drive_file';
                                   var bg = 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
-                                  if (['jpg','jpeg','png','gif','webp','svg','bmp','ico'].indexOf(ext) >= 0) { icon = 'ti-photo'; bg = 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'; }
-                                  else if (['mp4','webm','mov','avi','mkv','m4v'].indexOf(ext) >= 0) { icon = 'ti-video'; bg = 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400'; }
-                                  else if (['mp3','wav','ogg','m4a','flac','aac'].indexOf(ext) >= 0) { icon = 'ti-music'; bg = 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400'; }
-                                  else if (ext === 'pdf') { icon = 'ti-file-text'; bg = 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'; }
-                                  else if (['xls','xlsx','csv'].indexOf(ext) >= 0) { icon = 'ti-file-spreadsheet'; bg = 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'; }
-                                  else if (['doc','docx','txt','rtf'].indexOf(ext) >= 0) { icon = 'ti-file-description'; bg = 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'; }
+                                  if (['jpg','jpeg','png','gif','webp','svg','bmp','ico'].indexOf(ext) >= 0) { icon = 'image'; bg = 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'; }
+                                  else if (['mp4','webm','mov','avi','mkv','m4v'].indexOf(ext) >= 0) { icon = 'movie'; bg = 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400'; }
+                                  else if (['mp3','wav','ogg','m4a','flac','aac'].indexOf(ext) >= 0) { icon = 'music_note'; bg = 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400'; }
+                                  else if (ext === 'pdf') { icon = 'picture_as_pdf'; bg = 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'; }
+                                  else if (['xls','xlsx','csv'].indexOf(ext) >= 0) { icon = 'table_chart'; bg = 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'; }
+                                  else if (['doc','docx','txt','rtf'].indexOf(ext) >= 0) { icon = 'description'; bg = 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'; }
                                   var sizeStr = data.attachment.size_bytes != null ? (data.attachment.size_bytes < 1024 ? data.attachment.size_bytes + ' B' : (data.attachment.size_bytes < 1048576 ? (data.attachment.size_bytes / 1024).toFixed(1) + ' KB' : (data.attachment.size_bytes / 1048576).toFixed(1) + ' MB')) : '';
                                   var downloadUrl = '/drafts/' + draftId + '/attachments/' + data.attachment.id + '/download/';
                                   var li = document.createElement('li');
                                   li.className = 'flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 text-sm';
                                   li.setAttribute('data-attachment-id', data.attachment.id);
-                                  li.innerHTML = '<span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md ' + bg + '"><i class="ti ' + icon + ' size-5 block" aria-hidden="true"></i></span><div class="min-w-0 flex-1"><span class="text-gray-700 dark:text-gray-300 truncate block" title="' + name.replace(/"/g, '&quot;') + '">' + name.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' + (sizeStr ? '<span class="text-xs text-gray-500 dark:text-gray-400">' + sizeStr + '</span>' : '') + '</div><a href="' + downloadUrl + '" class="draft-attachment-download flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download" title="Download"><i class="ti ti-download size-4"></i></a><button type="button" class="draft-attachment-remove flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-attachment-id="' + data.attachment.id + '" aria-label="Remove"><i class="ti ti-x size-4"></i></button>';
+                                  li.innerHTML = '<span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md ' + bg + '"><span class="material-icons size-5 block" aria-hidden="true">' + icon + '</span></span><div class="min-w-0 flex-1"><span class="text-gray-700 dark:text-gray-300 truncate block" title="' + name.replace(/"/g, '&quot;') + '">' + name.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' + (sizeStr ? '<span class="text-xs text-gray-500 dark:text-gray-400">' + sizeStr + '</span>' : '') + '</div><a href="' + downloadUrl + '" class="draft-attachment-download flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download" title="Download"><span class="material-icons size-4">download</span></a><button type="button" class="draft-attachment-remove flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" data-attachment-id="' + data.attachment.id + '" aria-label="Remove"><span class="material-icons size-4">close</span></button>';
                                   attachmentsUl.appendChild(li);
                                   attachmentsList.classList.remove('hidden');
                                 }

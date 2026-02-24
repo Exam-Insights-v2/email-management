@@ -17,13 +17,13 @@ Usage:
             <h2 id="action-detail-{{ action.pk }}-title" class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex-1 min-w-0 pr-2 truncate">{{ action.name }}</h2>
             <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <button type="button" onclick="if (window.openEditActionModal) window.openEditActionModal({{ action.pk }});" class="inline-flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white inset-ring inset-ring-gray-200 dark:inset-ring-white/5 hover:bg-gray-200 dark:hover:bg-white/20">
-                <i class="ti ti-pencil mr-1 -ml-0.5 size-3.5 sm:size-4 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true"></i>
+                <span class="material-icons mr-1 -ml-0.5 size-3.5 sm:size-4 text-gray-900 dark:text-white flex-shrink-0" aria-hidden="true">edit</span>
                 <span class="hidden sm:inline">Edit</span>
               </button>
               <button type="button" command="close" commandfor="action-detail-{{ action.pk }}" class="relative rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">
                 <span class="absolute -inset-2.5"></span>
                 <span class="sr-only">Close</span>
-                <i class="ti ti-x size-5 sm:size-6" aria-hidden="true"></i>
+                <span class="material-icons size-5 sm:size-6" aria-hidden="true">close</span>
               </button>
             </div>
           </div>

@@ -36,7 +36,7 @@ List row component for tasks - reusable across priority sections
       <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
       {% endif %}
       <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" aria-label="Mark as Done" title="Mark as Done">
-        <i class="ti ti-circle-check size-4" aria-hidden="true"></i>
+        <span class="material-icons size-4" aria-hidden="true">check_circle</span>
       </button>
     </form>
   </div>
@@ -53,7 +53,7 @@ List row component for tasks - reusable across priority sections
       <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
       {% endif %}
       <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600" aria-label="Undone" title="Undone">
-        <i class="ti ti-circle-dashed size-4" aria-hidden="true"></i>
+        <span class="material-icons size-4" aria-hidden="true">radio_button_unchecked</span>
       </button>
     </form>
   </div>
@@ -68,13 +68,13 @@ List row component for tasks - reusable across priority sections
   <!-- Status/Progress Icon Column -->
   <div class="flex items-center justify-center">
     {% if task.status == 'done' %}
-      <i class="ti ti-circle-check size-4 text-green-500 dark:text-green-400" aria-hidden="true" title="Done"></i>
+      <span class="material-icons size-4 text-green-500 dark:text-green-400" aria-hidden="true" title="Done">check_circle</span>
     {% elif task.status == 'in_progress' %}
-      <i class="ti ti-clock-play size-4 text-blue-500 dark:text-blue-400" aria-hidden="true" title="In Progress"></i>
+      <span class="material-icons size-4 text-blue-500 dark:text-blue-400" aria-hidden="true" title="In Progress">play_circle</span>
     {% elif task.status == 'cancelled' %}
-      <i class="ti ti-circle-x size-4 text-red-500 dark:text-red-400" aria-hidden="true" title="Cancelled"></i>
+      <span class="material-icons size-4 text-red-500 dark:text-red-400" aria-hidden="true" title="Cancelled">cancel</span>
     {% else %}
-      <i class="ti ti-clock size-4 text-yellow-500 dark:text-yellow-400" aria-hidden="true" title="Pending"></i>
+      <span class="material-icons size-4 text-yellow-500 dark:text-yellow-400" aria-hidden="true" title="Pending">schedule</span>
     {% endif %}
   </div>
   
@@ -98,7 +98,7 @@ List row component for tasks - reusable across priority sections
   
   <!-- Date Added Column (Desktop) -->
   <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 justify-end">
-    <i class="ti ti-calendar size-3" aria-hidden="true"></i>
+    <span class="material-icons size-3" aria-hidden="true">calendar_today</span>
     {% load db_filters %}
     <time datetime="{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|date:'Y-m-d' }}{% else %}{{ task.created_at|date:'Y-m-d' }}{% endif %}">{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|aus_time:"d M g:i A" }}{% else %}{{ task.created_at|aus_time:"d M g:i A" }}{% endif %}</time>
   </div>
@@ -117,7 +117,7 @@ List row component for tasks - reusable across priority sections
       <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
       {% endif %}
       <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" aria-label="Mark as Done" title="Mark as Done">
-        <i class="ti ti-circle-check size-4 sm:size-5" aria-hidden="true"></i>
+        <span class="material-icons size-4 sm:size-5" aria-hidden="true">check_circle</span>
       </button>
     </form>
   </div>
@@ -134,7 +134,7 @@ List row component for tasks - reusable across priority sections
       <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
       {% endif %}
       <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600" aria-label="Undone" title="Undone">
-        <i class="ti ti-circle-dashed size-4 sm:size-5" aria-hidden="true"></i>
+        <span class="material-icons size-4 sm:size-5" aria-hidden="true">radio_button_unchecked</span>
       </button>
     </form>
   </div>

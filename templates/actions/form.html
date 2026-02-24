@@ -36,7 +36,7 @@
               {% if field.field.widget.input_type == 'select' %}
                 <div class="grid grid-cols-1 [&_select]:block [&_select]:w-full [&_select]:rounded-md [&_select]:bg-gray-100 [&_select]:dark:bg-white/5 [&_select]:px-3 [&_select]:py-1.5 [&_select]:text-base [&_select]:text-gray-900 [&_select]:dark:text-white [&_select]:border-0 [&_select]:focus:ring-2 [&_select]:focus:ring-cyan-600 [&_select]:sm:text-sm/6 [&_select]:appearance-none [&_select]:*:bg-white [&_select]:dark:*:bg-gray-800">
                   {{ field }}
-                  <i class="ti ti-chevron-down pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4" aria-hidden="true"></i>
+                  <span class="material-icons pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4" aria-hidden="true">expand_more</span>
                 </div>
               {% else %}
                 {{ field }}

@@ -155,6 +155,8 @@ EMAIL_FIRST_SYNC_MAX_MESSAGES = int(os.environ.get("EMAIL_FIRST_SYNC_MAX_MESSAGE
 EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES = int(
     os.environ.get("EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES", "200")
 )
+# Email sync audit: log each onboarding/sync decision (Gmail fetch, store, queue). Set to false in production to keep logs quiet.
+EMAIL_SYNC_AUDIT_LOGGING = os.environ.get("EMAIL_SYNC_AUDIT_LOGGING", "true").lower() in ("1", "true", "yes")
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -228,6 +230,11 @@ LOGGING = {
         "mail": {
             "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "mail.sync_audit": {
+            "handlers": ["console"],
+            "level": "INFO" if EMAIL_SYNC_AUDIT_LOGGING else "WARNING",
             "propagate": False,
         },
         "automation": {

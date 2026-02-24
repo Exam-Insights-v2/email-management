@@ -26,7 +26,7 @@
             {% if field.field.widget.input_type == 'select' %}
               <div class="grid grid-cols-1 select-wrapper">
                 {{ field }}
-                <i class="ti ti-chevron-down pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-600 dark:text-gray-400" aria-hidden="true"></i>
+                <span class="material-icons pointer-events-none col-start-1 row-start-1 mr-2 size-4 self-center justify-self-end text-gray-600 dark:text-gray-400" aria-hidden="true">expand_more</span>
               </div>
             {% else %}
               {{ field }}

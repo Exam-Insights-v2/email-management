@@ -14,11 +14,13 @@ from accounts.models import Account, Provider
 
 logger = logging.getLogger(__name__)
 from accounts.services import (
-    GoogleOAuthService, 
+    GoogleOAuthService,
     MicrosoftOAuthService,
     GmailOAuthService,
     MicrosoftEmailOAuthService,
 )
+from automation.utils import setup_account_automation
+from mail.onboarding import trigger_sync_after_connect
 
 
 def login_view(request):
@@ -85,18 +87,8 @@ def google_oauth_callback(request):
 
         # Automatically connect Gmail account
         try:
-            _logpath = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
-            os.makedirs(os.path.dirname(_logpath), exist_ok=True)
             # Get email from user info
             user_email = user.email
-
-            # #region agent log
-            try:
-                with open(_logpath, "a") as _f:
-                    _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "A,D", "location": "auth_views.google_oauth_callback", "message": "before get_or_create", "data": {"user_email": user_email}, "timestamp": int(time.time() * 1000)}) + "\n")
-            except Exception:
-                pass
-            # #endregion
 
             # Get or create account
             account, created = Account.objects.get_or_create(
@@ -105,36 +97,13 @@ def google_oauth_callback(request):
                 defaults={"sync_enabled": True}
             )
 
-            # #region agent log
-            try:
-                with open(_logpath, "a") as _f:
-                    _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "A,D,E", "location": "auth_views.google_oauth_callback", "message": "after get_or_create", "data": {"account_pk": account.pk, "account_is_connected": account.is_connected, "created": created}, "timestamp": int(time.time() * 1000)}) + "\n")
-            except Exception:
-                pass
-            # #endregion
-
             # Link account to user
             if user not in account.users.all():
                 account.users.add(user)
 
             # Save OAuth token if account is not already connected
             if not account.is_connected:
-                # #region agent log
-                try:
-                    with open(_logpath, "a") as _f:
-                        _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "A", "location": "auth_views.google_oauth_callback", "message": "entering save_token branch", "data": {"account_pk": account.pk}, "timestamp": int(time.time() * 1000)}) + "\n")
-                except Exception:
-                    pass
-                # #endregion
                 GmailOAuthService.save_token(account, credentials)
-                # #region agent log
-                try:
-                    account.refresh_from_db()
-                    with open(_logpath, "a") as _f:
-                        _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "B", "location": "auth_views.google_oauth_callback", "message": "after save_token (from DB)", "data": {"account_pk": account.pk, "account_is_connected": account.is_connected}, "timestamp": int(time.time() * 1000)}) + "\n")
-                except Exception:
-                    pass
-                # #endregion
 
                 # Set up recommended labels and actions for new accounts
                 if created:
@@ -148,22 +117,8 @@ def google_oauth_callback(request):
                 else:
                     messages.success(request, f"Welcome, {user.email}! Your Gmail account has been connected. (Email sync will start shortly)")
             else:
-                # #region agent log
-                try:
-                    with open(_logpath, "a") as _f:
-                        _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "A", "location": "auth_views.google_oauth_callback", "message": "else branch (already connected)", "data": {"account_pk": account.pk}, "timestamp": int(time.time() * 1000)}) + "\n")
-                except Exception:
-                    pass
-                # #endregion
                 messages.success(request, f"Welcome, {user.email}!")
         except Exception as account_error:
-            # #region agent log
-            try:
-                with open(_logpath, "a") as _f:
-                    _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "A,E", "location": "auth_views.google_oauth_callback", "message": "exception in account connect", "data": {"error": str(account_error)[:200]}, "timestamp": int(time.time() * 1000)}) + "\n")
-            except Exception:
-                pass
-            # #endregion
             # Log error but don't fail login if account connection fails
             logger.error("Error connecting Gmail account during login: %s", account_error)
             messages.success(request, f"Welcome, {user.email}! (Note: Email account connection had an issue - you can connect it manually in Settings)")
@@ -262,10 +217,8 @@ def microsoft_oauth_callback(request):
                 
                 # Set up recommended labels and actions for new accounts
                 if created:
-                    from automation.utils import setup_account_automation
                     setup_account_automation(account)
                 
-                from mail.onboarding import trigger_sync_after_connect
                 ok, _ = trigger_sync_after_connect(account)
                 if ok:
                     messages.success(request, f"Welcome, {user.email}! Your Microsoft email account has been connected. Syncing emails...")

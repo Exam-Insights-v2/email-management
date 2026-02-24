@@ -80,7 +80,7 @@
                 {% for attachment in draft.attachments.all %}
                 <li class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6">
                   <div class="flex w-0 flex-1 items-center">
-                    <i class="ti ti-paperclip size-5 shrink-0 text-gray-500" aria-hidden="true"></i>
+                    <span class="material-icons size-5 shrink-0 text-gray-500" aria-hidden="true">attach_file</span>
                     <div class="ml-4 flex min-w-0 flex-1 gap-2">
                       <span class="truncate font-medium text-white">{{ attachment.filename }}</span>
                       <span class="shrink-0 text-gray-500">{{ attachment.size_bytes|filesizeformat }}</span>

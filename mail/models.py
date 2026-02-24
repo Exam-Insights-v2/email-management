@@ -95,3 +95,34 @@ class DraftAttachment(models.Model):
 
     def __str__(self):
         return self.filename
+
+
+class SyncRun(models.Model):
+    """
+    Audit record for an onboarding/sync run. Used to inspect which emails were seen,
+    stored, and queued for processing (see show_onboarding_trace, explain_email).
+    """
+    class Phase(models.TextChoices):
+        BOOTSTRAP = "bootstrap", "Bootstrap (post-connect)"
+        FULL = "full", "Full sync (Celery)"
+
+    account = models.ForeignKey(
+        "accounts.Account", on_delete=models.CASCADE, related_name="sync_runs"
+    )
+    phase = models.CharField(max_length=32, choices=Phase.choices)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    params = models.JSONField(default=dict, blank=True)
+    gmail_query = models.CharField(max_length=512, blank=True)
+    message_ids_from_provider = models.JSONField(default=list, blank=True)
+    synced_email_ids = models.JSONField(default=list, blank=True)
+    thread_backfill_stats = models.JSONField(default=dict, blank=True)
+    emails_queued_for_processing = models.JSONField(default=list, blank=True)
+    error = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-finished_at", "-started_at"]
+        indexes = [models.Index(fields=["account", "finished_at"])]
+
+    def __str__(self):
+        return f"SyncRun {self.phase} account={self.account_id} at {self.finished_at}"

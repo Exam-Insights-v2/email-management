@@ -10,7 +10,7 @@ import logging
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from mail.models import EmailMessage, EmailThread
+from mail.models import EmailThread
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class Command(BaseCommand):
             return
 
         try:
-            from mail.services import EmailSyncService
+            from mail.services import EmailSyncService, store_thread_messages
             sync = EmailSyncService()
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Cannot get sync service: {e}"))
@@ -76,23 +76,8 @@ class Command(BaseCommand):
                 errors += 1
                 continue
             with transaction.atomic():
-                for m in thread_messages:
-                    EmailMessage.objects.update_or_create(
-                        account=account,
-                        external_message_id=m["external_message_id"],
-                        defaults={
-                            "thread": thread,
-                            "subject": m.get("subject") or "",
-                            "from_address": m.get("from_address") or "",
-                            "from_name": m.get("from_name") or "",
-                            "to_addresses": m.get("to_addresses") or [],
-                            "cc_addresses": m.get("cc_addresses") or [],
-                            "bcc_addresses": m.get("bcc_addresses") or [],
-                            "date_sent": m.get("date_sent"),
-                            "body_html": m.get("body_html") or "",
-                        },
-                    )
-                    total_messages += 1
+                saved = store_thread_messages(account, thread, thread_messages)
+                total_messages += saved
             self.stdout.write(f"  Backfilled thread {ext_id}: {len(thread_messages)} message(s)")
 
         self.stdout.write(

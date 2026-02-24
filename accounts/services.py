@@ -4,7 +4,7 @@ import secrets
 import logging
 import time
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as std_timezone
 from typing import Optional, Tuple
 
 import requests
@@ -234,23 +234,7 @@ class GmailOAuthService:
             },
         )
         account.is_connected = True
-        _logpath = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
-        # #region agent log
-        try:
-            os.makedirs(os.path.dirname(_logpath), exist_ok=True)
-            with open(_logpath, "a") as _f:
-                _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "B", "location": "accounts.services.GmailOAuthService.save_token", "message": "before account.save", "data": {"account_pk": account.pk, "is_connected": account.is_connected}, "timestamp": int(time.time() * 1000)}) + "\n")
-        except Exception:
-            pass
-        # #endregion
         account.save(update_fields=["is_connected"])
-        # #region agent log
-        try:
-            with open(_logpath, "a") as _f:
-                _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "B", "location": "accounts.services.GmailOAuthService.save_token", "message": "after account.save", "data": {"account_pk": account.pk}, "timestamp": int(time.time() * 1000)}) + "\n")
-        except Exception:
-            pass
-        # #endregion
         return oauth_token
 
     @staticmethod
@@ -275,27 +259,40 @@ class GmailOAuthService:
             time_until_expiry = oauth_token.expires_at - timezone.now()
             # Refresh if token expires within 5 minutes
             expires_soon = time_until_expiry.total_seconds() < 300
-        
+
+        has_refresh_token = bool(oauth_token.refresh_token and str(oauth_token.refresh_token).strip())
+
         # If token is expired and we don't have a refresh token, fail fast
-        if is_token_expired and not oauth_token.refresh_token:
-            return None
+        # unless the token was just saved (e.g. from OAuth callback); then the
+        # access token from the exchange is still valid for the first sync.
+        if is_token_expired and not has_refresh_token:
+            from datetime import timedelta
+            if oauth_token.updated_at and (timezone.now() - oauth_token.updated_at) > timedelta(minutes=5):
+                return None
+            # Token saved in the last 5 minutes: use it (fresh exchange)
 
         credentials = Credentials(
             token=oauth_token.access_token,
-            refresh_token=oauth_token.refresh_token,
+            refresh_token=oauth_token.refresh_token or None,
             token_uri="https://oauth2.googleapis.com/token",
             client_id=settings.GOOGLE_OAUTH_CLIENT_ID,
             client_secret=settings.GOOGLE_OAUTH_CLIENT_SECRET,
             scopes=token_scopes,  # Use stored scopes, not current SCOPES
         )
         
-        # Set expiry from DB if available to ensure accurate expiry check
+        # Set expiry from DB if available. Google Auth compares expiry to naive UTC;
+        # Django stores timezone-aware datetimes, so convert to naive UTC to avoid TypeError.
         if oauth_token.expires_at:
-            credentials.expiry = oauth_token.expires_at
+            exp = oauth_token.expires_at
+            credentials.expiry = (
+                exp.astimezone(std_timezone.utc).replace(tzinfo=None)
+                if timezone.is_aware(exp)
+                else exp
+            )
 
         # Refresh token if expired or expiring soon (proactive refresh)
         # This ensures tokens are always fresh and users never see expiration errors
-        if (is_token_expired or expires_soon or credentials.expired) and credentials.refresh_token:
+        if (is_token_expired or expires_soon or credentials.expired) and has_refresh_token:
             try:
                 # Refresh the token
                 credentials.refresh(Request())
@@ -318,17 +315,8 @@ class GmailOAuthService:
                 # Temporary network errors or rate limits should not disconnect the account
                 error_str = str(e).lower()
                 # Check for permanent errors that indicate refresh token is invalid
-                permanent_errors = ["invalid_grant", "invalid_token", "unauthorized_client"]
+                permanent_errors = ["invalid_grant", "invalid_token", "unauthorized_client", "invalid_request", "missing required parameter"]
                 if any(keyword in error_str for keyword in permanent_errors):
-                    # #region agent log
-                    try:
-                        _lp = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
-                        os.makedirs(os.path.dirname(_lp), exist_ok=True)
-                        with open(_lp, "a") as _f:
-                            _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "C", "location": "accounts.services.GmailOAuthService.get_valid_credentials", "message": "calling disconnect_account after refresh failure", "data": {"account_pk": account.pk, "error": str(e)[:150]}, "timestamp": int(time.time() * 1000)}) + "\n")
-                    except Exception:
-                        pass
-                    # #endregion
                     # Log the error for debugging
                     logger.warning("Gmail refresh token invalid for account %s: %s", account.pk, e)
                     GmailOAuthService.disconnect_account(account)
@@ -338,21 +326,17 @@ class GmailOAuthService:
                     logger.warning("Gmail token refresh failed (non-fatal) for account %s: %s", account.pk, e)
                 return None
 
+        # Do not return credentials that are expired and cannot be refreshed (would fail on first API call)
+        if (credentials.expired or is_token_expired or expires_soon) and not has_refresh_token:
+            logger.warning("Gmail account %s has no refresh token; disconnecting so user can re-connect.", account.pk)
+            GmailOAuthService.disconnect_account(account)
+            return None
+
         return credentials
 
     @staticmethod
     def disconnect_account(account: Account):
         """Disconnect account and remove OAuth token"""
-        # #region agent log
-        try:
-            import traceback
-            _lp = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
-            os.makedirs(os.path.dirname(_lp), exist_ok=True)
-            with open(_lp, "a") as _f:
-                _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "C", "location": "accounts.services.GmailOAuthService.disconnect_account", "message": "disconnect_account called", "data": {"account_pk": account.pk, "caller": traceback.format_stack()[-3].strip()}, "timestamp": int(time.time() * 1000)}) + "\n")
-        except Exception:
-            pass
-        # #endregion
         OAuthToken.objects.filter(account=account).delete()
         account.is_connected = False
         account.save(update_fields=["is_connected"])

@@ -2,12 +2,14 @@ import logging
 
 from celery import shared_task
 from django.db import transaction
+from django.utils import timezone
 
 from accounts.models import Account
 
 logger = logging.getLogger(__name__)
+sync_audit = logging.getLogger("mail.sync_audit")
 from automation.tasks import process_email
-from mail.models import EmailMessage
+from mail.models import EmailMessage, SyncRun
 from mail.services import EmailSyncService
 from mail.sync_status import (
     clear_last_sync_error,
@@ -20,19 +22,24 @@ from mail.sync_status import (
 @shared_task
 def sync_account_emails(account_id: int):
     """Sync emails for an account and trigger processing"""
+    logger.info("sync_account_emails starting for account_id=%s", account_id)
     try:
         account = Account.objects.get(pk=account_id)
     except Account.DoesNotExist:
+        logger.warning("sync_account_emails: account_id=%s not found", account_id)
         return {"error": "Account not found"}
 
     if not account.is_connected:
+        logger.warning("sync_account_emails: account_id=%s not connected", account_id)
         return {"error": "Account is not connected"}
 
     if not account.sync_enabled:
+        logger.warning("sync_account_emails: account_id=%s sync disabled", account_id)
         return {"error": "Sync is disabled for this account"}
 
     set_sync_in_progress(account_id, True)
     clear_last_sync_error(account_id)
+    sync_run_started = timezone.now()
     try:
         from django.db.models import Count
 
@@ -43,6 +50,7 @@ def sync_account_emails(account_id: int):
             result = sync_service.sync_account(account)
         except ValueError as e:
             error_msg = str(e)
+            logger.warning("sync_account_emails: sync_account failed account_id=%s error=%s", account_id, error_msg)
             set_last_sync_error(account_id, error_msg)
             set_sync_in_progress(account_id, False)
             if "not connected" in error_msg.lower() or "token is invalid" in error_msg.lower():
@@ -51,22 +59,56 @@ def sync_account_emails(account_id: int):
 
         synced_email_ids = result.get("synced_email_ids", [])
 
-        emails_without_tasks = get_emails_to_process(account, exclude_threads_with_tasks=True)
+        emails_without_tasks = get_emails_to_process(account, exclude_threads_with_tasks=True, log_audit=True)
+        emails_without_tasks_count = emails_without_tasks.count()
+
+        to_process_synced = list(emails_without_tasks.filter(pk__in=synced_email_ids))
+        other_qs = emails_without_tasks.exclude(pk__in=synced_email_ids)[:20]
+        other_emails_to_process = list(other_qs)
+        queued_ids = []
 
         if synced_email_ids:
-            synced_emails_to_process = emails_without_tasks.filter(pk__in=synced_email_ids)
-            for email_msg in synced_emails_to_process:
+            for email_msg in to_process_synced:
                 try:
                     process_email.delay(email_msg.pk)
+                    queued_ids.append(email_msg.pk)
                 except Exception:
                     pass
 
-        other_emails_to_process = emails_without_tasks.exclude(pk__in=synced_email_ids)[:20]
         for email_msg in other_emails_to_process:
             try:
                 process_email.delay(email_msg.pk)
+                queued_ids.append(email_msg.pk)
             except Exception:
                 pass
+
+        sync_audit.info(
+            "sync_account_emails processing selection",
+            extra={
+                "account_id": account_id,
+                "synced_email_ids_count": len(synced_email_ids),
+                "emails_without_tasks_count": emails_without_tasks_count,
+                "synced_eligible_count": len(to_process_synced),
+                "other_queued_count": len(other_emails_to_process),
+                "queued_for_process_email_count": len(queued_ids),
+                "queued_email_ids_sample": queued_ids[:30] if len(queued_ids) > 30 else queued_ids,
+            },
+        )
+
+        SyncRun.objects.create(
+            account=account,
+            phase=SyncRun.Phase.FULL,
+            started_at=sync_run_started,
+            finished_at=timezone.now(),
+            params={
+                "synced_email_ids_count": len(synced_email_ids),
+                "queued_count": len(queued_ids),
+            },
+            message_ids_from_provider=result.get("message_ids_from_provider", []),
+            synced_email_ids=synced_email_ids,
+            thread_backfill_stats=result.get("thread_backfill_stats", {}),
+            emails_queued_for_processing=queued_ids,
+        )
 
         emails_with_tasks = EmailMessage.objects.filter(
             account=account
@@ -84,8 +126,16 @@ def sync_account_emails(account_id: int):
 
         set_sync_in_progress(account_id, False)
         clear_last_sync_error(account_id)
+        logger.info(
+            "sync_account_emails completed account_id=%s created=%s updated=%s total=%s",
+            account_id,
+            result.get("created", 0),
+            result.get("updated", 0),
+            result.get("total", 0),
+        )
         return result
     except Exception as e:
+        logger.exception("sync_account_emails failed account_id=%s", account_id)
         set_sync_in_progress(account_id, False)
         set_last_sync_error(account_id, str(e))
         return {"error": str(e)}

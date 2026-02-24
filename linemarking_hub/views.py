@@ -18,9 +18,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from accounts.models import Account, OAuthToken
+from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from automation.models import Action, EmailLabel, Label
 from jobs.models import Job, Task
 from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
+from mail.services import GmailService, persist_sent_message
 from linemarking_hub.templatetags.db_filters import _strip_quoted_email_html
 from linemarking_hub.forms import (
     AccountForm,
@@ -408,15 +410,6 @@ def tasks_list(request):
     
     # Check account connection status and token validity for user's accounts
     user_accounts = request.user.accounts.all() if request.user.is_authenticated else Account.objects.none()
-    # #region agent log
-    try:
-        _logpath = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
-        os.makedirs(os.path.dirname(_logpath), exist_ok=True)
-        with open(_logpath, "a") as _f:
-            _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "D", "location": "views.tasks_list", "message": "accounts on load", "data": {"accounts": [{"pk": a.pk, "email": a.email, "is_connected": a.is_connected} for a in user_accounts]}, "timestamp": int(time.time() * 1000)}) + "\n")
-    except Exception:
-        pass
-    # #endregion
     account_statuses = {}
     for acc in user_accounts:
         has_token_error = False
@@ -424,16 +417,13 @@ def tasks_list(request):
         
         if acc.is_connected:
             # Check if token is valid (refresh logic will handle proactive refresh)
-            # Don't mark as disconnected here - let the refresh logic handle that
             try:
                 if acc.provider == 'gmail':
-                    from accounts.services import GmailOAuthService
                     credentials = GmailOAuthService.get_valid_credentials(acc)
                     if not credentials:
                         has_token_error = True
                         token_error_message = "Unable to get valid credentials. Please reconnect your account."
                 elif acc.provider == 'microsoft':
-                    from accounts.services import MicrosoftEmailOAuthService
                     credentials = MicrosoftEmailOAuthService.get_valid_credentials(acc)
                     if not credentials:
                         has_token_error = True
@@ -581,34 +571,22 @@ def task_reprocess(request, pk):
 def emails_list(request):
     emails = EmailMessage.objects.filter(
         account__in=request.user.accounts.all()
-    ).select_related("account", "thread").prefetch_related("labels__label", "tasks").order_by("-date_sent", "-created_at")
+    ).select_related("account", "thread").prefetch_related("thread__messages", "labels__label", "tasks").order_by("-date_sent", "-created_at")
     
-    # Preload email thread and draft data for all emails
-    # Reuse GmailService instance per account for better caching
-    from mail.services import GmailService
-    gmail_services = {}  # Cache service instances per account ID
-    
+    # Build thread message data from DB (sync already stores full threads)
     email_data = {}
     for email in emails:
         thread_messages = []
-        if email.account.is_connected and email.thread:
-            try:
-                # Reuse service instance for this account
-                account_id = email.account.pk
-                if account_id not in gmail_services:
-                    gmail_services[account_id] = GmailService()
-                
-                gmail_service = gmail_services[account_id]
-                thread_messages = gmail_service.get_thread_messages(
-                    email.account, email.thread.external_thread_id
-                )
-                thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
-            except Exception as e:
-                # Clear cache for this account on error to force refresh next time
-                account_id = email.account.pk
-                GmailService.clear_cache(account_id)
-                gmail_services.pop(account_id, None)
-                logger.error(f"Error fetching thread messages for email {email.pk}: {e}")
+        if email.thread:
+            for m in email.thread.messages.all():
+                thread_messages.append({
+                    "from_address": m.from_address or "",
+                    "from_name": m.from_name or m.from_address or "",
+                    "subject": m.subject or "",
+                    "date_sent": m.date_sent,
+                    "body_html": m.body_html or "",
+                })
+            thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
         
         drafts = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at")
         
@@ -721,7 +699,6 @@ def email_delete(request, pk):
     # Delete from Gmail if connected
     if email.account.is_connected:
         try:
-            from mail.services import GmailService
             gmail_service = GmailService()
             gmail_service.delete_message(email.account, email.external_message_id)
             messages.success(request, f"Email '{subject}' deleted from Gmail and database.")
@@ -744,7 +721,6 @@ def email_archive(request, pk):
         return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
     
     try:
-        from mail.services import GmailService
         gmail_service = GmailService()
         gmail_service.archive_message(email.account, email.external_message_id)
         messages.success(request, f"Email '{email.subject or 'Untitled'}' archived successfully.")
@@ -765,7 +741,6 @@ def email_unarchive(request, pk):
         return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
     try:
-        from mail.services import GmailService
         gmail_service = GmailService()
         gmail_service.unarchive_message(email.account, email.external_message_id)
         messages.success(request, f"Email '{email.subject or 'Untitled'}' moved back to inbox.")
@@ -878,7 +853,6 @@ def draft_send(request, pk):
         return redirect("draft_detail", pk=draft.pk)
 
     try:
-        from mail.services import GmailService
         gmail_service = GmailService()
 
         if send_account.provider != "gmail":
@@ -900,7 +874,6 @@ def draft_send(request, pk):
                 bcc_addresses=draft.bcc_addresses or [],
             )
 
-        from mail.services import persist_sent_message
         persist_sent_message(
             account=send_account,
             send_result=result,
@@ -944,7 +917,6 @@ def draft_send_and_mark_done(request, pk):
         return redirect("tasks_list")
 
     try:
-        from mail.services import GmailService
         gmail_service = GmailService()
 
         if send_account.provider != "gmail":
@@ -966,7 +938,6 @@ def draft_send_and_mark_done(request, pk):
                 bcc_addresses=draft.bcc_addresses or [],
             )
 
-        from mail.services import persist_sent_message
         persist_sent_message(
             account=send_account,
             send_result=result,
@@ -1179,10 +1150,6 @@ def account_detail(request, pk):
 @login_required
 def account_create(request):
     """Redirect directly to Gmail OAuth connection - email will be obtained from OAuth"""
-    from django.shortcuts import redirect
-    from django.urls import reverse
-    from accounts.services import GmailOAuthService
-    
     # Get authorization URL - we'll get the email from OAuth response
     # Force re-auth to ensure we get all required scopes
     redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
@@ -1376,26 +1343,18 @@ def draft_rewrite(request, pk):
     email = draft.email_message
     email_context = f"Subject: {email.subject or '(No subject)'}\nFrom: {email.from_name or email.from_address} ({email.from_address})\nBody:\n{email.body_html or ''}"
     
-    # Include thread messages if available
-    if email.account.is_connected and email.thread:
-        try:
-            from mail.services import GmailService
-            gmail_service = GmailService()
-            thread_messages = gmail_service.get_thread_messages(
-                email.account, email.thread.external_thread_id
-            )
-            if thread_messages:
-                thread_context = "\n\nEmail Thread:\n"
-                for msg in thread_messages[:5]:  # Limit to last 5 messages
-                    thread_context += f"From: {msg.get('from_name', msg.get('from_address', ''))}\n"
-                    thread_context += f"Subject: {msg.get('subject', '')}\n"
-                    thread_context += f"Body: {msg.get('body_html', '')[:500]}\n\n"
-                email_context += thread_context
-        except Exception as e:
-            # Clear cache on error
-            from mail.services import GmailService
-            GmailService.clear_cache(email.account.pk)
-            logger.warning(f"Could not fetch thread messages for draft rewrite: {e}")
+    # Include thread messages from DB (sync already stores full threads)
+    if email.thread:
+        thread_messages = list(
+            email.thread.messages.values("from_name", "from_address", "subject", "body_html").order_by("-date_sent")
+        )
+        if thread_messages:
+            thread_context = "\n\nEmail Thread:\n"
+            for msg in thread_messages[:5]:
+                thread_context += f"From: {msg.get('from_name') or msg.get('from_address', '')}\n"
+                thread_context += f"Subject: {msg.get('subject', '')}\n"
+                thread_context += f"Body: {(msg.get('body_html') or '')[:500]}\n\n"
+            email_context += thread_context
     
     # Get writing style if available
     writing_style = email.account.writing_style if email.account.writing_style else None
@@ -1610,16 +1569,13 @@ def settings_view(request):
         
         if account.is_connected:
             # Check if token is valid (refresh logic will handle proactive refresh)
-            # Don't mark as disconnected here - let the refresh logic handle that
             try:
                 if account.provider == 'gmail':
-                    from accounts.services import GmailOAuthService
                     credentials = GmailOAuthService.get_valid_credentials(account)
                     if not credentials:
                         has_token_error = True
                         token_error_message = "Unable to get valid credentials. Please reconnect your account."
                 elif account.provider == 'microsoft':
-                    from accounts.services import MicrosoftEmailOAuthService
                     credentials = MicrosoftEmailOAuthService.get_valid_credentials(account)
                     if not credentials:
                         has_token_error = True

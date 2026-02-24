@@ -1,12 +1,21 @@
+"""
+Sync emails via the same full pipeline as Celery and "Sync now" in the UI.
+Runs sync_account_emails synchronously so sync, SyncRun, and process_email queue
+all run without a Celery worker for the sync step. process_email tasks still
+require a worker to run.
+"""
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
 from accounts.models import Account
-from mail.services import EmailSyncService
+from mail.tasks import sync_account_emails
 
 
 class Command(BaseCommand):
-    help = "Sync emails for all connected accounts or a specific account"
+    help = (
+        "Full sync for connected accounts (same as Celery/UI Sync now): "
+        "sync from provider, create SyncRun, queue process_email. "
+        "Use --account-id or --email to sync one account, or --all for all connected."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -33,46 +42,34 @@ class Command(BaseCommand):
         elif options["all"]:
             accounts = Account.objects.filter(is_connected=True, sync_enabled=True)
         else:
-            # Default: sync all connected accounts
             accounts = Account.objects.filter(is_connected=True, sync_enabled=True)
 
         if not accounts.exists():
             self.stdout.write(self.style.WARNING("No connected accounts found to sync."))
             return
 
-        sync_service = EmailSyncService()
-        total_created = 0
-        total_updated = 0
-
         for account in accounts:
             self.stdout.write(f"\nSyncing {account.email} ({account.provider})...")
 
             if not account.is_connected:
                 self.stdout.write(
-                    self.style.WARNING(f"  ⚠️  Account {account.email} is not connected. Skipping.")
+                    self.style.WARNING(f"  Account {account.email} is not connected. Skipping.")
                 )
                 continue
 
             try:
-                result = sync_service.sync_account(account, max_results=50)
-                total_created += result["created"]
-                total_updated += result["updated"]
-
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"  ✅ Synced {result['total']} emails "
-                        f"({result['created']} new, {result['updated']} updated)"
+                result = sync_account_emails.apply(args=(account.pk,))
+                out = result.get()
+                if isinstance(out, dict) and "error" in out:
+                    self.stdout.write(self.style.ERROR(f"  Error: {out['error']}"))
+                else:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"  Synced {out.get('total', 0)} emails "
+                            f"({out.get('created', 0)} new, {out.get('updated', 0)} updated)"
+                        )
                     )
-                )
-                self.stdout.write(f"  📅 Last synced: {account.last_synced_at}")
-
             except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"  ❌ Error syncing {account.email}: {str(e)}")
-                )
+                self.stdout.write(self.style.ERROR(f"  Error syncing {account.email}: {e}"))
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"\n✅ Sync complete! Total: {total_created} new, {total_updated} updated emails"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS("\nSync complete."))

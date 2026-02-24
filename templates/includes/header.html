@@ -21,15 +21,15 @@
             <span class="absolute -inset-1"></span>
             <span class="sr-only">Toggle theme</span>
             <!-- Sun icon (light mode) -->
-            <i id="theme-toggle-light-icon" class="ti ti-sun size-4 hidden dark:block" aria-hidden="true"></i>
+            <span id="theme-toggle-light-icon" class="material-icons size-4 hidden dark:block" aria-hidden="true">wb_sunny</span>
             <!-- Moon icon (dark mode) -->
-            <i id="theme-toggle-dark-icon" class="ti ti-moon size-4 block dark:hidden" aria-hidden="true"></i>
+            <span id="theme-toggle-dark-icon" class="material-icons size-4 block dark:hidden" aria-hidden="true">nights_stay</span>
           </button>
           <!-- Settings Button -->
           <a href="{% url 'settings' %}" class="relative inline-flex items-center justify-center rounded-full p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors {% if 'settings' in request.path %}text-gray-700 dark:text-gray-100 bg-gray-200 dark:bg-gray-700/50{% endif %} no-underline" aria-label="Settings">
             <span class="absolute -inset-1"></span>
             <span class="sr-only">Settings</span>
-            <i class="ti ti-settings size-4" aria-hidden="true"></i>
+            <span class="material-icons size-4" aria-hidden="true">settings</span>
           </a>
         </div>
         {% else %}

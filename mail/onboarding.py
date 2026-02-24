@@ -1,37 +1,30 @@
 """
-Helpers for post-connect onboarding: bootstrap sync + queue full sync.
+Helpers for post-connect onboarding: queue full sync.
 Used by account OAuth callbacks (Settings and login) to avoid duplicating logic.
 """
 import logging
 
 from accounts.models import Account
+from mail.tasks import sync_account_emails
 
 logger = logging.getLogger(__name__)
-
-BOOTSTRAP_MAX_MESSAGES = 100
+sync_audit = logging.getLogger("mail.sync_audit")
 
 
 def trigger_sync_after_connect(account: Account) -> tuple[bool, str | None]:
     """
-    Run a small in-process sync so the user sees some emails immediately, then queue
-    full sync. Returns (success, error_message). success is True if at least the
-    queue succeeded; error_message is set if queue failed (for user-facing message).
+    Queue full sync for the account (runs in Celery worker).
+    Returns (success, error_message). success is True if the task was queued.
     """
     try:
-        from mail.services import EmailSyncService, GmailService
-
-        if account.provider == "gmail":
-            GmailService.clear_cache(account.pk)
-        EmailSyncService().sync_account(
-            account,
-            max_total=BOOTSTRAP_MAX_MESSAGES,
-            force_initial=True,
+        logger.info(
+            "Onboarding: queuing full sync for account_id=%s (sync runs in Celery worker; check worker logs for audit)",
+            account.pk,
         )
-    except Exception:
-        pass
-    try:
-        from mail.tasks import sync_account_emails
-
+        sync_audit.info(
+            "Onboarding: queuing full sync; audit logs will appear in Celery worker output",
+            extra={"account_id": account.pk},
+        )
         sync_account_emails.delay(account.pk)
         return True, None
     except Exception as e:

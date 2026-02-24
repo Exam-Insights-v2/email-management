@@ -6,79 +6,68 @@
 {% block header_title %}Tasks{% endblock %}
 
 {% block header_center %}
-  <!-- Desktop version - shows in header center on sm+ screens -->
   <div id="refresh-sync-message" class="hidden sm:flex items-center justify-center" style="display: none !important;">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-xs sm:text-sm leading-none">
-      <i class="ti ti-refresh w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50/90 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-200/50 dark:border-cyan-700/50 shadow-sm transition-colors">
+      <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
       Refresh to sync
     </button>
   </div>
-  <!-- Mobile version - fixed centered on screen, shows on small screens only -->
   <div id="refresh-sync-message-mobile" class="hidden sm:hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none" style="display: none !important;">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 dark:text-cyan-400 rounded-md font-semibold hover:bg-cyan-600 hover:text-white transition-colors text-sm leading-none shadow-lg pointer-events-auto">
-      <i class="ti ti-refresh w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
+    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50/95 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 text-sm font-medium shadow-lg border border-cyan-200/50 dark:border-cyan-700/50 pointer-events-auto transition-colors">
+      <span class="material-icons w-4 h-4 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
       Refresh to sync
     </button>
   </div>
 {% endblock %}
 
 {% block header_action %}
-  <div class="flex items-center gap-2">
-    <!-- Filter Button -->
-    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm leading-none">
-      <i class="ti ti-filter w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+  <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200/80 dark:border-white/10 text-gray-600 dark:text-gray-400 text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+      <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">filter_list</span>
       Filter{% if active_filter_count > 0 %} ({{ active_filter_count }}){% endif %}
     </button>
-    <!-- Clear Filters Button (only shown when filters are active) -->
     {% if active_filter_count > 0 %}
-    <a href="{% url 'tasks_list' %}" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-md font-semibold hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors text-xs sm:text-sm leading-none no-underline">
-      <i class="ti ti-x w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+    <a href="{% url 'tasks_list' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50/90 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200/50 dark:border-red-800/50 shadow-sm transition-colors no-underline">
+      <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">close</span>
       Clear
     </a>
     {% endif %}
-    <!-- Search Button -->
-    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-2 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-xs sm:text-sm leading-none">
-      <i class="ti ti-search w-3.5 sm:w-4 h-3.5 sm:h-4 flex-shrink-0" aria-hidden="true"></i>
+    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200/80 dark:border-white/10 text-gray-600 dark:text-gray-400 text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+      <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">search</span>
       Search
     </button>
-    <!-- Create Task Button -->
     {% include 'includes/create_modal.html' with modal_id="create-task" title="Create Task" form_template="tasks/form_content.html" form_url="task_create" button_text="Create" form=form %}
   </div>
 {% endblock %}
 
 {% block content %}
-<!-- Please connect (friendly prompt when account not connected) -->
 {% if user_accounts %}
   {% for account in user_accounts %}
     {% with status=account_statuses|get_item:account.pk %}
     {% if not account.is_connected %}
-    <div class="mt-3 mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-      <div class="rounded-md bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 p-3 sm:p-4">
+    <div class="mt-2">
+      <div class="rounded-xl border border-cyan-200/60 dark:border-cyan-800/50 bg-cyan-50/80 dark:bg-cyan-900/20 p-4 shadow-sm">
         <div class="flex items-start gap-3">
           <div class="flex-shrink-0">
-            <i class="ti ti-mail-forward size-5 text-cyan-600 dark:text-cyan-400" aria-hidden="true"></i>
+            <span class="material-icons size-5 text-cyan-600 dark:text-cyan-400" aria-hidden="true">forward</span>
           </div>
           <div class="flex-1 min-w-0">
-            <h3 class="text-xs sm:text-sm font-semibold text-cyan-800 dark:text-cyan-200 mb-1">
-              Please connect {{ account.email }}
-            </h3>
-            <p class="text-xs sm:text-sm text-cyan-700 dark:text-cyan-300 mb-3">
-              Connect your account to sync emails.
-            </p>
-            <div class="flex items-center gap-2">
+            <h3 class="text-xs sm:text-sm font-semibold text-cyan-800 dark:text-cyan-200 mb-1">Please connect {{ account.email }}</h3>
+            <p class="text-xs sm:text-sm text-cyan-700 dark:text-cyan-300 mb-3">Connect your account to sync emails.</p>
+            <div class="flex items-center gap-2 flex-wrap">
               {% if account.provider == 'gmail' %}
-              <a href="{% url 'connect_gmail' %}?email={{ account.email|urlencode }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 text-white rounded-md text-xs sm:text-sm font-semibold hover:bg-cyan-500 transition-colors no-underline leading-none">
-                <i class="ti ti-refresh w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle;" aria-hidden="true"></i>
-                <span class="leading-none">Reconnect Gmail</span>
+              <a href="{% url 'connect_gmail' %}?email={{ account.email|urlencode }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 transition-colors no-underline shadow-sm">
+                <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">refresh</span>
+                Reconnect Gmail
               </a>
               {% elif account.provider == 'microsoft' %}
-              <a href="{% url 'connect_microsoft' %}?email={{ account.email|urlencode }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 text-white rounded-md text-xs sm:text-sm font-semibold hover:bg-cyan-500 transition-colors no-underline leading-none">
-                <i class="ti ti-refresh w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle;" aria-hidden="true"></i>
-                <span class="leading-none">Reconnect Microsoft</span>
+              <a href="{% url 'connect_microsoft' %}?email={{ account.email|urlencode }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 transition-colors no-underline shadow-sm">
+                <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">refresh</span>
+                Reconnect Microsoft
               </a>
               {% endif %}
-              <a href="{% url 'settings' %}?tab=accounts" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white rounded-md text-xs sm:text-sm font-semibold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors no-underline leading-none">
-                <span class="leading-none">Go to Settings</span>
+              <a href="{% url 'settings' %}?tab=accounts" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium border border-gray-200/80 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/15 transition-colors no-underline shadow-sm">
+                Go to Settings
               </a>
             </div>
           </div>
@@ -90,97 +79,176 @@
   {% endfor %}
 {% endif %}
 
-<!-- List View -->
-<div class="mt-3">
-  <!-- Priority 5: Urgent -->
-  {% if tasks_by_priority.5 %}
-  <section class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden mb-3 sm:mb-4">
-    <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Urgent</h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.5|length }} task{{ tasks_by_priority.5|length|pluralize }}</p>
-    </div>
-    <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
-      {% for task in tasks_by_priority.5 %}
-        {% include 'tasks/list_row.html' with task=task %}
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  <!-- Priority 4: High -->
-  {% if tasks_by_priority.4 %}
-  <section class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden mb-3 sm:mb-4">
-    <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">High</h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.4|length }} task{{ tasks_by_priority.4|length|pluralize }}</p>
-    </div>
-    <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
-      {% for task in tasks_by_priority.4 %}
-        {% include 'tasks/list_row.html' with task=task %}
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  <!-- Priority 3: Medium -->
-  {% if tasks_by_priority.3 %}
-  <section class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden mb-3 sm:mb-4">
-    <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Medium</h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.3|length }} task{{ tasks_by_priority.3|length|pluralize }}</p>
-    </div>
-    <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
-      {% for task in tasks_by_priority.3 %}
-        {% include 'tasks/list_row.html' with task=task %}
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  <!-- Priority 2: Low -->
-  {% if tasks_by_priority.2 %}
-  <section class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden mb-3 sm:mb-4">
-    <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Low</h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.2|length }} task{{ tasks_by_priority.2|length|pluralize }}</p>
-    </div>
-    <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
-      {% for task in tasks_by_priority.2 %}
-        {% include 'tasks/list_row.html' with task=task %}
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  <!-- Priority 1: Lowest -->
-  {% if tasks_by_priority.1 %}
-  <section class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden mb-3 sm:mb-4">
-    <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Lowest</h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.1|length }} task{{ tasks_by_priority.1|length|pluralize }}</p>
-    </div>
-    <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5 bg-white dark:bg-gray-900">
-      {% for task in tasks_by_priority.1 %}
-        {% include 'tasks/list_row.html' with task=task %}
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
+<!-- View switcher tabs -->
+<div class="mt-4 flex items-center justify-between gap-4 flex-wrap">
+  <div class="inline-flex rounded-full bg-white/80 dark:bg-white/5 p-1 border border-gray-200/80 dark:border-white/10 shadow-sm" role="tablist" aria-label="Task view">
+    <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="panel-list" data-view="list" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-4" aria-hidden="true">view_list</span>
+      List
+    </button>
+    <button type="button" role="tab" id="tab-email" aria-selected="false" aria-controls="panel-email" data-view="email" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-4" aria-hidden="true">mail</span>
+      Email
+    </button>
+    <button type="button" role="tab" id="tab-cards" aria-selected="false" aria-controls="panel-cards" data-view="cards" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-4" aria-hidden="true">grid_view</span>
+      Cards
+    </button>
+    <button type="button" role="tab" id="tab-board" aria-selected="false" aria-controls="panel-board" data-view="board" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-4" aria-hidden="true">view_kanban</span>
+      Board
+    </button>
+  </div>
+  <p class="text-xs text-gray-500 dark:text-gray-400">{{ all_tasks|length }} task{{ all_tasks|length|pluralize }}</p>
 </div>
 
-<!-- Empty State (if no tasks at all) -->
+<!-- List view -->
+<section id="panel-list" role="tabpanel" aria-labelledby="tab-list" class="tasks-view-panel mt-4" data-view="list">
+  {% if tasks_by_priority.5 %}
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Urgent</h3>
+      <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.5|length }} task{{ tasks_by_priority.5|length|pluralize }}</span>
+    </div>
+    <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
+      {% for task in tasks_by_priority.5 %}{% include 'tasks/list_row.html' with task=task %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if tasks_by_priority.4 %}
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">High</h3>
+      <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.4|length }} task{{ tasks_by_priority.4|length|pluralize }}</span>
+    </div>
+    <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
+      {% for task in tasks_by_priority.4 %}{% include 'tasks/list_row.html' with task=task %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if tasks_by_priority.3 %}
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Medium</h3>
+      <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.3|length }} task{{ tasks_by_priority.3|length|pluralize }}</span>
+    </div>
+    <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
+      {% for task in tasks_by_priority.3 %}{% include 'tasks/list_row.html' with task=task %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if tasks_by_priority.2 %}
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Low</h3>
+      <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.2|length }} task{{ tasks_by_priority.2|length|pluralize }}</span>
+    </div>
+    <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
+      {% for task in tasks_by_priority.2 %}{% include 'tasks/list_row.html' with task=task %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if tasks_by_priority.1 %}
+  <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Lowest</h3>
+      <span class="text-xs text-gray-500 dark:text-gray-400">{{ tasks_by_priority.1|length }} task{{ tasks_by_priority.1|length|pluralize }}</span>
+    </div>
+    <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
+      {% for task in tasks_by_priority.1 %}{% include 'tasks/list_row.html' with task=task %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</section>
+
+<!-- Email view (inbox-style) -->
+<section id="panel-email" role="tabpanel" aria-labelledby="tab-email" class="tasks-view-panel hidden" data-view="email" hidden>
+  <div class="rounded-xl bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+    <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
+      {% for task in all_tasks %}
+        {% include 'tasks/email_row.html' with task=task %}
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<!-- Cards view -->
+<section id="panel-cards" role="tabpanel" aria-labelledby="tab-cards" class="tasks-view-panel hidden" data-view="cards" hidden>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for task in all_tasks %}
+      {% include 'tasks/card_item.html' with task=task %}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Board view -->
+<section id="panel-board" role="tabpanel" aria-labelledby="tab-board" class="tasks-view-panel hidden" data-view="board" hidden>
+  {% if all_tasks %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pt-6 pb-2">
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-amber-50 dark:bg-amber-900/10">
+          <span class="material-icons size-4 text-amber-600 dark:text-amber-400">schedule</span>
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Pending</h3>
+          <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-pending">0</span>
+        </div>
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="pending">
+          {% for task in all_tasks %}{% if task.status == 'pending' %}
+          {% include 'tasks/card_item.html' with task=task %}
+          {% endif %}{% endfor %}
+        </ul>
+      </div>
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-blue-50 dark:bg-blue-900/10">
+          <span class="material-icons size-4 text-blue-600 dark:text-blue-400">play_circle</span>
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">In progress</h3>
+          <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-in_progress">0</span>
+        </div>
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="in_progress">
+          {% for task in all_tasks %}{% if task.status == 'in_progress' %}
+          {% include 'tasks/card_item.html' with task=task %}
+          {% endif %}{% endfor %}
+        </ul>
+      </div>
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-emerald-50 dark:bg-emerald-900/10">
+          <span class="material-icons size-4 text-emerald-600 dark:text-emerald-400">check_circle</span>
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Done</h3>
+          <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-done">0</span>
+        </div>
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="done">
+          {% for task in all_tasks %}{% if task.status == 'done' %}
+          {% include 'tasks/card_item.html' with task=task %}
+          {% endif %}{% endfor %}
+        </ul>
+      </div>
+      <div class="board-column min-w-[280px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden flex flex-col max-h-[calc(100vh-280px)]">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0 bg-red-50 dark:bg-red-900/10">
+          <span class="material-icons size-4 text-red-600 dark:text-red-400">cancel</span>
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Cancelled</h3>
+          <span class="text-xs text-gray-500 dark:text-gray-400 ml-auto" id="board-count-cancelled">0</span>
+        </div>
+        <ul class="flex-1 overflow-y-auto p-2 space-y-2" data-status="cancelled">
+          {% for task in all_tasks %}{% if task.status == 'cancelled' %}
+          {% include 'tasks/card_item.html' with task=task %}
+          {% endif %}{% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
+</section>
+
 {% if not all_tasks %}
-  <div class="p-6 sm:p-12 text-center mt-3">
-    <p class="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-3">No tasks yet.</p>
+  <div class="mt-6 py-12 text-center rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-white/50 dark:bg-gray-800/30 shadow-sm">
+    <span class="material-icons size-12 text-gray-300 dark:text-gray-600 mb-3">task_alt</span>
+    <p class="text-gray-600 dark:text-gray-400 text-sm">No tasks yet.</p>
+    <p class="text-gray-500 dark:text-gray-500 text-xs mt-1">Create a task or connect an account to sync emails.</p>
   </div>
 {% endif %}
 
-<!-- Filter Modal -->
 {% if filter_form %}
   {% include 'includes/filter_modal.html' with modal_id="filter-tasks" title="Filter Tasks" form_template="tasks/filter_form_content.html" form=filter_form %}
 {% endif %}
 
-<!-- Task Detail Modals -->
 {% load db_filters %}
 {% for task in all_tasks %}
   {% with email_data=task_email_data|get_item:task.pk %}
@@ -188,270 +256,199 @@
   {% endwith %}
 {% endfor %}
 
-<!-- Edit Modals -->
 {% for task in all_tasks %}
   {% include 'includes/edit_modal.html' with modal_id="edit-task-"|add:task.pk|stringformat:"s" title="Edit Task" form_template="tasks/form_content.html" form_url="task_update" object_pk=task.pk %}
 {% endfor %}
 
 <script>
-  // Task modal toggle handler
-  (function() {
-    // Close all open task modals
-    function closeAllTaskModals() {
-      document.querySelectorAll('dialog[id^="task-detail-"]').forEach(function(modal) {
-        if (modal.open) {
-          const backdrop = modal.querySelector('el-dialog-backdrop');
-          const panel = modal.querySelector('el-dialog-panel');
-          if (backdrop) backdrop.setAttribute('data-closed', '');
-          if (panel) panel.setAttribute('data-closed', '');
-          if (typeof modal.close === 'function') {
-            modal.close();
-          }
-        }
-      });
-    }
-    
-    // Open task detail modal
-    function openTaskModal(taskPk) {
-      const modalId = 'task-detail-' + taskPk;
-      const modal = document.getElementById(modalId);
-      
-      if (!modal) {
-        // Modal not found, redirect to ensure it's rendered
-        window.location.href = '{% url "tasks_list" %}?task=' + taskPk;
-        return;
-      }
-      
-      if (typeof modal.showModal !== 'function') {
-        return;
-      }
-      
-      // Check if any task modal is currently open
-      const hasOpenModal = Array.from(document.querySelectorAll('dialog[id^="task-detail-"]')).some(function(d) {
-        return d.open;
-      });
-      
-      if (hasOpenModal) {
-        // Close any other open task modals first
-        closeAllTaskModals();
-        
-        // Delay to ensure previous modal is closed before opening new one
-        setTimeout(function() {
-          openModalNow(modal);
-        }, 200);
-      } else {
-        // No modal open, open immediately
-        openModalNow(modal);
-      }
-    }
-    
-    // Helper to actually open the modal
-    function openModalNow(modal) {
-      // Remove data-closed attributes to show modal
-      const backdrop = modal.querySelector('el-dialog-backdrop');
-      const panel = modal.querySelector('el-dialog-panel');
-      
-      if (backdrop) backdrop.removeAttribute('data-closed');
-      if (panel) panel.removeAttribute('data-closed');
-      
-      // Open the dialog
-      modal.showModal();
-    }
-    
-    // Expose globally for URL parameter handling
-    window.openTaskDetailModal = openTaskModal;
-    
-    // Task navigation - get all task PKs in order
-    const allTaskPks = [
-      {% for task in all_tasks %}
-      {{ task.pk }}{% if not forloop.last %},{% endif %}
-      {% endfor %}
-    ];
-    
-    // Navigate to next/previous task
-    function navigateToTask(currentTaskPk, direction) {
-      if (allTaskPks.length === 0) return;
-      
-      // Ensure currentTaskPk is a number for comparison
-      const currentPk = typeof currentTaskPk === 'string' ? parseInt(currentTaskPk, 10) : currentTaskPk;
-      
-      // Convert all PKs to numbers for comparison
-      const taskPksAsNumbers = allTaskPks.map(pk => typeof pk === 'string' ? parseInt(pk, 10) : pk);
-      const currentIndex = taskPksAsNumbers.indexOf(currentPk);
-      
-      if (currentIndex === -1) {
-        console.warn('Current task not found in list:', currentPk);
-        return;
-      }
-      
-      let newIndex;
-      if (direction === 'next') {
-        newIndex = (currentIndex + 1) % taskPksAsNumbers.length;
-      } else {
-        // Previous (up arrow)
-        newIndex = (currentIndex - 1 + taskPksAsNumbers.length) % taskPksAsNumbers.length;
-      }
-      
-      const newTaskPk = taskPksAsNumbers[newIndex];
-      
-      // Verify the new modal exists
-      const newModal = document.getElementById('task-detail-' + newTaskPk);
-      if (!newModal) {
-        console.warn('Next task modal not found:', newTaskPk);
-        return;
-      }
-      
-      // Use openTaskModal which handles closing other modals
-      openTaskModal(newTaskPk);
-    }
-    
-    // Event delegation for navigation buttons
-    document.addEventListener('click', function(e) {
-      const prevBtn = e.target.closest('.task-nav-prev');
-      const nextBtn = e.target.closest('.task-nav-next');
-      
-      if (prevBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const taskPk = parseInt(prevBtn.getAttribute('data-task-pk'));
-        if (taskPk) navigateToTask(taskPk, 'prev');
-      } else if (nextBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const taskPk = parseInt(nextBtn.getAttribute('data-task-pk'));
-        if (taskPk) navigateToTask(taskPk, 'next');
-      }
-    });
-    
-    // Event delegation for task row clicks
-    document.addEventListener('click', function(e) {
-      // Ignore clicks on interactive elements
-      if (e.target.closest('button, a, input, select, textarea, form')) {
-        return;
-      }
-      
-      const taskRow = e.target.closest('.task-row');
-      if (taskRow) {
-        const taskPk = taskRow.getAttribute('data-task-pk');
-        if (taskPk) {
-          e.preventDefault();
-          e.stopPropagation();
-          openTaskModal(parseInt(taskPk));
-        }
-      }
-    });
-    
-    // Auto-open modal from URL parameter
-    document.addEventListener('DOMContentLoaded', function() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const taskPk = urlParams.get('task');
-      
-      if (taskPk) {
-        setTimeout(function() {
-          openTaskModal(parseInt(taskPk));
-          // Clean up URL
-          const newParams = new URLSearchParams(urlParams);
-          newParams.delete('task');
-          const newUrl = window.location.pathname + (newParams.toString() ? '?' + newParams.toString() : '');
-          window.history.replaceState({}, '', newUrl);
-        }, 100);
-      }
-    });
-  })();
+(function() {
+  var STORAGE_KEY = 'tasksViewMode';
+  var DEFAULT_VIEW = 'list';
 
-  // Refresh sync message functionality
-  (function() {
-    const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-    
-    function initRefreshSync() {
-      const refreshMessage = document.getElementById('refresh-sync-message');
-      const refreshMessageMobile = document.getElementById('refresh-sync-message-mobile');
-      
-      if (!refreshMessage && !refreshMessageMobile) return;
-      
-      // Ensure both are hidden initially
-      if (refreshMessage) refreshMessage.classList.add('hidden');
-      if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
-      
-      // Reset page load time on every page load/reload
-      const resetPageLoadTime = () => {
-        const now = Date.now();
-        sessionStorage.setItem('pageLoadTime', now.toString());
-        return now;
-      };
-      
-      // Get page load time (read only, don't reset)
-      const getPageLoadTime = () => {
-        const stored = sessionStorage.getItem('pageLoadTime');
-        if (stored) {
-          return parseInt(stored, 10);
-        }
-        // Fallback: if not set, set it now
-        return resetPageLoadTime();
-      };
-      
-      // Check if 10 minutes have passed
-      const checkRefreshNeeded = () => {
-        const loadTime = getPageLoadTime();
-        const now = Date.now();
-        const elapsed = now - loadTime;
-        
-        if (elapsed >= REFRESH_INTERVAL_MS) {
-          if (refreshMessage) {
-            refreshMessage.classList.remove('hidden');
-            refreshMessage.style.display = '';
-          }
-          if (refreshMessageMobile) {
-            refreshMessageMobile.classList.remove('hidden');
-            refreshMessageMobile.style.display = '';
-          }
-        } else {
-          if (refreshMessage) {
-            refreshMessage.classList.add('hidden');
-            refreshMessage.style.display = 'none';
-          }
-          if (refreshMessageMobile) {
-            refreshMessageMobile.classList.add('hidden');
-            refreshMessageMobile.style.display = 'none';
-          }
-          // Schedule check for when 10 minutes will have passed
-          const remaining = REFRESH_INTERVAL_MS - elapsed;
-          setTimeout(() => {
-            if (refreshMessage) {
-              refreshMessage.classList.remove('hidden');
-              refreshMessage.style.display = '';
-            }
-            if (refreshMessageMobile) {
-              refreshMessageMobile.classList.remove('hidden');
-              refreshMessageMobile.style.display = '';
-            }
-          }, remaining);
-        }
-      };
-      
-      // Reset timer on page load - this ensures fresh start on every reload
-      resetPageLoadTime();
-      
-      // Initial check (will be 0 elapsed, so message stays hidden)
-      checkRefreshNeeded();
-      
-      // Check every minute to be safe
-      setInterval(checkRefreshNeeded, 60 * 1000);
-      
-      // Reset on page visibility change (user comes back to tab)
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          checkRefreshNeeded();
-        }
+  function getStoredView() {
+    try {
+      var v = localStorage.getItem(STORAGE_KEY);
+      return (v === 'list' || v === 'email' || v === 'cards' || v === 'board') ? v : DEFAULT_VIEW;
+    } catch (e) { return DEFAULT_VIEW; }
+  }
+
+  function setStoredView(view) {
+    try { localStorage.setItem(STORAGE_KEY, view); } catch (e) {}
+  }
+
+  function switchView(view) {
+    document.querySelectorAll('.tasks-view-tab').forEach(function(t) {
+      t.setAttribute('aria-selected', t.getAttribute('data-view') === view ? 'true' : 'false');
+      t.removeAttribute('data-active');
+      if (t.getAttribute('data-view') === view) t.setAttribute('data-active', '');
+    });
+    document.querySelectorAll('.tasks-view-panel').forEach(function(p) {
+      var match = p.getAttribute('data-view') === view;
+      p.classList.toggle('hidden', !match);
+      p.hidden = !match;
+    });
+    setStoredView(view);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var view = getStoredView();
+    switchView(view);
+
+    document.querySelectorAll('.tasks-view-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var v = btn.getAttribute('data-view');
+        if (v) switchView(v);
       });
+    });
+
+    var pending = document.querySelectorAll('[data-status="pending"] .task-row').length;
+    var inProgress = document.querySelectorAll('[data-status="in_progress"] .task-row').length;
+    var done = document.querySelectorAll('[data-status="done"] .task-row').length;
+    var cancelled = document.querySelectorAll('[data-status="cancelled"] .task-row').length;
+    var el = document.getElementById('board-count-pending'); if (el) el.textContent = pending;
+    el = document.getElementById('board-count-in_progress'); if (el) el.textContent = inProgress;
+    el = document.getElementById('board-count-done'); if (el) el.textContent = done;
+    el = document.getElementById('board-count-cancelled'); if (el) el.textContent = cancelled;
+  });
+})();
+
+(function() {
+  function closeAllTaskModals() {
+    document.querySelectorAll('dialog[id^="task-detail-"]').forEach(function(modal) {
+      if (modal.open) {
+        var backdrop = modal.querySelector('el-dialog-backdrop');
+        var panel = modal.querySelector('el-dialog-panel');
+        if (backdrop) backdrop.setAttribute('data-closed', '');
+        if (panel) panel.setAttribute('data-closed', '');
+        if (typeof modal.close === 'function') modal.close();
+      }
+    });
+  }
+  function openTaskModal(taskPk) {
+    var modalId = 'task-detail-' + taskPk;
+    var modal = document.getElementById(modalId);
+    if (!modal) {
+      window.location.href = '{% url "tasks_list" %}?task=' + taskPk;
+      return;
     }
-    
-    // Run when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initRefreshSync);
+    if (typeof modal.showModal !== 'function') return;
+    var hasOpen = Array.from(document.querySelectorAll('dialog[id^="task-detail-"]')).some(function(d) { return d.open; });
+    if (hasOpen) {
+      closeAllTaskModals();
+      setTimeout(function() { openModalNow(modal); }, 200);
     } else {
-      initRefreshSync();
+      openModalNow(modal);
     }
-  })();
+  }
+  function openModalNow(modal) {
+    var backdrop = modal.querySelector('el-dialog-backdrop');
+    var panel = modal.querySelector('el-dialog-panel');
+    if (backdrop) backdrop.removeAttribute('data-closed');
+    if (panel) panel.removeAttribute('data-closed');
+    modal.showModal();
+  }
+  window.openTaskDetailModal = openTaskModal;
+  var allTaskPks = [{% for task in all_tasks %}{{ task.pk }}{% if not forloop.last %},{% endif %}{% endfor %}];
+  function navigateToTask(currentTaskPk, direction) {
+    if (allTaskPks.length === 0) return;
+    var currentPk = typeof currentTaskPk === 'string' ? parseInt(currentTaskPk, 10) : currentTaskPk;
+    var taskPksAsNumbers = allTaskPks.map(function(pk) { return typeof pk === 'string' ? parseInt(pk, 10) : pk; });
+    var currentIndex = taskPksAsNumbers.indexOf(currentPk);
+    if (currentIndex === -1) return;
+    var newIndex = direction === 'next' ? (currentIndex + 1) % taskPksAsNumbers.length : (currentIndex - 1 + taskPksAsNumbers.length) % taskPksAsNumbers.length;
+    var newTaskPk = taskPksAsNumbers[newIndex];
+    var newModal = document.getElementById('task-detail-' + newTaskPk);
+    if (!newModal) return;
+    openTaskModal(newTaskPk);
+  }
+  document.addEventListener('click', function(e) {
+    var prevBtn = e.target.closest('.task-nav-prev');
+    var nextBtn = e.target.closest('.task-nav-next');
+    if (prevBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var taskPk = parseInt(prevBtn.getAttribute('data-task-pk'));
+      if (taskPk) navigateToTask(taskPk, 'prev');
+    } else if (nextBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var taskPk = parseInt(nextBtn.getAttribute('data-task-pk'));
+      if (taskPk) navigateToTask(taskPk, 'next');
+    }
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('button, a, input, select, textarea, form')) return;
+    var taskRow = e.target.closest('.task-row');
+    if (taskRow) {
+      var taskPk = taskRow.getAttribute('data-task-pk');
+      if (taskPk) {
+        e.preventDefault();
+        e.stopPropagation();
+        openTaskModal(parseInt(taskPk));
+      }
+    }
+  });
+  document.addEventListener('DOMContentLoaded', function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var taskPk = urlParams.get('task');
+    if (taskPk) {
+      setTimeout(function() {
+        openTaskModal(parseInt(taskPk));
+        var newParams = new URLSearchParams(urlParams);
+        newParams.delete('task');
+        var newUrl = window.location.pathname + (newParams.toString() ? '?' + newParams.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+      }, 100);
+    }
+  });
+})();
+
+(function() {
+  var REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+  function initRefreshSync() {
+    var refreshMessage = document.getElementById('refresh-sync-message');
+    var refreshMessageMobile = document.getElementById('refresh-sync-message-mobile');
+    if (!refreshMessage && !refreshMessageMobile) return;
+    if (refreshMessage) refreshMessage.classList.add('hidden');
+    if (refreshMessageMobile) refreshMessageMobile.classList.add('hidden');
+    var resetPageLoadTime = function() {
+      var now = Date.now();
+      sessionStorage.setItem('pageLoadTime', now.toString());
+      return now;
+    };
+    var getPageLoadTime = function() {
+      var stored = sessionStorage.getItem('pageLoadTime');
+      return stored ? parseInt(stored, 10) : resetPageLoadTime();
+    };
+    var checkRefreshNeeded = function() {
+      var loadTime = getPageLoadTime();
+      var now = Date.now();
+      var elapsed = now - loadTime;
+      if (elapsed >= REFRESH_INTERVAL_MS) {
+        if (refreshMessage) { refreshMessage.classList.remove('hidden'); refreshMessage.style.display = ''; }
+        if (refreshMessageMobile) { refreshMessageMobile.classList.remove('hidden'); refreshMessageMobile.style.display = ''; }
+      } else {
+        if (refreshMessage) { refreshMessage.classList.add('hidden'); refreshMessage.style.display = 'none'; }
+        if (refreshMessageMobile) { refreshMessageMobile.classList.add('hidden'); refreshMessageMobile.style.display = 'none'; }
+        var remaining = REFRESH_INTERVAL_MS - elapsed;
+        setTimeout(function() {
+          if (refreshMessage) { refreshMessage.classList.remove('hidden'); refreshMessage.style.display = ''; }
+          if (refreshMessageMobile) { refreshMessageMobile.classList.remove('hidden'); refreshMessageMobile.style.display = ''; }
+        }, remaining);
+      }
+    };
+    resetPageLoadTime();
+    checkRefreshNeeded();
+    setInterval(checkRefreshNeeded, 60 * 1000);
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) checkRefreshNeeded();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRefreshSync);
+  } else {
+    initRefreshSync();
+  }
+})();
 </script>
 {% endblock %}

@@ -30,7 +30,7 @@
                   <option value="{{ account.pk }}" {% if draft and draft.account.pk == account.pk %}selected{% endif %}>{{ account.email }}</option>
                   {% endfor %}
                 </select>
-                <i class="ti ti-chevron-down pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4" aria-hidden="true"></i>
+                <span class="material-icons pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4" aria-hidden="true">expand_more</span>
               </div>
             </div>
           </div>
@@ -45,7 +45,7 @@
                   <option value="{{ email.pk }}" {% if draft and draft.email_message and draft.email_message.pk == email.pk %}selected{% endif %}>{{ email.subject|default:"No subject" }}</option>
                   {% endfor %}
                 </select>
-                <i class="ti ti-chevron-down pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4" aria-hidden="true"></i>
+                <span class="material-icons pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-600 dark:text-gray-400 sm:size-4" aria-hidden="true">expand_more</span>
               </div>
             </div>
           </div>

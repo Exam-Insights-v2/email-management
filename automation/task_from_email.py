@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from django.db import transaction
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Max, QuerySet
 from django.utils import timezone
 
 from accounts.models import Account
@@ -23,14 +23,18 @@ def get_emails_to_process(
     *,
     limit: Optional[int] = None,
     exclude_threads_with_tasks: bool = True,
+    log_audit: bool = False,
 ) -> QuerySet:
     """
     Return emails that have no task and (optionally) whose thread has no task.
+    Only the most recent email per thread is returned (one task per thread; previous
+    messages in the chain are already acted on).
     Single source of truth for "who to process" used by sync task and management command.
     Callers can .filter(pk__in=synced_ids) or .exclude(pk__in=synced_ids)[:n] for prioritisation.
 
     limit: optional cap on returned count.
     exclude_threads_with_tasks: if True, exclude emails whose thread already has any task.
+    log_audit: if True, log a summary to mail.sync_audit (for onboarding observability).
     """
     qs = (
         EmailMessage.objects.filter(account=account)
@@ -43,9 +47,19 @@ def get_emails_to_process(
             thread__isnull=False,
         ).values_list("thread_id", flat=True).distinct()
         qs = qs.exclude(thread_id__in=threads_with_tasks)
-    qs = qs.select_related("account", "thread").order_by("-created_at")
+
+    # Only the latest email per thread: one task per chain (previous messages already acted on)
+    latest_ids = qs.values("thread_id").annotate(latest_id=Max("id")).values_list("latest_id", flat=True)
+    qs = qs.filter(pk__in=latest_ids).select_related("account", "thread").order_by("-created_at")
     if limit is not None:
         qs = qs[:limit]
+    if log_audit:
+        count = qs.count()
+        sync_audit = logging.getLogger("mail.sync_audit")
+        sync_audit.info(
+            "get_emails_to_process result",
+            extra={"account_id": account.pk, "limit": limit, "count": count},
+        )
     return qs
 
 

@@ -1,9 +1,9 @@
 import re
+from datetime import datetime, timezone as std_timezone
 from django import template
 from django.utils import timezone
 from django.utils.dateformat import format
 from django.utils.safestring import mark_safe
-from datetime import datetime
 import builtins
 
 register = template.Library()
@@ -323,7 +323,7 @@ def aus_time(value, format_string=None):
             aus_time_value = timezone.localtime(value)
         else:
             # Make it timezone-aware using UTC, then convert to local
-            aware_value = timezone.make_aware(value, timezone.utc)
+            aware_value = timezone.make_aware(value, std_timezone.utc)
             aus_time_value = timezone.localtime(aware_value)
         
         # Format the time using Django's dateformat
@@ -509,23 +509,23 @@ def get_item(dictionary, key):
 
 @register.filter
 def attachment_icon(filename):
-    """Return Tabler icon class for an attachment based on filename extension."""
+    """Return Material Icons icon name for an attachment based on filename extension."""
     if not filename or not isinstance(filename, str):
-        return "ti-file"
+        return "insert_drive_file"
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext in ("jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"):
-        return "ti-photo"
+        return "image"
     if ext in ("mp4", "webm", "mov", "avi", "mkv", "m4v"):
-        return "ti-video"
+        return "movie"
     if ext in ("mp3", "wav", "ogg", "m4a", "flac", "aac"):
-        return "ti-music"
+        return "music_note"
     if ext == "pdf":
-        return "ti-file-text"
+        return "picture_as_pdf"
     if ext in ("xls", "xlsx", "csv"):
-        return "ti-file-spreadsheet"
+        return "table_chart"
     if ext in ("doc", "docx", "txt", "rtf"):
-        return "ti-file-description"
-    return "ti-file"
+        return "description"
+    return "insert_drive_file"
 
 
 @register.filter

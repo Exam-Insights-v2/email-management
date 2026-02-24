@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -8,7 +9,15 @@ from rest_framework import viewsets
 
 from .models import Account, Provider
 from .serializers import AccountSerializer
-from .services import GmailOAuthService, MicrosoftEmailOAuthService, MicrosoftOAuthService
+from .services import (
+    GmailOAuthService,
+    GoogleOAuthService,
+    MicrosoftEmailOAuthService,
+    MicrosoftOAuthService,
+)
+from automation.utils import setup_account_automation
+from mail.onboarding import trigger_sync_after_connect
+from mail.tasks import sync_account_emails
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +60,6 @@ def account_connect_gmail(request):
     
     # Set up recommended labels and actions for new accounts
     if created:
-        from automation.utils import setup_account_automation
         setup_account_automation(account)
 
     # Force reconnection by using force_reauth=True
@@ -95,7 +103,6 @@ def account_gmail_oauth_callback(request):
         error_msg = str(w)
         if "scope" in error_msg.lower():
             # Log the warning but try to continue - scope mismatches are often harmless
-            from accounts.services import GoogleOAuthService
             logger.warning("OAuth scope warning (attempting to continue): %s", error_msg)
             # Try to create a new flow and fetch token, ignoring the warning
             try:
@@ -144,37 +151,21 @@ def account_gmail_oauth_callback(request):
         return redirect(f"{reverse('settings')}?tab=accounts")
     
     try:
-        # Get email from Gmail API profile (this works with Gmail scopes)
-        email = None
-        gmail_error = None
-        try:
-            from googleapiclient.discovery import build
-            gmail_service = build("gmail", "v1", credentials=credentials)
-            profile = gmail_service.users().getProfile(userId="me").execute()
-            email = profile.get("emailAddress")
-        except Exception as e:
-            gmail_error = e
-            # Fallback: try userinfo API if we have those scopes
-            try:
-                from accounts.services import GoogleOAuthService
-                user_info = GoogleOAuthService.get_user_info(credentials)
-                email = user_info.get("email")
-            except Exception as userinfo_error:
-                import traceback
-                logger.error(
-                    "Gmail API error: %s\nUserinfo API error: %s\n%s",
-                    gmail_error, userinfo_error, traceback.format_exc(),
-                )
-                messages.error(
-                    request, 
-                    f"Could not retrieve email address. Gmail API: {str(gmail_error)}. Userinfo API: {str(userinfo_error)}. Please try connecting again."
-                )
-                return redirect(f"{reverse('settings')}?tab=accounts")
-        
+        # Get email from userinfo API (same as login path; single place, no Gmail client build)
+        user_info = GoogleOAuthService.get_user_info(credentials)
+        email = user_info.get("email")
         if not email:
             messages.error(request, "Could not retrieve email address from Google.")
             return redirect(f"{reverse('settings')}?tab=accounts")
-        
+    except Exception as e:
+        logger.error("Could not retrieve email from Google userinfo: %s\n%s", e, traceback.format_exc())
+        messages.error(
+            request,
+            f"Could not retrieve email address from Google: {e}. Please try connecting again.",
+        )
+        return redirect(f"{reverse('settings')}?tab=accounts")
+    
+    try:
         # Get or create account with the email from OAuth
         account, created = Account.objects.get_or_create(
             provider=Provider.GMAIL, 
@@ -203,7 +194,6 @@ def account_gmail_oauth_callback(request):
                 request, f"Gmail account {account.email} was already connected."
             )
         
-        from mail.onboarding import trigger_sync_after_connect
         ok, _ = trigger_sync_after_connect(account)
         if ok:
             messages.info(request, f"Email sync started for {account.email}. Emails will appear shortly.")
@@ -211,7 +201,6 @@ def account_gmail_oauth_callback(request):
             messages.warning(request, "Account connected but email sync failed to start. You can manually sync from the account page.")
         return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
-        import traceback
         error_msg = str(e)
         error_traceback = traceback.format_exc()
         logger.error("OAuth callback error: %s\n%s", error_msg, error_traceback)
@@ -263,7 +252,6 @@ def account_connect_microsoft(request):
     
     # Set up recommended labels and actions for new accounts
     if created:
-        from automation.utils import setup_account_automation
         setup_account_automation(account)
 
     # Force reconnection by using force_reauth=True
@@ -351,7 +339,6 @@ def account_microsoft_oauth_callback(request):
         
         # Set up recommended labels and actions for new accounts
         if created:
-            from automation.utils import setup_account_automation
             setup_result = setup_account_automation(account)
             messages.success(
                 request, 
@@ -363,7 +350,6 @@ def account_microsoft_oauth_callback(request):
                 request, f"Microsoft account {account.email} was already connected."
             )
         
-        from mail.onboarding import trigger_sync_after_connect
         ok, _ = trigger_sync_after_connect(account)
         if ok:
             messages.info(request, f"Email sync started for {account.email}. Emails will appear shortly.")
@@ -371,7 +357,6 @@ def account_microsoft_oauth_callback(request):
             messages.warning(request, "Account connected but email sync failed to start. You can manually sync from the account page.")
         return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
-        import traceback
         error_msg = str(e)
         error_traceback = traceback.format_exc()
         logger.error("OAuth callback error: %s\n%s", error_msg, error_traceback)
@@ -413,8 +398,6 @@ def account_disconnect(request, pk):
 def account_sync(request, pk):
     """Manually trigger email sync for an account"""
     if request.method == "POST":
-        from mail.tasks import sync_account_emails
-
         try:
             account = Account.objects.get(pk=pk)
             if not account.is_connected:

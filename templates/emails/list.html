@@ -36,19 +36,19 @@
             {% url 'email_delete' email.pk as email_delete_url %}
             <el-dropdown class="inline-block">
               <button class="inline-flex items-center justify-center rounded-md text-gray-600 dark:text-gray-400 focus:outline-2 focus:outline-offset-2 focus:outline-cyan-500 transition-colors" aria-label="Options">
-                <i class="ti ti-dots-vertical size-5" aria-hidden="true"></i>
+                <span class="material-icons size-5" aria-hidden="true">more_vert</span>
               </button>
               <el-menu anchor="bottom end" popover class="w-56 origin-top-right rounded-md bg-white dark:bg-gray-800 outline-1 -outline-offset-1 outline-gray-200 dark:outline-white/10 transition transition-discrete [--anchor-gap:--spacing(0.5)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in shadow-lg">
                 <div class="py-1">
                   <button type="button" onclick="if (window.openEmailDetailModal) window.openEmailDetailModal({{ email.pk }});" class="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
-                    <i class="ti ti-eye size-4 text-gray-500 dark:text-gray-400" aria-hidden="true"></i>
+                    <span class="material-icons size-4 text-gray-500 dark:text-gray-400" aria-hidden="true">visibility</span>
                     <span>View</span>
                   </button>
                   {% with modal_id="delete-email-modal-"|add:email.pk|stringformat:"s" %}
                   <form action="{{ email_delete_url }}" method="POST" data-warning-modal="{{ modal_id }}">
                     {% csrf_token %}
                     <button type="submit" class="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-gray-100 dark:focus:bg-white/5 focus:text-gray-900 dark:focus:text-white focus:outline-hidden">
-                      <i class="ti ti-trash size-4 text-gray-500 dark:text-gray-400" aria-hidden="true"></i>
+                      <span class="material-icons size-4 text-gray-500 dark:text-gray-400" aria-hidden="true">delete</span>
                       <span>Delete</span>
                     </button>
                   </form>

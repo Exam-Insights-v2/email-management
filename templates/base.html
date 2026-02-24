@@ -10,8 +10,8 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Include @tailwindplus/elements for header components -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
@@ -21,19 +21,38 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Roboto', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+              sans: ['Google Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
             },
           },
         },
       }
     </script>
     <style>
-      /* Tabler Icons alignment */
-      .ti {
+      /* Google Material Icons */
+      .material-icons {
+        font-family: 'Material Icons';
+        font-weight: normal;
+        font-style: normal;
+        font-size: 24px;
         display: inline-block;
-        vertical-align: middle;
         line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        -moz-osx-font-smoothing: grayscale;
+        font-feature-settings: 'liga';
+        vertical-align: middle;
       }
+      .material-icons.size-3 { font-size: 0.75rem; }
+      .material-icons.size-3\.5 { font-size: 0.875rem; }
+      .material-icons.size-4 { font-size: 1rem; }
+      .material-icons.size-5 { font-size: 1.25rem; }
+      .material-icons.size-6 { font-size: 1.5rem; }
+      .material-icons.size-\[18px\] { font-size: 18px; }
       
       /* Email body styling to look like a real email client */
       .email-body {
@@ -569,27 +588,31 @@
   </head>
   <body class="h-full bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
     {% block header %}
-    {% include 'includes/header.html' %}
+    {% include 'includes/sidebar.html' %}
     {% endblock %}
-    <header class="sticky top-[48px] z-40 flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/10">
-      <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-2">
-        <div class="grid grid-cols-3 items-center py-1 sm:py-2 gap-2">
-          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate pr-2">{% block header_title %}Jobs{% endblock %}</h1>
-          <div class="flex items-center justify-center">
-            {% block header_center %}{% endblock %}
-          </div>
-          <div class="flex items-center justify-end">
-            {% block header_action %}{% endblock %}
+    <div class="flex flex-1 flex-col min-w-0 pl-[215px]">
+      <header class="sticky top-0 z-40 flex-shrink-0 px-4 pt-3 pb-2">
+        <div class="mx-auto max-w-7xl">
+          <div class="rounded-xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm px-4 py-2.5 sm:px-5 sm:py-3">
+            <div class="grid grid-cols-3 items-center gap-2">
+              <h1 class="text-base sm:text-lg font-semibold tracking-tight text-gray-900 dark:text-white truncate pr-2">{% block header_title %}Jobs{% endblock %}</h1>
+              <div class="flex items-center justify-center">
+                {% block header_center %}{% endblock %}
+              </div>
+              <div class="flex items-center justify-end gap-1.5 sm:gap-2">
+                {% block header_action %}{% endblock %}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
-    <main class="flex-1 overflow-y-auto">
-      <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
-        <!-- Toast container will be added here by JavaScript -->
-        {% block content %}{% endblock %}
-      </div>
-    </main>
+      </header>
+      <main class="flex-1 overflow-y-auto px-4 pb-4">
+        <div class="mx-auto max-w-7xl py-3 sm:py-4">
+          <!-- Toast container will be added here by JavaScript -->
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
     
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-0 right-0 z-50 flex flex-col gap-2 p-4 pointer-events-none" style="max-width: 420px;"></div>
@@ -619,11 +642,11 @@
           const icon = document.createElement('div');
           icon.className = 'flex-shrink-0 mt-0.5';
           if (type === 'success') {
-            icon.innerHTML = '<i class="ti ti-circle-check size-5 text-emerald-600 dark:text-emerald-400"></i>';
+            icon.innerHTML = '<span class="material-icons size-5 text-emerald-600 dark:text-emerald-400">check_circle</span>';
           } else if (type === 'error') {
-            icon.innerHTML = '<i class="ti ti-circle-x size-5 text-red-600 dark:text-red-400"></i>';
+            icon.innerHTML = '<span class="material-icons size-5 text-red-600 dark:text-red-400">cancel</span>';
           } else {
-            icon.innerHTML = '<i class="ti ti-info-circle size-5 text-cyan-600 dark:text-cyan-400"></i>';
+            icon.innerHTML = '<span class="material-icons size-5 text-cyan-600 dark:text-cyan-400">info</span>';
           }
 
           // Content
@@ -634,7 +657,7 @@
           // Close button
           const closeBtn = document.createElement('button');
           closeBtn.className = 'flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors';
-          closeBtn.innerHTML = '<i class="ti ti-x size-4"></i>';
+          closeBtn.innerHTML = '<span class="material-icons size-4">close</span>';
           closeBtn.onclick = () => removeToast(toastId);
 
           toast.appendChild(icon);

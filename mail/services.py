@@ -3,7 +3,7 @@ import email
 import email.utils
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone as utc_tz
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
 
@@ -18,6 +18,7 @@ from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from mail.models import Draft, EmailMessage, EmailThread
 
 logger = logging.getLogger(__name__)
+sync_audit = logging.getLogger("mail.sync_audit")
 
 # Sync caps: first sync can fetch more; incremental is capped per run.
 # For large mailboxes, run backfill_inbox_sync to pull more history after first sync.
@@ -32,7 +33,7 @@ def _since_utc(since: Optional[datetime]) -> Optional[datetime]:
         return None
     if timezone.is_naive(since):
         since = timezone.make_aware(since)
-    return since.astimezone(timezone.utc)
+    return since.astimezone(utc_tz.utc)
 
 
 def persist_sent_message(
@@ -76,6 +77,53 @@ def persist_sent_message(
     )
 
 
+def store_thread_messages(
+    account: Account,
+    thread: EmailThread,
+    thread_messages: List[dict],
+    audit_logger: Optional[logging.Logger] = None,
+) -> int:
+    """
+    Persist a list of provider message dicts for a thread into EmailMessage.
+    Used by sync_account thread backfill and backfill_thread_messages command.
+    If audit_logger is set, log warnings on per-message failures and continue; otherwise raise.
+    Returns the number of messages stored.
+    """
+    saved = 0
+    for m in thread_messages:
+        try:
+            EmailMessage.objects.update_or_create(
+                account=account,
+                external_message_id=m["external_message_id"],
+                defaults={
+                    "thread": thread,
+                    "subject": m.get("subject") or "",
+                    "from_address": m.get("from_address") or "",
+                    "from_name": m.get("from_name") or "",
+                    "to_addresses": m.get("to_addresses") or [],
+                    "cc_addresses": m.get("cc_addresses") or [],
+                    "bcc_addresses": m.get("bcc_addresses") or [],
+                    "date_sent": m.get("date_sent"),
+                    "body_html": m.get("body_html") or "",
+                },
+            )
+            saved += 1
+        except Exception as e:
+            if audit_logger is not None:
+                audit_logger.warning(
+                    "store_thread_messages failed to save message",
+                    extra={
+                        "account_id": account.pk,
+                        "external_thread_id": thread.external_thread_id,
+                        "external_message_id": m.get("external_message_id", "?"),
+                        "error": str(e),
+                    },
+                )
+            else:
+                raise
+    return saved
+
+
 def _escape_odata_string(value: str) -> str:
     """Escape single quotes for use in OData $filter string literal (double the quote)."""
     return (value or "").replace("'", "''")
@@ -117,9 +165,17 @@ class GmailService(EmailProviderService):
             cached_credentials = self._credentials_cache[account_id]
             cached_service = self._service_cache[account_id]
             
-            # Verify credentials are still valid (not expired)
-            if cached_credentials and not cached_credentials.expired:
-                return cached_service
+            # Verify credentials are still valid (not expired).
+            # If .expired raises (e.g. TypeError: naive vs aware datetime), treat cache as stale.
+            if cached_credentials:
+                try:
+                    if not cached_credentials.expired:
+                        return cached_service
+                except Exception:
+                    # Invalid or uncomparable expiry: clear cache so we refetch and store correct expiry
+                    self._credentials_cache.pop(account_id, None)
+                    self._service_cache.pop(account_id, None)
+            # Cache miss or expired or invalid: fall through to refetch
         
         # Get fresh credentials (will refresh if needed)
         credentials = GmailOAuthService.get_valid_credentials(account)
@@ -268,13 +324,13 @@ class GmailService(EmailProviderService):
         since: Optional[datetime] = None,
         max_total: Optional[int] = None,
     ) -> List[dict]:
-        """Fetch messages from Gmail: inbox, archived, and sent; excludes only trash and spam.
+        """Fetch messages from Gmail: inbox only (excludes archived, trash, spam).
         Full threads are filled via thread backfill.
         max_total: cap total messages fetched (e.g. 500 for first sync); None = use max_results only (one page).
         """
         service = self._get_service(account)
         since_utc = _since_utc(since)
-        query_parts = ["-in:trash", "-in:spam"]
+        query_parts = ["in:inbox", "-in:trash", "-in:spam"]
         if since_utc:
             query_parts.append(f"after:{since_utc.strftime('%Y/%m/%d')}")
         query = " ".join(query_parts)
@@ -283,8 +339,28 @@ class GmailService(EmailProviderService):
         parsed_messages: List[dict] = []
         page_token: Optional[str] = None
 
+        sync_audit.info(
+            "Gmail fetch_messages starting account_id=%s query=%s since=%s max_total=%s page_size=%s cap=%s",
+            account.pk,
+            query,
+            str(since_utc) if since_utc else None,
+            max_total,
+            page_size,
+            cap,
+            extra={
+                "account_id": account.pk,
+                "query": query,
+                "since": str(since_utc) if since_utc else None,
+                "max_total": max_total,
+                "page_size": page_size,
+                "cap": cap,
+            },
+        )
+
         try:
+            page_num = 0
             while len(parsed_messages) < cap:
+                page_num += 1
                 list_kwargs = {
                     "userId": "me",
                     "maxResults": min(page_size, cap - len(parsed_messages)),
@@ -296,6 +372,18 @@ class GmailService(EmailProviderService):
                 list_request = service.users().messages().list(**list_kwargs)
                 results = self._gmail_request_with_backoff(lambda: list_request)
                 messages = results.get("messages", [])
+                sync_audit.info(
+                    "Gmail fetch_messages page account_id=%s page=%s message_ids_returned=%s",
+                    account.pk,
+                    page_num,
+                    len(messages),
+                    extra={
+                        "account_id": account.pk,
+                        "page": page_num,
+                        "page_token": "yes" if page_token else "first",
+                        "message_ids_returned": len(messages),
+                    },
+                )
                 if not messages:
                     break
                 for msg in messages:
@@ -309,11 +397,33 @@ class GmailService(EmailProviderService):
                             .get(userId="me", id=mid, format="full")
                         )
                         parsed_messages.append(self._parse_message(msg_data))
-                    except Exception:
+                    except Exception as e:
+                        sync_audit.warning(
+                            "Gmail fetch_messages skipped message account_id=%s external_message_id=%s error=%s",
+                            account.pk,
+                            msg_id,
+                            str(e),
+                            extra={
+                                "account_id": account.pk,
+                                "external_message_id": msg_id,
+                                "error": str(e),
+                            },
+                        )
                         continue
                 page_token = results.get("nextPageToken")
                 if not page_token:
                     break
+            external_ids = [m["external_message_id"] for m in parsed_messages]
+            sync_audit.info(
+                "Gmail fetch_messages completed account_id=%s total_parsed=%s",
+                account.pk,
+                len(parsed_messages),
+                extra={
+                    "account_id": account.pk,
+                    "total_parsed": len(parsed_messages),
+                    "external_message_ids_sample": external_ids[:50] if len(external_ids) > 50 else external_ids,
+                },
+            )
             return parsed_messages
         except Exception as e:
             raise ValueError(f"Error fetching Gmail messages: {str(e)}")
@@ -827,7 +937,7 @@ class MicrosoftService(EmailProviderService):
 
         def _sort_date(d):
             if d is None:
-                return datetime.min.replace(tzinfo=timezone.utc)
+                return datetime.min.replace(tzinfo=utc_tz.utc)
             return timezone.make_aware(d) if timezone.is_naive(d) else d
 
         merged.sort(key=lambda m: _sort_date(m.get("date_sent")), reverse=True)
@@ -1084,6 +1194,19 @@ class EmailSyncService:
             max_total=max_total,
         )
 
+        message_ids_from_provider = [m["external_message_id"] for m in messages]
+        thread_backfill_stats = {}
+
+        sync_audit.info(
+            "sync_account store starting",
+            extra={
+                "account_id": account.pk,
+                "is_initial": is_initial,
+                "max_total": max_total,
+                "messages_from_provider": len(messages),
+            },
+        )
+
         # Store in database
         created_count = 0
         updated_count = 0
@@ -1134,43 +1257,78 @@ class EmailSyncService:
             # Step 1: When an email comes in, fetch the full thread from Gmail and save every message to the DB.
             # This is the only place we fetch thread messages from the API; the task view only reads from the DB.
             if thread_ids_to_backfill and hasattr(provider_service, "get_thread_messages"):
+                backfill_fetched = 0
+                backfill_failed_threads = []
+                backfill_saved = 0
+                backfill_message_failures = 0
                 for ext_thread_id in thread_ids_to_backfill:
                     try:
                         thread_messages = provider_service.get_thread_messages(account, ext_thread_id)
-                    except Exception:
+                        backfill_fetched += 1
+                    except Exception as e:
+                        sync_audit.warning(
+                            "sync_account thread backfill failed to fetch thread",
+                            extra={
+                                "account_id": account.pk,
+                                "external_thread_id": ext_thread_id,
+                                "error": str(e),
+                            },
+                        )
+                        backfill_failed_threads.append(ext_thread_id)
                         continue
                     thread, _ = EmailThread.objects.get_or_create(
                         account=account,
                         external_thread_id=ext_thread_id,
                     )
-                    saved_in_thread = 0
-                    for m in thread_messages:
-                        try:
-                            EmailMessage.objects.update_or_create(
-                                account=account,
-                                external_message_id=m["external_message_id"],
-                                defaults={
-                                    "thread": thread,
-                                    "subject": m.get("subject") or "",
-                                    "from_address": m.get("from_address") or "",
-                                    "from_name": m.get("from_name") or "",
-                                    "to_addresses": m.get("to_addresses") or [],
-                                    "cc_addresses": m.get("cc_addresses") or [],
-                                    "bcc_addresses": m.get("bcc_addresses") or [],
-                                    "date_sent": m.get("date_sent"),
-                                    "body_html": m.get("body_html") or "",
-                                },
-                            )
-                            saved_in_thread += 1
-                        except Exception:
-                            pass
+                    saved_in_thread = store_thread_messages(
+                        account, thread, thread_messages, audit_logger=sync_audit
+                    )
+                    backfill_saved += saved_in_thread
+                    backfill_message_failures += len(thread_messages) - saved_in_thread
+                    sync_audit.debug(
+                        "sync_account thread backfill thread done",
+                        extra={
+                            "account_id": account.pk,
+                            "external_thread_id": ext_thread_id,
+                            "messages_saved": saved_in_thread,
+                        },
+                    )
+                sync_audit.info(
+                    "sync_account thread backfill completed",
+                    extra={
+                        "account_id": account.pk,
+                        "threads_fetched": backfill_fetched,
+                        "threads_failed": len(backfill_failed_threads),
+                        "messages_saved": backfill_saved,
+                        "message_failures": backfill_message_failures,
+                    },
+                )
+                thread_backfill_stats = {
+                    "threads_fetched": backfill_fetched,
+                    "threads_failed": len(backfill_failed_threads),
+                    "messages_saved": backfill_saved,
+                    "message_failures": backfill_message_failures,
+                }
 
             account.last_synced_at = timezone.now()
             account.save(update_fields=["last_synced_at"])
+
+        sync_audit.info(
+            "sync_account store completed",
+            extra={
+                "account_id": account.pk,
+                "created_count": created_count,
+                "updated_count": updated_count,
+                "synced_email_ids_count": len(synced_email_ids),
+                "synced_email_ids_sample": synced_email_ids[:20] if len(synced_email_ids) > 20 else synced_email_ids,
+            },
+        )
 
         return {
             "created": created_count,
             "updated": updated_count,
             "total": len(messages),
             "synced_email_ids": synced_email_ids,  # Return list of synced email IDs
+            "message_ids_from_provider": message_ids_from_provider,
+            "thread_backfill_stats": thread_backfill_stats,
         }
