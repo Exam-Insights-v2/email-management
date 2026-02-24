@@ -46,8 +46,6 @@ node_modules/
 # Python test outputs
 .pytest_cache/
 
-# Django migrations cache
-*.sqlite3
 
 # Coverage reports
 .coverage

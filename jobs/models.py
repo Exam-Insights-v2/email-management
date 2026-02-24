@@ -1,6 +1,10 @@
+import logging
+
 from django.db import models
 from django.db.models import Max
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 
 class JobStatus(models.TextChoices):
@@ -61,6 +65,8 @@ class Task(models.Model):
         null=True,
         related_name="tasks",
     )
+    # For email-backed tasks, thread is derivable as email_message.thread; kept for join convenience.
+    # Standalone (manual) tasks have both email_message and thread null.
     thread = models.ForeignKey(
         "mail.EmailThread",
         on_delete=models.SET_NULL,
@@ -127,9 +133,10 @@ class Task(models.Model):
                 self.account_task_number = (max_number or 0) + 1
             except Exception as e:
                 # Fallback: just get max without locking (less safe but will work)
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Error generating account_task_number with locking: {e}. Using fallback method.")
+                logger.warning(
+                    "Error generating account_task_number with locking: %s. Using fallback method.",
+                    e,
+                )
                 max_number = Task.objects.filter(
                     account_id=account_id
                 ).aggregate(

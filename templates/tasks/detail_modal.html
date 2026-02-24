@@ -4,7 +4,46 @@ Usage:
   {% include 'tasks/detail_modal.html' with task=task %}
 {% endcomment %}
 {% load db_filters %}
-
+<style>
+  .draft-body-editor a[href] {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+  .dark .draft-body-editor a[href] {
+    color: #60a5fa;
+  }
+  .draft-body-editor a[href]:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+  }
+  .dark .draft-body-editor a[href]:hover {
+    color: #93c5fd;
+  }
+  .draft-body-editor ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+  }
+  .draft-body-editor ol {
+    list-style-type: decimal;
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+  }
+  .draft-body-editor li {
+    margin: 0.15em 0;
+  }
+  .draft-from-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  }
+  .dark   .draft-from-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  }
+  /* Prevent nested message boxes inside a thread message body (only this message's content should show) */
+  .task-thread-message-body .task-thread-message-box,
+  .task-thread-message-body article {
+    display: none !important;
+  }
+</style>
 <el-dialog>
   <dialog id="task-detail-{{ task.pk }}" aria-labelledby="task-detail-{{ task.pk }}-title" class="fixed inset-0 size-auto max-h-none max-w-none bg-transparent backdrop:bg-transparent">
     <el-dialog-backdrop class="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/50 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
@@ -37,6 +76,29 @@ Usage:
                 {% endif %}
                 <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors" aria-label="Mark as Done">
                   <i class="ti ti-circle-check size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                </button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'task_update' task.pk %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+                <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+                <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+                <input type="hidden" name="status" value="pending">
+                {% if task.due_at %}
+                {% load db_filters %}
+                <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
+                {% endif %}
+                <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors" aria-label="Undone" title="Undone">
+                  <i class="ti ti-circle-dashed size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
+                </button>
+              </form>
+              {% endif %}
+              {% if task.email_message %}
+              <form method="post" action="{% url 'task_reprocess' task.pk %}" class="inline" onsubmit="return confirm('Reprocess this task? The current task will be removed and the email will be reclassified. Refresh the page in a few seconds to see the new task.');">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center justify-center rounded-md p-2 h-9 w-9 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors" aria-label="Reprocess email and task" title="Reprocess: re-run classification and create a new task">
+                  <i class="ti ti-refresh size-5 sm:size-6 block pt-1" aria-hidden="true"></i>
                 </button>
               </form>
               {% endif %}
@@ -137,62 +199,50 @@ Usage:
               </section>
             </div>
 
-            <!-- Email Thread & Draft Section (same scroll area) -->
+            <!-- Email Thread & Draft: one flat list of boxes (oldest message → newest message → draft), each its own article -->
             {% if task.email_message and email_data %}
-            <div class="">
-            <!-- Scrollable area: thread (oldest→newest) then draft; scroll to bottom so current email + draft are in view; scroll up to see older messages -->
+            <div class="p-4 sm:p-6">
             <div id="task-email-thread-draft-{{ task.pk }}" class="overflow-y-auto dark:border-white/10 max-h-[70vh]">
-            <!-- Email Thread Section (shown first, oldest first so current email is at bottom) -->
-            {% if email_data.thread_messages %}
-            <section class="p-4 sm:p-6">
-              <div class="space-y-4">
-                {% for msg in email_data.thread_messages reversed %}
-                <article class="rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden">
-                  <!-- Header: sender to recipient | timestamp + menu -->
-                  <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold {% if msg.external_message_id == task.email_message.external_message_id %}bg-cyan-500{% else %}bg-gray-500 dark:bg-gray-600{% endif %}" aria-hidden="true">
-                        {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
+            <div class="space-y-4" role="list">
+              {% for msg in email_data.thread_messages %}
+              <article class="task-thread-message-box rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden" role="listitem">
+                <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold {% if msg.external_message_id == task.email_message.external_message_id %}bg-cyan-500{% else %}bg-gray-500 dark:bg-gray-600{% endif %}" aria-hidden="true">
+                      {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
+                    </span>
+                    <div class="min-w-0 text-sm">
+                      <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
+                      <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
+                      <span class="text-gray-900 dark:text-white">
+                        {% if msg.to_addresses %}
+                          {% for email in msg.to_addresses %}
+                            <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
+                          {% endfor %}
+                        {% else %}—{% endif %}
                       </span>
-                      <div class="min-w-0 text-sm">
-                        <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
-                        <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
-                        <span class="text-gray-900 dark:text-white">
-                          {% if msg.to_addresses %}
-                            {% for email in msg.to_addresses %}
-                              <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
-                            {% endfor %}
-                          {% else %}—{% endif %}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="flex items-center flex-shrink-0">
-                      <time class="text-xs text-gray-500 dark:text-gray-400" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
                     </div>
                   </div>
-                  <!-- Subject -->
-                  <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/10">
-                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
+                  <div class="flex items-center flex-shrink-0">
+                    <time class="text-xs text-gray-500 dark:text-gray-400" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
                   </div>
-                  <!-- Body -->
-                  <div class="px-4 sm:px-5 py-4">
-                    {% if msg.body_html %}
-                    <div class="email-body" style="contain: layout style paint; isolation: isolate;">
-                      {% load db_filters %}{{ msg.body_html|remove_global_style_script|strip_quoted_email }}
-                    </div>
-                    {% else %}
-                    <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
-                    {% endif %}
+                </div>
+                <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/10">
+                  <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
+                </div>
+                <div class="px-4 sm:px-5 py-4">
+                  {% if msg.body_html %}
+                  <div class="email-body task-thread-message-body" style="contain: layout style paint; isolation: isolate;">
+                    {{ msg.body_html|remove_global_style_script|strip_quoted_email }}
                   </div>
-                </article>
-                {% endfor %}
-              </div>
-            </section>
-            {% endif %}
+                  {% else %}
+                  <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
+                  {% endif %}
+                </div>
+              </article>
+              {% endfor %}
 
-            <!-- Draft Reply Section (same card style as thread emails, clearly marked as draft and editable) -->
-            {% if email_data.has_draft_reply %}
-            <section class="p-4 sm:p-6 pt-0 sm:pt-0">
+              {% if email_data.has_draft_reply %}
               {% if email_data.draft %}
               <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_update' email_data.draft.pk %}" data-draft-id="{{ email_data.draft.pk }}">
               {% else %}
@@ -204,7 +254,7 @@ Usage:
                 <input type="hidden" id="draft-to-json-{{ task.pk }}" name="to_addresses" value="">
                 <input type="hidden" id="draft-cc-json-{{ task.pk }}" name="cc_addresses" value="">
                 <input type="hidden" id="draft-bcc-json-{{ task.pk }}" name="bcc_addresses" value="">
-                <article class="rounded-lg border border-gray-200 dark:border-gray-500/40 bg-cyan-800 dark:bg-cyan-800/80 overflow-visible">
+                <article class="task-thread-draft-box rounded-lg border border-gray-200 dark:border-gray-500/40 bg-cyan-800 dark:bg-cyan-800/80 overflow-visible" role="listitem">
                   <!-- Clickable header: toggles dropdown for To / From / CC / BCC -->
                   <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10 text-left transition-colors cursor-pointer" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -292,16 +342,16 @@ Usage:
                       </span>
                       <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertUnorderedList" title="Bullet list" aria-label="Bullet list"><i class="ti ti-list size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertUnorderedList" title="Bullet list" aria-label="Bullet list" tabindex="-1"><i class="ti ti-list size-4"></i></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Bullet list</span>
                       </span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertOrderedList" title="Numbered list" aria-label="Numbered list"><i class="ti ti-list-numbers size-4"></i></button>
+                        <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="insertOrderedList" title="Numbered list" aria-label="Numbered list" tabindex="-1"><i class="ti ti-list-numbers size-4"></i></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Numbered list</span>
                       </span>
                       <span class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" aria-hidden="true"></span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="draft-insert-link p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" title="Insert link" aria-label="Insert link" id="draft-link-btn-{{ task.pk }}"><i class="ti ti-link size-4"></i></button>
+                        <button type="button" class="draft-insert-link p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" title="Insert link" aria-label="Insert link" id="draft-link-btn-{{ task.pk }}" tabindex="-1"><i class="ti ti-link size-4"></i></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Insert link</span>
                         <!-- Insert link popup (small, next to button) -->
                         <div id="draft-link-popup-{{ task.pk }}" class="hidden absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-white/10 p-2" aria-modal="true" aria-labelledby="draft-link-popup-title-{{ task.pk }}" role="dialog">
@@ -345,7 +395,7 @@ Usage:
                       data-signature="{{ task.account.signature_html|default:''|escapejs }}"
                       role="textbox"
                       aria-multiline="true"
-                    >{% if email_data.draft %}{% load db_filters %}{{ email_data.draft.body_html|remove_global_style_script }}{% endif %}</div>
+                    >{% if email_data.draft %}{% load db_filters %}{{ email_data.draft_body_display|remove_global_style_script }}{% endif %}</div>
                     <div id="draft-attachments-list-{{ task.pk }}" class="mt-3 {% if not email_data.draft or not email_data.draft.attachments.all %}hidden{% endif %}">
                       <ul class="space-y-2" id="draft-attachments-ul-{{ task.pk }}">
                       {% if email_data.draft %}{% load db_filters %}{% for att in email_data.draft.attachments.all %}
@@ -393,9 +443,9 @@ Usage:
                       <input type="file" id="draft-attachment-input-{{ task.pk }}" class="hidden" multiple accept="*/*">
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
-                      {% if user_connected_accounts|length > 1 %}
+                      {% if user_connected_accounts and user_connected_accounts|length > 1 %}
                         <label for="draft-from-account-{{ task.pk }}" class="text-sm text-gray-500 dark:text-gray-400 shrink-0">From:</label>
-                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="text-sm rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-0.5 pr-5 pl-1 focus:ring-1 focus:ring-cyan-500 max-w-[11rem]" title="Choose which account to send from" aria-label="Send from account">
+                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="draft-from-select text-sm rounded-md border-0 bg-gray-100/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 py-1.5 pr-7 pl-2 focus:ring-2 focus:ring-cyan-500/50 focus:ring-inset cursor-pointer max-w-[11rem] hover:bg-gray-200/80 dark:hover:bg-white/10 transition-colors appearance-none bg-no-repeat bg-[length:0.75rem] bg-[right_0.35rem_center]" title="Choose which account to send from" aria-label="Send from account">
                           {% for acc in user_connected_accounts %}
                             <option value="{{ acc.pk }}" {% if email_data.draft %}{% if acc.pk == email_data.draft.account_id %}selected{% endif %}{% else %}{% if acc.pk == task.account_id %}selected{% endif %}{% endif %}>{{ acc.email }}</option>
                           {% endfor %}
@@ -415,7 +465,11 @@ Usage:
                   </div>
                 </article>
               </form>
-              <script>
+              {% endif %}
+            </div>
+            </div>
+            </div>
+            <script>
                 (function() {
                   const taskPk = {{ task.pk }};
                   const form = document.getElementById('draft-form-' + taskPk);
@@ -457,7 +511,11 @@ Usage:
                   }
                   var savedSel = null;
                   var DRAFT_LIST_DEBUG = false;
-                  if (typeof window !== 'undefined') window.draftListDebug = function(on) { DRAFT_LIST_DEBUG = !!on; return DRAFT_LIST_DEBUG; };
+                  var DRAFT_BULLET_DEBUG = false;
+                  if (typeof window !== 'undefined') {
+                    window.draftListDebug = function(on) { DRAFT_LIST_DEBUG = !!on; return DRAFT_LIST_DEBUG; };
+                    window.draftBulletDebug = function(on) { DRAFT_BULLET_DEBUG = !!on; return DRAFT_BULLET_DEBUG; };
+                  }
                   // Bullet list troubleshooting: open DevTools (F12), open a task with draft, run draftListDebug(1), then click bullet list and check console for [draft list] messages.
                   function saveSel() {
                     var sel = window.getSelection();
@@ -731,32 +789,52 @@ Usage:
                       });
                       btn.addEventListener('mousedown', function(e) {
                         e.preventDefault();
+                        if (bodyEditor && document.getSelection() && document.getSelection().anchorNode && bodyEditor.contains(document.getSelection().anchorNode))
+                          savedSel = saveSel();
                         var target = e.currentTarget;
                         var cmd = target ? target.getAttribute('data-command') : null;
                         if (!cmd || !bodyEditor) return;
-                        bodyEditor.focus();
                         var toRestore = savedSel;
                         var isListCmd = (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList');
-                        if (DRAFT_LIST_DEBUG && isListCmd) console.log('[draft list] mousedown list cmd, toRestore=', !!toRestore);
-                        setTimeout(function() {
-                          var restored = toRestore ? restoreSel(toRestore) : false;
-                          if (isListCmd && !restored && !toRestore) {
-                            var sel = window.getSelection();
-                            if (!sel.rangeCount || !bodyEditor.contains(sel.anchorNode)) {
-                              var r = document.createRange();
-                              r.selectNodeContents(bodyEditor);
-                              sel.removeAllRanges();
-                              sel.addRange(r);
+                        if (isListCmd) {
+                          if (DRAFT_BULLET_DEBUG) console.log('[bullet] mousedown savedSel=', !!toRestore, 'bodyEditor=', !!bodyEditor);
+                          requestAnimationFrame(function() {
+                            bodyEditor.focus();
+                            if (toRestore) {
+                              var ok = restoreSel(toRestore);
+                              if (DRAFT_BULLET_DEBUG) console.log('[bullet] rAF1 restoreSel=', ok);
                             }
-                          }
-                          if (isListCmd) {
-                            applyListCommand(cmd === 'insertOrderedList');
-                          } else {
+                            requestAnimationFrame(function() {
+                              var sel = window.getSelection();
+                              var inEditor = sel.rangeCount && bodyEditor.contains(sel.anchorNode);
+                              if (DRAFT_BULLET_DEBUG) console.log('[bullet] rAF2 rangeCount=', sel.rangeCount, 'inEditor=', inEditor, 'anchorNode=', sel.anchorNode ? sel.anchorNode.nodeName : null);
+                              if (!inEditor && toRestore) restoreSel(toRestore);
+                              else if (!inEditor) {
+                                var r = document.createRange();
+                                r.selectNodeContents(bodyEditor);
+                                sel.removeAllRanges();
+                                sel.addRange(r);
+                              }
+                              var execCmd = cmd === 'insertOrderedList' ? 'insertOrderedList' : 'insertUnorderedList';
+                              try {
+                                var result = document.execCommand(execCmd, false, null);
+                                if (DRAFT_BULLET_DEBUG) console.log('[bullet] execCommand(', execCmd, ')=', result);
+                              } catch (err) {
+                                if (DRAFT_BULLET_DEBUG) console.error('[bullet] execCommand error', err);
+                              }
+                              syncBodyToHidden();
+                              scheduleAutosave();
+                            });
+                          });
+                        } else {
+                          bodyEditor.focus();
+                          setTimeout(function() {
+                            if (toRestore) restoreSel(toRestore);
                             document.execCommand(cmd, false, null);
-                          }
-                          syncBodyToHidden();
-                          scheduleAutosave();
-                        }, 0);
+                            syncBodyToHidden();
+                            scheduleAutosave();
+                          }, 0);
+                        }
                       });
                     });
                     var PRESET_FORE = ['#000000','#374151','#6b7280','#9ca3af','#dc2626','#2563eb','#059669','#7c3aed','#b45309','#0d9488','#ea580c','#be123c'];
@@ -889,6 +967,11 @@ Usage:
                       if (linkUrlInput) linkUrlInput.value = '';
                     }
                     if (linkBtn) {
+                      linkBtn.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        if (bodyEditor && document.getSelection() && document.getSelection().anchorNode && bodyEditor.contains(document.getSelection().anchorNode))
+                          savedSel = saveSel();
+                      });
                       var linkWrap = linkBtn.closest('span');
                       if (linkWrap) {
                         linkWrap.addEventListener('mouseenter', function() {
@@ -900,8 +983,11 @@ Usage:
                         e.preventDefault();
                         e.stopPropagation();
                         if (!bodyEditor || !linkPopup || !linkUrlInput) return;
+                        savedSel = saveSel();
                         linkPopup.classList.toggle('hidden');
-                        if (!linkPopup.classList.contains('hidden')) { linkUrlInput.value = ''; linkUrlInput.focus(); }
+                        if (!linkPopup.classList.contains('hidden')) {
+                          linkUrlInput.value = '';
+                        }
                       });
                     }
                     if (linkCancelBtn) linkCancelBtn.addEventListener('click', closeLinkPopup);
@@ -918,15 +1004,33 @@ Usage:
                     }
                     if (linkDoneBtn && linkUrlInput && bodyEditor) {
                       function applyLinkAndClose() {
-                        bodyEditor.focus();
-                        var toRestore = savedSel;
-                        if (toRestore) restoreSel(toRestore);
                         var url = (linkUrlInput.value || '').trim();
-                        if (url) document.execCommand('createLink', false, url);
-                        else document.execCommand('unlink', false, null);
-                        closeLinkPopup();
-                        syncBodyToHidden();
-                        scheduleAutosave();
+                        if (!url) {
+                          bodyEditor.focus();
+                          var toRestore = savedSel;
+                          if (toRestore) restoreSel(toRestore);
+                          document.execCommand('unlink', false, null);
+                          closeLinkPopup();
+                          syncBodyToHidden();
+                          scheduleAutosave();
+                          return;
+                        }
+                        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url) === false)
+                          url = 'https://' + url;
+                        var toRestore = savedSel;
+                        bodyEditor.focus();
+                        requestAnimationFrame(function() {
+                          if (toRestore) restoreSel(toRestore);
+                          requestAnimationFrame(function() {
+                            var sel = window.getSelection();
+                            if (!sel.rangeCount || !bodyEditor.contains(sel.anchorNode))
+                              restoreSel(toRestore);
+                            document.execCommand('createLink', false, url);
+                            closeLinkPopup();
+                            syncBodyToHidden();
+                            scheduleAutosave();
+                          });
+                        });
                       }
                       linkDoneBtn.addEventListener('click', applyLinkAndClose);
                       linkUrlInput.addEventListener('keydown', function(e) {
@@ -1145,6 +1249,11 @@ Usage:
                             fromInp.value = fromSelect.value;
                             formSend.appendChild(fromInp);
                           }
+                          var taskInp = document.createElement('input');
+                          taskInp.type = 'hidden';
+                          taskInp.name = 'task_id';
+                          taskInp.value = taskPk;
+                          formSend.appendChild(taskInp);
                           document.body.appendChild(formSend);
                           formSend.submit();
                         } else {
@@ -1293,11 +1402,7 @@ Usage:
                   }
                 })();
               </script>
-            </section>
             {% endif %}
-            </div>
-            </div>
-          {% endif %}
           </div>
         </div>
       </el-dialog-panel>

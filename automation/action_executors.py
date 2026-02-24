@@ -8,7 +8,7 @@ from typing import Dict, Any, List
 from automation.models import Action, Label, EmailLabel
 from automation.services import OpenAIClient
 from jobs.models import Job, Task, TaskStatus, JobStatus
-from mail.models import Draft, EmailMessage
+from mail.models import Draft, EmailMessage, EmailThread
 from mail.services import GmailService
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -131,55 +131,32 @@ def execute_create_task(
     client: OpenAIClient,
     context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Create a task from the email"""
-    # Use instructions to guide task creation, or use defaults
+    """Create a task from the email (uses same consolidation as process_email)."""
+    from automation.task_from_email import ensure_task_for_email
+
     instructions = action.instructions or "Create a task for this email"
-    
-    # Check if task already exists for this email (with atomic operation to prevent race conditions)
-    from django.db import transaction
-    
-    with transaction.atomic():
-        # Use select_for_update to prevent race conditions
-        existing_task = Task.objects.select_for_update().filter(
-            account=email.account,
-            email_message=email
-        ).first()
-        
-        if existing_task:
-            return {
-                "success": True,
-                "message": f"Task already exists (ID: {existing_task.pk})",
-                "data": {"task_id": existing_task.pk, "existing": True}
-            }
-    
-        # Extract task details from instructions or use email subject
-        title = email.subject or f"Task for email from {email.from_address}"
-        description = f"Email from {email.from_name or email.from_address}: {email.subject}"
-        
-        # Parse priority from instructions if mentioned
-        priority = 1
-        if "priority" in instructions.lower() or "urgent" in instructions.lower():
-            priority = 5
-        elif "high" in instructions.lower():
-            priority = 4
-        elif "medium" in instructions.lower():
-            priority = 3
-        
-        task = Task.objects.create(
-            account=email.account,
-            email_message=email,
-            thread=email.thread,
-            title=title[:255],
-            description=description,
-            priority=priority,
-            status=TaskStatus.PENDING,
-        )
-        
-        return {
-            "success": True,
-            "message": f"Task created (ID: {task.pk})",
-            "data": {"task_id": task.pk, "title": task.title}
-        }
+    title = email.subject or f"Task for email from {email.from_address}"
+    description = f"Email from {email.from_name or email.from_address}: {email.subject}"
+    priority = 1
+    if "priority" in instructions.lower() or "urgent" in instructions.lower():
+        priority = 5
+    elif "high" in instructions.lower():
+        priority = 4
+    elif "medium" in instructions.lower():
+        priority = 3
+
+    classification = {
+        "task_title": title[:255],
+        "task_description": description,
+        "priority": priority,
+        "due_at": None,
+    }
+    task = ensure_task_for_email(email, classification)
+    return {
+        "success": True,
+        "message": f"Task created (ID: {task.pk})",
+        "data": {"task_id": task.pk, "title": task.title}
+    }
 
 
 def execute_notify(
@@ -248,7 +225,17 @@ def execute_send_reply(
             body_html=html_body,
             reply_to_message_id=email.external_message_id,
         )
-        
+
+        from mail.services import persist_sent_message
+        persist_sent_message(
+            account=email.account,
+            send_result=result,
+            subject=f"Re: {email.subject or 'your message'}",
+            from_address=email.account.email,
+            to_addresses=[email.from_address],
+            body_html=html_body,
+        )
+
         return {
             "success": True,
             "message": f"Reply sent successfully (Message ID: {result.get('id')})",
@@ -304,7 +291,19 @@ def execute_forward_email(
             external_message_id=email.external_message_id,
             to_addresses=to_addresses,
         )
-        
+
+        from mail.services import persist_sent_message
+        persist_sent_message(
+            account=email.account,
+            send_result=result,
+            subject=result.get("subject", ""),
+            from_address=result.get("from_address", email.account.email),
+            to_addresses=result.get("to_addresses", to_addresses),
+            cc_addresses=result.get("cc_addresses"),
+            bcc_addresses=result.get("bcc_addresses"),
+            body_html=result.get("body_html", ""),
+        )
+
         return {
             "success": True,
             "message": f"Email forwarded successfully (Message ID: {result.get('id')})",
@@ -557,8 +556,7 @@ Return JSON only, no additional text."""
                 {"role": "system", "content": "You are a data extraction assistant. Extract structured information from emails and return valid JSON only."},
                 {"role": "user", "content": extraction_prompt}
             ],
-            response_format={"type": "json_object"},
-            temperature=0.3
+            response_format={"type": "json_object"}
         )
         
         logger.info(f"OpenAI Response - execute_create_job for email {email.pk}: {len(response.choices[0].message.content) if response.choices else 0} chars")
@@ -637,8 +635,7 @@ Return JSON only, no additional text."""
                 {"role": "system", "content": "You are a data extraction assistant. Extract structured information from emails and return valid JSON only."},
                 {"role": "user", "content": extraction_prompt}
             ],
-            response_format={"type": "json_object"},
-            temperature=0.3
+            response_format={"type": "json_object"}
         )
         
         extracted_data = json.loads(response.choices[0].message.content)
@@ -796,42 +793,22 @@ def execute_create_reminder(
     if not due_date:
         due_date = timezone.now() + timedelta(days=7)
     
-    # Create reminder task
+    from automation.task_from_email import ensure_task_for_email
+
+    due_at_aware = timezone.make_aware(due_date) if timezone.is_naive(due_date) else due_date
     title = f"Reminder: {email.subject or 'Follow up'}"
     description = f"Reminder for email from {email.from_name or email.from_address}\n\n{instructions}"
-    
-    # Check if task already exists
-    existing_task = Task.objects.filter(
-        account=email.account,
-        email_message=email
-    ).first()
-    
-    if existing_task:
-        # Update existing task with due date
-        existing_task.due_at = due_date
-        existing_task.save()
-        return {
-            "success": True,
-            "message": f"Reminder set for existing task (ID: {existing_task.pk})",
-            "data": {"task_id": existing_task.pk, "due_at": due_date.isoformat()}
-        }
-    
-    # Create new reminder task
-    task = Task.objects.create(
-        account=email.account,
-        email_message=email,
-        thread=email.thread,
-        title=title[:255],
-        description=description,
-        priority=context.get("priority", 3),
-        status=TaskStatus.PENDING,
-        due_at=due_date,
-    )
-    
+    classification = {
+        "task_title": title[:255],
+        "task_description": description,
+        "priority": context.get("priority", 3),
+        "due_at": due_at_aware,
+    }
+    task = ensure_task_for_email(email, classification)
     return {
         "success": True,
         "message": f"Reminder task created (ID: {task.pk})",
-        "data": {"task_id": task.pk, "due_at": due_date.isoformat(), "title": task.title}
+        "data": {"task_id": task.pk, "due_at": (task.due_at or due_date).isoformat(), "title": task.title}
     }
 
 

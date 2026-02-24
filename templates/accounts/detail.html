@@ -30,6 +30,16 @@
       </div>
       <div class="mt-6 border-t border-white/10">
         <dl class="divide-y divide-white/10">
+          {% if sync_in_progress %}
+          <div class="px-4 py-3 sm:px-0 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-200 text-sm">
+            Syncing emails… This may take a minute. Refresh to update.
+          </div>
+          {% endif %}
+          {% if last_sync_error %}
+          <div class="px-4 py-3 sm:px-0 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+            Last sync failed: {{ last_sync_error }} Try syncing again or reconnect the account.
+          </div>
+          {% endif %}
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-100">Provider</dt>
             <dd class="mt-1 text-sm/6 text-gray-400 sm:col-span-2 sm:mt-0">{{ account.get_provider_display }}</dd>

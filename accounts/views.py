@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
@@ -7,6 +9,8 @@ from rest_framework import viewsets
 from .models import Account, Provider
 from .serializers import AccountSerializer
 from .services import GmailOAuthService, MicrosoftEmailOAuthService, MicrosoftOAuthService
+
+logger = logging.getLogger(__name__)
 
 
 class AccountViewSet(viewsets.ModelViewSet):
@@ -91,10 +95,8 @@ def account_gmail_oauth_callback(request):
         error_msg = str(w)
         if "scope" in error_msg.lower():
             # Log the warning but try to continue - scope mismatches are often harmless
-            import logging
             from accounts.services import GoogleOAuthService
-            logger = logging.getLogger(__name__)
-            logger.warning(f"OAuth scope warning (attempting to continue): {error_msg}")
+            logger.warning("OAuth scope warning (attempting to continue): %s", error_msg)
             # Try to create a new flow and fetch token, ignoring the warning
             try:
                 # Use the scopes that Google actually granted (including openid)
@@ -159,9 +161,10 @@ def account_gmail_oauth_callback(request):
                 email = user_info.get("email")
             except Exception as userinfo_error:
                 import traceback
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Gmail API error: {gmail_error}\nUserinfo API error: {userinfo_error}\n{traceback.format_exc()}")
+                logger.error(
+                    "Gmail API error: %s\nUserinfo API error: %s\n%s",
+                    gmail_error, userinfo_error, traceback.format_exc(),
+                )
                 messages.error(
                     request, 
                     f"Could not retrieve email address. Gmail API: {str(gmail_error)}. Userinfo API: {str(userinfo_error)}. Please try connecting again."
@@ -200,46 +203,29 @@ def account_gmail_oauth_callback(request):
                 request, f"Gmail account {account.email} was already connected."
             )
         
-        # Trigger email sync after account connection
-        try:
-            from mail.tasks import sync_account_emails
-            sync_account_emails.delay(account.pk)
+        from mail.onboarding import trigger_sync_after_connect
+        ok, _ = trigger_sync_after_connect(account)
+        if ok:
             messages.info(request, f"Email sync started for {account.email}. Emails will appear shortly.")
-        except Exception as sync_error:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error triggering email sync: {sync_error}")
-            messages.warning(request, f"Account connected but email sync failed to start. You can manually sync from the account page.")
+        else:
+            messages.warning(request, "Account connected but email sync failed to start. You can manually sync from the account page.")
         return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
         import traceback
         error_msg = str(e)
         error_traceback = traceback.format_exc()
-        
-        # Log the full error for debugging
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"OAuth callback error: {error_msg}\n{error_traceback}")
-        
-        # Provide helpful message for scope mismatch errors
+        logger.error("OAuth callback error: %s\n%s", error_msg, error_traceback)
         if "scope" in error_msg.lower() or "invalid_grant" in error_msg.lower():
-            messages.error(
-                request,
-                f"OAuth scope error: {error_msg}. Please try connecting again.",
-            )
+            messages.error(request, f"OAuth scope error: {error_msg}. Please try connecting again.")
         else:
             messages.error(request, f"Error connecting account: {error_msg}")
-        
-        # Safe redirect - handle any potential reverse errors
         try:
             settings_url = reverse('settings')
             return redirect(f"{settings_url}?tab=accounts")
         except Exception as redirect_error:
-            # Fallback to simple redirect if reverse fails
-            logger.error(f"Redirect error: {redirect_error}")
+            logger.error("Redirect error: %s", redirect_error)
             return redirect('/settings?tab=accounts')
     finally:
-        # Clean up session
         request.session.pop("oauth_state", None)
         request.session.pop("oauth_account_id", None)
 
@@ -338,9 +324,7 @@ def account_microsoft_oauth_callback(request):
             email = user_info.get("mail") or user_info.get("userPrincipalName")
         except Exception as e:
             import traceback
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Microsoft Graph API error: {str(e)}\n{traceback.format_exc()}")
+            logger.error("Microsoft Graph API error: %s\n%s", e, traceback.format_exc())
             messages.error(
                 request, 
                 f"Could not retrieve email address from Microsoft: {str(e)}. Please try connecting again."
@@ -379,46 +363,29 @@ def account_microsoft_oauth_callback(request):
                 request, f"Microsoft account {account.email} was already connected."
             )
         
-        # Trigger email sync after account connection
-        try:
-            from mail.tasks import sync_account_emails
-            sync_account_emails.delay(account.pk)
+        from mail.onboarding import trigger_sync_after_connect
+        ok, _ = trigger_sync_after_connect(account)
+        if ok:
             messages.info(request, f"Email sync started for {account.email}. Emails will appear shortly.")
-        except Exception as sync_error:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error triggering email sync: {sync_error}")
-            messages.warning(request, f"Account connected but email sync failed to start. You can manually sync from the account page.")
+        else:
+            messages.warning(request, "Account connected but email sync failed to start. You can manually sync from the account page.")
         return redirect(f"{reverse('settings')}?tab=accounts")
     except Exception as e:
         import traceback
         error_msg = str(e)
         error_traceback = traceback.format_exc()
-        
-        # Log the full error for debugging
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"OAuth callback error: {error_msg}\n{error_traceback}")
-        
-        # Provide helpful message for scope mismatch errors
+        logger.error("OAuth callback error: %s\n%s", error_msg, error_traceback)
         if "scope" in error_msg.lower() or "invalid_grant" in error_msg.lower():
-            messages.error(
-                request,
-                f"OAuth scope error: {error_msg}. Please try connecting again.",
-            )
+            messages.error(request, f"OAuth scope error: {error_msg}. Please try connecting again.")
         else:
             messages.error(request, f"Error connecting account: {error_msg}")
-        
-        # Safe redirect - handle any potential reverse errors
         try:
             settings_url = reverse('settings')
             return redirect(f"{settings_url}?tab=accounts")
         except Exception as redirect_error:
-            # Fallback to simple redirect if reverse fails
-            logger.error(f"Redirect error: {redirect_error}")
+            logger.error("Redirect error: %s", redirect_error)
             return redirect('/settings?tab=accounts')
     finally:
-        # Clean up session
         request.session.pop("oauth_state", None)
         request.session.pop("oauth_account_id", None)
 

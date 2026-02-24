@@ -5,7 +5,7 @@
 {% block header_title %}All Drafts{% endblock %}
 
 {% block header_action %}
-  {% include 'includes/create_drawer.html' with drawer_id="create-draft" title="Create Draft" form_template="drafts/form_content.html" form_url="draft_create" button_text="Create New Draft" accounts=accounts emails=emails %}
+  {% include 'includes/create_modal.html' with modal_id="create-draft" title="Create Draft" form_template="drafts/form_content.html" form_url="draft_create" button_text="Create New Draft" form=form accounts=accounts emails=emails %}
 {% endblock %}
 
 {% block content %}

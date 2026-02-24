@@ -42,9 +42,20 @@ List row component for tasks - reusable across priority sections
   </div>
   {% else %}
   <div class="flex items-center justify-center sm:hidden">
-    <div class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400" aria-label="Done" title="Done">
-      <i class="ti ti-circle-check size-4" aria-hidden="true"></i>
-    </div>
+    <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
+      {% csrf_token %}
+      <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+      <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+      <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+      <input type="hidden" name="status" value="pending">
+      {% if task.due_at %}
+      {% load db_filters %}
+      <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
+      {% endif %}
+      <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600" aria-label="Undone" title="Undone">
+        <i class="ti ti-circle-dashed size-4" aria-hidden="true"></i>
+      </button>
+    </form>
   </div>
   {% endif %}
   
@@ -112,9 +123,20 @@ List row component for tasks - reusable across priority sections
   </div>
   {% else %}
   <div class="hidden sm:flex items-center justify-center">
-    <div class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400" aria-label="Done" title="Done">
-      <i class="ti ti-circle-check size-4 sm:size-5" aria-hidden="true"></i>
-    </div>
+    <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
+      {% csrf_token %}
+      <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+      <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+      <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+      <input type="hidden" name="status" value="pending">
+      {% if task.due_at %}
+      {% load db_filters %}
+      <input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">
+      {% endif %}
+      <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600" aria-label="Undone" title="Undone">
+        <i class="ti ti-circle-dashed size-4 sm:size-5" aria-hidden="true"></i>
+      </button>
+    </form>
   </div>
   {% endif %}
 </li>

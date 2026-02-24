@@ -1,6 +1,8 @@
+import json
 import os
 import secrets
 import logging
+import time
 import warnings
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
@@ -17,14 +19,18 @@ from msal import ConfidentialClientApplication
 
 from accounts.models import Account, OAuthToken, Provider
 
+logger = logging.getLogger(__name__)
+
 # Suppress the file_cache warning from oauth2client
 warnings.filterwarnings('ignore', message='.*file_cache.*oauth2client.*', category=UserWarning)
 
-# Suppress INFO level logging for oauth2client file_cache messages
-# The warning comes from oauth2client library initialization
-for logger_name in ['oauth2client', 'oauth2client.client', '__init__']:
-    oauth2client_logger = logging.getLogger(logger_name)
-    oauth2client_logger.setLevel(logging.WARNING)  # Only show WARNING and above
+# Suppress INFO level logging for oauth2client/file_cache messages from Google libs
+for logger_name in [
+    'oauth2client', 'oauth2client.client', '__init__',
+    'google_auth_oauthlib', 'google.auth', 'googleapiclient',
+]:
+    _log = logging.getLogger(logger_name)
+    _log.setLevel(logging.WARNING)
 
 # Also suppress via logging filter for any logger that contains file_cache messages
 class FileCacheFilter(logging.Filter):
@@ -228,7 +234,23 @@ class GmailOAuthService:
             },
         )
         account.is_connected = True
+        _logpath = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
+        # #region agent log
+        try:
+            os.makedirs(os.path.dirname(_logpath), exist_ok=True)
+            with open(_logpath, "a") as _f:
+                _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "B", "location": "accounts.services.GmailOAuthService.save_token", "message": "before account.save", "data": {"account_pk": account.pk, "is_connected": account.is_connected}, "timestamp": int(time.time() * 1000)}) + "\n")
+        except Exception:
+            pass
+        # #endregion
         account.save(update_fields=["is_connected"])
+        # #region agent log
+        try:
+            with open(_logpath, "a") as _f:
+                _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "B", "location": "accounts.services.GmailOAuthService.save_token", "message": "after account.save", "data": {"account_pk": account.pk}, "timestamp": int(time.time() * 1000)}) + "\n")
+        except Exception:
+            pass
+        # #endregion
         return oauth_token
 
     @staticmethod
@@ -283,7 +305,10 @@ class GmailOAuthService:
                 if credentials.refresh_token:
                     oauth_token.refresh_token = credentials.refresh_token
                 if credentials.expiry:
-                    oauth_token.expires_at = credentials.expiry
+                    expiry = credentials.expiry
+                    oauth_token.expires_at = (
+                        timezone.make_aware(expiry) if timezone.is_naive(expiry) else expiry
+                    )
                 # Update scopes if they changed during refresh
                 if credentials.scopes:
                     oauth_token.set_scopes_list(list(credentials.scopes))
@@ -295,17 +320,22 @@ class GmailOAuthService:
                 # Check for permanent errors that indicate refresh token is invalid
                 permanent_errors = ["invalid_grant", "invalid_token", "unauthorized_client"]
                 if any(keyword in error_str for keyword in permanent_errors):
+                    # #region agent log
+                    try:
+                        _lp = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
+                        os.makedirs(os.path.dirname(_lp), exist_ok=True)
+                        with open(_lp, "a") as _f:
+                            _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "C", "location": "accounts.services.GmailOAuthService.get_valid_credentials", "message": "calling disconnect_account after refresh failure", "data": {"account_pk": account.pk, "error": str(e)[:150]}, "timestamp": int(time.time() * 1000)}) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
                     # Log the error for debugging
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Gmail refresh token invalid for account {account.pk}: {e}")
+                    logger.warning("Gmail refresh token invalid for account %s: %s", account.pk, e)
                     GmailOAuthService.disconnect_account(account)
                 # For other errors (network, rate limits, etc.), log but don't disconnect
                 # The token might still be valid, just couldn't refresh right now
                 else:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Gmail token refresh failed (non-fatal) for account {account.pk}: {e}")
+                    logger.warning("Gmail token refresh failed (non-fatal) for account %s: %s", account.pk, e)
                 return None
 
         return credentials
@@ -313,6 +343,16 @@ class GmailOAuthService:
     @staticmethod
     def disconnect_account(account: Account):
         """Disconnect account and remove OAuth token"""
+        # #region agent log
+        try:
+            import traceback
+            _lp = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
+            os.makedirs(os.path.dirname(_lp), exist_ok=True)
+            with open(_lp, "a") as _f:
+                _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "C", "location": "accounts.services.GmailOAuthService.disconnect_account", "message": "disconnect_account called", "data": {"account_pk": account.pk, "caller": traceback.format_stack()[-3].strip()}, "timestamp": int(time.time() * 1000)}) + "\n")
+        except Exception:
+            pass
+        # #endregion
         OAuthToken.objects.filter(account=account).delete()
         account.is_connected = False
         account.save(update_fields=["is_connected"])
@@ -557,15 +597,17 @@ class MicrosoftEmailOAuthService:
                     # Temporary errors should not disconnect the account
                     permanent_errors = ["invalid_grant", "invalid_client", "unauthorized_client"]
                     if any(err in error_code for err in permanent_errors) or any(err in error_description for err in permanent_errors):
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Microsoft refresh token invalid for account {account.pk}: {result.get('error_description', result.get('error'))}")
+                        logger.warning(
+                            "Microsoft refresh token invalid for account %s: %s",
+                            account.pk, result.get("error_description", result.get("error")),
+                        )
                         MicrosoftEmailOAuthService.disconnect_account(account)
                     else:
                         # Log non-fatal errors but don't disconnect
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Microsoft token refresh failed (non-fatal) for account {account.pk}: {result.get('error_description', result.get('error'))}")
+                        logger.warning(
+                            "Microsoft token refresh failed (non-fatal) for account %s: %s",
+                            account.pk, result.get("error_description", result.get("error")),
+                        )
                     return None
                 
                 # Update stored token
@@ -599,15 +641,11 @@ class MicrosoftEmailOAuthService:
                 error_str = str(e).lower()
                 permanent_errors = ["invalid_grant", "invalid_client", "unauthorized_client"]
                 if any(err in error_str for err in permanent_errors):
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Microsoft refresh token invalid for account {account.pk}: {e}")
+                    logger.warning("Microsoft refresh token invalid for account %s: %s", account.pk, e)
                     MicrosoftEmailOAuthService.disconnect_account(account)
                 else:
                     # Log non-fatal errors but don't disconnect
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Microsoft token refresh failed (non-fatal) for account {account.pk}: {e}")
+                    logger.warning("Microsoft token refresh failed (non-fatal) for account %s: %s", account.pk, e)
                 return None
 
         # Return current token

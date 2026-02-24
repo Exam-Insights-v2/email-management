@@ -52,6 +52,15 @@ Usage:
                   Mark as Done
                 </button>
               </form>
+              <form method="post" action="{% url 'email_unarchive' email.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-6 py-2.5 bg-slate-500 text-white rounded-full hover:bg-slate-400 text-sm font-semibold transition-colors flex items-center gap-2">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                  </svg>
+                  Undone
+                </button>
+              </form>
               {% with modal_id="delete-email-modal"|add:email.pk %}
               <form method="post" action="{% url 'email_delete' email.pk %}" class="inline" data-warning-modal="{{ modal_id }}">
                 {% csrf_token %}

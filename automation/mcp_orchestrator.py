@@ -183,8 +183,7 @@ def get_ai_action_plan(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,  # Lower temperature for more consistent decisions
+            ]
         )
         
         logger.info(f"OpenAI Response - get_ai_action_plan: {len(response.choices[0].message.content) if response.choices else 0} chars")

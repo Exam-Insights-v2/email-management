@@ -1,6 +1,8 @@
 import base64
 import email
 import email.utils
+import logging
+import time
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
@@ -9,10 +11,74 @@ import requests
 from django.db import transaction
 from django.utils import timezone
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from accounts.models import Account
 from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from mail.models import Draft, EmailMessage, EmailThread
+
+logger = logging.getLogger(__name__)
+
+# Sync caps: first sync can fetch more; incremental is capped per run.
+# For large mailboxes, run backfill_inbox_sync to pull more history after first sync.
+FIRST_SYNC_MAX_MESSAGES = 500
+INCREMENTAL_SYNC_MAX_MESSAGES = 200
+PAGE_SIZE = 100  # Gmail max 500; use 100 for balance of requests vs latency
+
+
+def _since_utc(since: Optional[datetime]) -> Optional[datetime]:
+    """Return since as timezone-aware UTC for consistent API use."""
+    if since is None:
+        return None
+    if timezone.is_naive(since):
+        since = timezone.make_aware(since)
+    return since.astimezone(timezone.utc)
+
+
+def persist_sent_message(
+    account: Account,
+    send_result: dict,
+    *,
+    subject: str = "",
+    from_address: str,
+    to_addresses: List[str],
+    body_html: str = "",
+    cc_addresses: Optional[List[str]] = None,
+    bcc_addresses: Optional[List[str]] = None,
+    date_sent=None,
+) -> EmailMessage:
+    """
+    Persist a sent message to the DB after a Gmail send (draft send, reply, or forward).
+    Ensures thread exists (get_or_create) and creates the EmailMessage.
+    Returns the created EmailMessage.
+    """
+    message_id = send_result.get("id", "")
+    thread_id = (send_result.get("threadId") or "").strip()
+    if not thread_id:
+        thread_id = f"single-{message_id}" if message_id else f"single-{timezone.now().timestamp()}"
+    thread, _ = EmailThread.objects.get_or_create(
+        account=account,
+        external_thread_id=thread_id,
+    )
+    if date_sent is None:
+        date_sent = timezone.now()
+    return EmailMessage.objects.create(
+        account=account,
+        thread=thread,
+        external_message_id=message_id,
+        subject=subject,
+        from_address=from_address,
+        to_addresses=to_addresses or [],
+        cc_addresses=cc_addresses or [],
+        bcc_addresses=bcc_addresses or [],
+        body_html=body_html,
+        date_sent=date_sent,
+    )
+
+
+def _escape_odata_string(value: str) -> str:
+    """Escape single quotes for use in OData $filter string literal (double the quote)."""
+    return (value or "").replace("'", "''")
 
 
 class EmailProviderService:
@@ -178,40 +244,76 @@ class GmailService(EmailProviderService):
             "body_html": final_body,
         }
 
-    def fetch_messages(
-        self, account: Account, max_results: int = 50, since: Optional[datetime] = None
-    ) -> List[dict]:
-        """Fetch messages from Gmail - only received emails (inbox)"""
-        service = self._get_service(account)
+    def _gmail_request_with_backoff(self, request_fn, max_retries: int = 3):
+        """Execute a Gmail API request with exponential backoff on 429/5xx."""
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                return request_fn().execute()
+            except HttpError as e:
+                last_error = e
+                status = getattr(e, "resp", None) and getattr(e.resp, "status", None)
+                if status in (429, 500, 502, 503) and attempt < max_retries - 1:
+                    delay = (2 ** attempt) + 1
+                    time.sleep(delay)
+                    continue
+                raise
+        if last_error:
+            raise last_error
 
-        # Build query: only received emails (not sent)
-        # -in:sent means exclude sent folder
-        # is:inbox means only inbox emails
-        query_parts = ["-in:sent", "is:inbox"]
-        
-        if since:
-            # Gmail query format: after:YYYY/MM/DD
-            query_parts.append(f"after:{since.strftime('%Y/%m/%d')}")
-        
+    def fetch_messages(
+        self,
+        account: Account,
+        max_results: int = 50,
+        since: Optional[datetime] = None,
+        max_total: Optional[int] = None,
+    ) -> List[dict]:
+        """Fetch messages from Gmail: inbox, archived, and sent; excludes only trash and spam.
+        Full threads are filled via thread backfill.
+        max_total: cap total messages fetched (e.g. 500 for first sync); None = use max_results only (one page).
+        """
+        service = self._get_service(account)
+        since_utc = _since_utc(since)
+        query_parts = ["-in:trash", "-in:spam"]
+        if since_utc:
+            query_parts.append(f"after:{since_utc.strftime('%Y/%m/%d')}")
         query = " ".join(query_parts)
+        page_size = min(max_results, PAGE_SIZE)
+        cap = max_total if max_total is not None else page_size
+        parsed_messages: List[dict] = []
+        page_token: Optional[str] = None
 
         try:
-            results = (
-                service.users()
-                .messages()
-                .list(userId="me", maxResults=max_results, q=query)
-                .execute()
-            )
-            messages = results.get("messages", [])
-
-            parsed_messages = []
-            for msg in messages:
-                msg_id = msg["id"]
-                msg_data = (
-                    service.users().messages().get(userId="me", id=msg_id, format="full").execute()
-                )
-                parsed_messages.append(self._parse_message(msg_data))
-
+            while len(parsed_messages) < cap:
+                list_kwargs = {
+                    "userId": "me",
+                    "maxResults": min(page_size, cap - len(parsed_messages)),
+                    "q": query,
+                    "includeSpamTrash": False,
+                }
+                if page_token:
+                    list_kwargs["pageToken"] = page_token
+                list_request = service.users().messages().list(**list_kwargs)
+                results = self._gmail_request_with_backoff(lambda: list_request)
+                messages = results.get("messages", [])
+                if not messages:
+                    break
+                for msg in messages:
+                    if len(parsed_messages) >= cap:
+                        break
+                    msg_id = msg["id"]
+                    try:
+                        msg_data = self._gmail_request_with_backoff(
+                            lambda mid=msg_id: service.users()
+                            .messages()
+                            .get(userId="me", id=mid, format="full")
+                        )
+                        parsed_messages.append(self._parse_message(msg_data))
+                    except Exception:
+                        continue
+                page_token = results.get("nextPageToken")
+                if not page_token:
+                    break
             return parsed_messages
         except Exception as e:
             raise ValueError(f"Error fetching Gmail messages: {str(e)}")
@@ -275,7 +377,7 @@ class GmailService(EmailProviderService):
             raise ValueError(f"Error checking Gmail message status: {str(e)}")
     
     def get_thread_messages(self, account: Account, external_thread_id: str) -> List[dict]:
-        """Get all messages in a thread"""
+        """Get all messages in a thread. Skips messages that fail to parse (logs and continues)."""
         try:
             service = self._get_service(account)
             thread = (
@@ -286,7 +388,11 @@ class GmailService(EmailProviderService):
             )
             messages = []
             for msg in thread.get("messages", []):
-                messages.append(self._parse_message(msg))
+                msg_id = msg.get("id", "")
+                try:
+                    messages.append(self._parse_message(msg))
+                except Exception:
+                    pass
             return messages
         except Exception as e:
             # Clear cache on error (especially 401/authentication errors)
@@ -314,6 +420,18 @@ class GmailService(EmailProviderService):
             ).execute()
         except Exception as e:
             raise ValueError(f"Error archiving Gmail message: {str(e)}")
+
+    def unarchive_message(self, account: Account, external_message_id: str):
+        """Move a message back to inbox (undo archive)"""
+        service = self._get_service(account)
+        try:
+            service.users().messages().modify(
+                userId="me",
+                id=external_message_id,
+                body={"addLabelIds": ["INBOX"]}
+            ).execute()
+        except Exception as e:
+            raise ValueError(f"Error moving message to inbox: {str(e)}")
 
     def mark_as_spam(self, account: Account, external_message_id: str):
         """Mark a message as spam"""
@@ -395,9 +513,9 @@ class GmailService(EmailProviderService):
         # Add forward note if provided
         if note:
             body_html = f"<p>{note}</p><hr>{body_html}"
-        
+
         # Send as new message
-        return self.send_message(
+        result = self.send_message(
             account=account,
             to_addresses=to_addresses,
             subject=subject,
@@ -405,6 +523,14 @@ class GmailService(EmailProviderService):
             cc_addresses=cc_addresses,
             bcc_addresses=bcc_addresses,
         )
+        # Include metadata so caller can persist the sent message to DB
+        result["subject"] = subject
+        result["from_address"] = account.email
+        result["to_addresses"] = to_addresses
+        result["body_html"] = body_html
+        result["cc_addresses"] = cc_addresses or []
+        result["bcc_addresses"] = bcc_addresses or []
+        return result
 
     def send_message(
         self,
@@ -592,55 +718,120 @@ class MicrosoftService(EmailProviderService):
             "body_html": body_html or "",
         }
 
-    def fetch_messages(
-        self, account: Account, max_results: int = 50, since: Optional[datetime] = None
+    def _ms_request_with_backoff(self, url: str, headers: dict, params: Optional[dict] = None, max_retries: int = 3):
+        """GET with exponential backoff on 429/5xx."""
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                resp = requests.get(url, headers=headers, params=params, timeout=30)
+                if resp.status_code in (429, 500, 502, 503) and attempt < max_retries - 1:
+                    delay = (2 ** attempt) + 1
+                    logger.warning(
+                        "[Microsoft] Request failed with %s, retrying in %ds (attempt %d/%d)",
+                        resp.status_code, delay, attempt + 1, max_retries,
+                    )
+                    time.sleep(delay)
+                    continue
+                resp.raise_for_status()
+                return resp
+            except requests.RequestException as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    time.sleep((2 ** attempt) + 1)
+                    continue
+                raise
+        if last_error:
+            raise last_error
+
+    def _fetch_folder_messages(
+        self,
+        headers: dict,
+        folder_path: str,
+        max_results: int,
+        since: Optional[datetime] = None,
+        max_total: Optional[int] = None,
     ) -> List[dict]:
-        """Fetch messages from Microsoft - only received emails (inbox)"""
-        headers = self._get_headers(account)
-
-        # Build filter query - get all emails from inbox (not just unread)
-        filter_parts = []
-        
-        if since:
-            # Microsoft Graph filter format: sentDateTime ge YYYY-MM-DDTHH:MM:SSZ
-            filter_parts.append(f"sentDateTime ge {since.strftime('%Y-%m-%dT%H:%M:%SZ')}")
-
-        filter_query = " and ".join(filter_parts) if filter_parts else None
-
+        """Fetch and parse messages from a single Microsoft mail folder with pagination and resilience."""
+        since_utc = _since_utc(since)
         params = {
-            "$top": max_results,
+            "$top": min(max_results, PAGE_SIZE),
             "$orderby": "sentDateTime desc",
         }
-        if filter_query:
-            params["$filter"] = filter_query
+        if since_utc:
+            # ISO 8601 in UTC for Graph API
+            params["$filter"] = f"sentDateTime ge {since_utc.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        cap = max_total if max_total is not None else max_results
+        parsed: List[dict] = []
+        url = f"https://graph.microsoft.com/v1.0/me/mailFolders/{folder_path}/messages"
 
-        try:
-            # Get messages from inbox
-            response = requests.get(
-                "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages",
-                headers=headers,
-                params=params,
-            )
-            response.raise_for_status()
-            
-            messages_data = response.json()
-            messages = messages_data.get("value", [])
-
-            parsed_messages = []
+        while len(parsed) < cap:
+            resp = self._ms_request_with_backoff(url, headers, params)
+            data = resp.json()
+            messages = data.get("value", [])
             for msg in messages:
-                # Get full message details
-                msg_id = msg["id"]
-                msg_response = requests.get(
-                    f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}",
-                    headers=headers,
-                )
-                msg_response.raise_for_status()
-                msg_data = msg_response.json()
-                parsed_messages.append(self._parse_message(msg_data))
+                if len(parsed) >= cap:
+                    break
+                msg_id = msg.get("id")
+                if not msg_id:
+                    continue
+                try:
+                    msg_resp = self._ms_request_with_backoff(
+                        f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}",
+                        headers,
+                    )
+                    parsed.append(self._parse_message(msg_resp.json()))
+                except Exception as e:
+                    logger.warning(
+                        "[Microsoft] Skip message %s: %s",
+                        msg_id,
+                        e,
+                        exc_info=False,
+                    )
+                    continue
+            next_link = data.get("@odata.nextLink")
+            if not next_link:
+                break
+            url = next_link
+            params = None  # nextLink is full URL
+        return parsed
 
-            return parsed_messages
+    def fetch_messages(
+        self,
+        account: Account,
+        max_results: int = 50,
+        since: Optional[datetime] = None,
+        max_total: Optional[int] = None,
+    ) -> List[dict]:
+        """Fetch messages from Microsoft: inbox and archive (excludes deleted/junk). Sent in threads via thread backfill."""
+        headers = self._get_headers(account)
+        cap = max_total if max_total is not None else min(max_results, PAGE_SIZE)
+        try:
+            inbox_list = self._fetch_folder_messages(
+                headers, "inbox", max_results, since, max_total=cap
+            )
         except Exception as e:
             raise ValueError(f"Error fetching Microsoft messages: {str(e)}")
+        try:
+            archive_list = self._fetch_folder_messages(
+                headers, "archive", max_results, since, max_total=cap
+            )
+        except Exception:
+            archive_list = []
+        # Merge by message ID (a message only lives in one folder), sort by date desc, apply cap
+        by_id: dict = {}
+        for m in inbox_list + archive_list:
+            mid = m.get("external_message_id")
+            if mid and mid not in by_id:
+                by_id[mid] = m
+        merged = list(by_id.values())
+
+        def _sort_date(d):
+            if d is None:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            return timezone.make_aware(d) if timezone.is_naive(d) else d
+
+        merged.sort(key=lambda m: _sort_date(m.get("date_sent")), reverse=True)
+        return merged[:cap]
 
     def check_email_status(self, account: Account, external_message_id: str) -> dict:
         """
@@ -709,6 +900,59 @@ class MicrosoftService(EmailProviderService):
         except Exception as e:
             raise ValueError(f"Error fetching Microsoft message: {str(e)}")
 
+    def get_thread_messages(self, account: Account, external_thread_id: str) -> List[dict]:
+        """Get all messages in a conversation (thread) from Microsoft Graph. Includes inbox and sent; skips messages that fail to parse."""
+        headers = self._get_headers(account)
+        filter_val = f"conversationId eq '{_escape_odata_string(external_thread_id)}'"
+        params = {
+            "$filter": filter_val,
+            "$orderby": "sentDateTime asc",
+            "$top": 100,
+        }
+        try:
+            # Fetch from /me/messages (all folders)
+            response = requests.get(
+                "https://graph.microsoft.com/v1.0/me/messages",
+                headers=headers,
+                params=params,
+            )
+            response.raise_for_status()
+            messages = response.json().get("value", [])
+            # Also fetch from sent folder so sent messages are definitely included
+            sent_response = requests.get(
+                "https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages",
+                headers=headers,
+                params=params,
+            )
+            if sent_response.status_code == 200:
+                sent_messages = sent_response.json().get("value", [])
+                seen_ids = {m["id"] for m in messages}
+                for sm in sent_messages:
+                    if sm["id"] not in seen_ids:
+                        messages.append(sm)
+                        seen_ids.add(sm["id"])
+            parsed = []
+            for msg in messages:
+                msg_id = msg.get("id", "")
+                try:
+                    msg_response = requests.get(
+                        f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}",
+                        headers=headers,
+                    )
+                    msg_response.raise_for_status()
+                    parsed.append(self._parse_message(msg_response.json()))
+                except Exception as e:
+                    logger.warning(
+                        "[Email Sync] Skip message in thread (fetch/parse failed) thread_id=%s message_id=%s: %s",
+                        external_thread_id,
+                        msg_id,
+                        e,
+                        exc_info=True,
+                    )
+            return parsed
+        except Exception as e:
+            raise ValueError(f"Error fetching Microsoft thread messages: {str(e)}")
+
 
 class EmailSyncService:
     """Service for syncing emails from providers to database"""
@@ -731,9 +975,6 @@ class EmailSyncService:
         Returns:
             dict with counts of updated tasks
         """
-        import logging
-        logger = logging.getLogger(__name__)
-        
         from jobs.models import Task, TaskStatus
         
         provider_service = self.providers.get(account.provider)
@@ -803,8 +1044,17 @@ class EmailSyncService:
             "errors": error_count,
         }
 
-    def sync_account(self, account: Account, max_results: int = 50) -> dict:
-        """Sync emails for an account"""
+    def sync_account(
+        self,
+        account: Account,
+        max_results: int = 50,
+        max_total: Optional[int] = None,
+        force_initial: bool = False,
+        backfill: bool = False,
+    ) -> dict:
+        """Sync emails for an account. Uses initial vs incremental caps when max_total not provided.
+        backfill=True: ignore last_synced_at and fetch most recent messages (for one-off backfill).
+        """
         if not account.is_connected:
             raise ValueError(f"Account {account} is not connected")
 
@@ -812,30 +1062,33 @@ class EmailSyncService:
         if not provider_service:
             raise ValueError(f"Unsupported provider: {account.provider}")
 
-        # Get last sync time
-        since = account.last_synced_at
+        since = None if backfill else account.last_synced_at
+        is_initial = force_initial or (since is None)
+        if max_total is None:
+            from django.conf import settings
+            max_total = (
+                getattr(settings, "EMAIL_FIRST_SYNC_MAX_MESSAGES", FIRST_SYNC_MAX_MESSAGES)
+                if is_initial
+                else getattr(
+                    settings,
+                    "EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES",
+                    INCREMENTAL_SYNC_MAX_MESSAGES,
+                )
+            )
+        page_size = min(max_results, PAGE_SIZE)
 
-        # Fetch messages
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"[Email Fetch] Fetching messages for account {account.email} (provider: {account.provider}, max_results: {max_results}, since: {since})")
-        messages = provider_service.fetch_messages(account, max_results=max_results, since=since)
-        logger.info(f"[Email Fetch] Fetched {len(messages)} messages from provider")
-        
-        # Log details of fetched messages
-        if messages:
-            logger.info(f"[Email Fetch] Sample of fetched messages:")
-            for i, msg in enumerate(messages[:5]):  # Log first 5
-                logger.info(f"  [{i+1}] Subject: '{msg.get('subject', '(No subject)')}' | From: {msg.get('from_address', 'Unknown')} | ID: {msg.get('external_message_id', 'Unknown')}")
-            if len(messages) > 5:
-                logger.info(f"  ... and {len(messages) - 5} more messages")
-        else:
-            logger.warning(f"[Email Fetch] No messages fetched from provider")
+        messages = provider_service.fetch_messages(
+            account,
+            max_results=page_size,
+            since=since,
+            max_total=max_total,
+        )
 
         # Store in database
         created_count = 0
         updated_count = 0
         synced_email_ids = []  # Track which emails were synced in this batch
+        thread_ids_to_backfill = set()  # Real thread IDs to fetch in full (excludes single-message threads)
 
         with transaction.atomic():
             for msg_data in messages:
@@ -845,7 +1098,9 @@ class EmailSyncService:
                 if not external_thread_id or external_thread_id.strip() == "":
                     # Use message ID as thread ID to ensure each email gets its own thread
                     external_thread_id = f"single-{msg_data['external_message_id']}"
-                
+                else:
+                    thread_ids_to_backfill.add(external_thread_id)
+
                 thread, thread_created = EmailThread.objects.get_or_create(
                     account=account,
                     external_thread_id=external_thread_id,
@@ -873,12 +1128,43 @@ class EmailSyncService:
 
                 if created:
                     created_count += 1
-                    logger.info(f"[Email Sync] Created email #{email_msg.pk}: '{msg_data.get('subject', '(No subject)')}' from {msg_data.get('from_address', 'Unknown')}")
                 else:
                     updated_count += 1
-                    logger.debug(f"[Email Sync] Updated email #{email_msg.pk}: '{msg_data.get('subject', '(No subject)')}'")
 
-            # Update last_synced_at
+            # Step 1: When an email comes in, fetch the full thread from Gmail and save every message to the DB.
+            # This is the only place we fetch thread messages from the API; the task view only reads from the DB.
+            if thread_ids_to_backfill and hasattr(provider_service, "get_thread_messages"):
+                for ext_thread_id in thread_ids_to_backfill:
+                    try:
+                        thread_messages = provider_service.get_thread_messages(account, ext_thread_id)
+                    except Exception:
+                        continue
+                    thread, _ = EmailThread.objects.get_or_create(
+                        account=account,
+                        external_thread_id=ext_thread_id,
+                    )
+                    saved_in_thread = 0
+                    for m in thread_messages:
+                        try:
+                            EmailMessage.objects.update_or_create(
+                                account=account,
+                                external_message_id=m["external_message_id"],
+                                defaults={
+                                    "thread": thread,
+                                    "subject": m.get("subject") or "",
+                                    "from_address": m.get("from_address") or "",
+                                    "from_name": m.get("from_name") or "",
+                                    "to_addresses": m.get("to_addresses") or [],
+                                    "cc_addresses": m.get("cc_addresses") or [],
+                                    "bcc_addresses": m.get("bcc_addresses") or [],
+                                    "date_sent": m.get("date_sent"),
+                                    "body_html": m.get("body_html") or "",
+                                },
+                            )
+                            saved_in_thread += 1
+                        except Exception:
+                            pass
+
             account.last_synced_at = timezone.now()
             account.save(update_fields=["last_synced_at"])
 

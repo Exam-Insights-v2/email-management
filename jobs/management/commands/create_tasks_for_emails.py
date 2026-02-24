@@ -1,8 +1,9 @@
 from django.core.management.base import BaseCommand
-from django.db.models import Q, Count
-from mail.models import EmailMessage
-from jobs.models import Task
+
+from accounts.models import Account
+from automation.task_from_email import get_emails_to_process
 from automation.tasks import process_email
+from mail.models import EmailMessage
 
 
 class Command(BaseCommand):
@@ -42,21 +43,19 @@ class Command(BaseCommand):
         dry_run = options.get("dry_run", False)
         use_async = options.get("async", True) and not options.get("sync", False)
 
-        # Build query for emails without tasks
-        # Annotate with task count and filter for emails with 0 tasks
-        emails_query = EmailMessage.objects.annotate(
-            task_count=Count('tasks')
-        ).filter(task_count=0).select_related("account", "thread")
-
         if account_id:
-            emails_query = emails_query.filter(account_id=account_id)
+            accounts = [Account.objects.get(pk=account_id)]
             self.stdout.write(f"Filtering by account ID: {account_id}")
+        else:
+            accounts = list(Account.objects.filter(is_connected=True))
 
+        emails = []
+        for account in accounts:
+            qs = get_emails_to_process(account, exclude_threads_with_tasks=True)
+            emails.extend(list(qs))
         if email_id:
-            emails_query = emails_query.filter(pk=email_id)
+            emails = [e for e in emails if e.pk == email_id]
             self.stdout.write(f"Processing specific email ID: {email_id}")
-
-        emails = list(emails_query.order_by("-created_at"))
         total_count = len(emails)
 
         if total_count == 0:

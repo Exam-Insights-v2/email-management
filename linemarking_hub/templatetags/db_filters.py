@@ -72,15 +72,93 @@ def _strip_quoted_email_html(html):
             break
         text = text[:match.start()] + text[match.end():]
 
-    # Remove Gmail quote div: <div class="gmail_quote">...</div> (find matching closing tag by counting div depth)
-    gmail_start = re.search(
-        r'<div[^>]*class="[^"]*gmail_quote[^"]*"[^>]*>',
+    # Remove nested <article> elements (some clients wrap quoted email in article; would show as box inside box)
+    while True:
+        match = re.search(r'<article[^>]*>', text, re.IGNORECASE)
+        if not match:
+            break
+        start = match.start()
+        pos = match.end()
+        depth = 1
+        while pos < len(text) and depth > 0:
+            next_open = text.find('<article', pos)
+            next_close = text.find('</article>', pos)
+            if next_close == -1:
+                break
+            if next_open != -1 and next_open < next_close:
+                depth += 1
+                pos = next_open + 8
+            else:
+                depth -= 1
+                pos = next_close + 10
+        if depth == 0:
+            text = text[:start] + text[pos:].lstrip()
+        else:
+            break
+
+    def remove_div_by_class_pattern(html_text, class_substring):
+        """Remove a div whose class attribute contains class_substring (match by div depth)."""
+        pattern = re.compile(
+            r'<div[^>]*class="[^"]*' + re.escape(class_substring) + r'[^"]*"[^>]*>',
+            re.IGNORECASE
+        )
+        while True:
+            match = pattern.search(html_text)
+            if not match:
+                break
+            start = match.start()
+            pos = match.end()
+            depth = 1
+            while pos < len(html_text) and depth > 0:
+                next_open = html_text.find('<div', pos)
+                next_close = html_text.find('</div>', pos)
+                if next_close == -1:
+                    break
+                if next_open != -1 and next_open < next_close:
+                    depth += 1
+                    pos = next_open + 4
+                else:
+                    depth -= 1
+                    pos = next_close + 6
+            if depth == 0:
+                html_text = html_text[:start] + html_text[pos:].lstrip()
+            else:
+                break
+        return html_text
+
+    # Remove divs that wrap quoted/reply content (each can contain nested message-like boxes)
+    for quote_class in ('gmail_quote', 'Apple-mail-quote', 'AppleMailQuote', 'moz-cite'):
+        text = remove_div_by_class_pattern(text, quote_class)
+
+    # Remove "Forwarded message" block (Gmail and others)
+    text = re.sub(
+        r'(?:^|[\r\n])(?:<[^>]+>|\s)*----------\s*Forwarded message\s*----------.*$',
+        '',
         text,
-        re.IGNORECASE
+        flags=re.IGNORECASE | re.DOTALL | re.MULTILINE
     )
-    if gmail_start:
-        start = gmail_start.start()
-        pos = gmail_start.end()
+
+    # Remove Outlook/other "Original Message" or "On ... wrote:" blocks (often at end of body).
+    # Only match "On ... wrote:" at line/block start so we don't remove sender text like "On receipt we will..."
+    # Use MULTILINE so ^ matches after newlines; require "wrote:" so "On Monday" alone is not stripped.
+    for pattern in (
+        r'-----Original Message-----.*$',
+        r'(?:^|[\r\n])(?:<[^>]+>|\s)*On\s+.+?\s+wrote\s*:.*$',
+        r'(?:^|[\r\n])(?:<[^>]+>|\s)*From:\s*.+?Sent:\s*.+?To:\s*.+?Subject:.*$',
+    ):
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL | re.MULTILINE)
+
+    # Remove any remaining div that looks like a nested email (border-left is common for quoted reply)
+    while True:
+        match = re.search(
+            r'<div[^>]*style="[^"]*border-left[^"]*"[^>]*>',
+            text,
+            re.IGNORECASE
+        )
+        if not match:
+            break
+        start = match.start()
+        pos = match.end()
         depth = 1
         while pos < len(text) and depth > 0:
             next_open = text.find('<div', pos)
@@ -95,15 +173,8 @@ def _strip_quoted_email_html(html):
                 pos = next_close + 6
         if depth == 0:
             text = text[:start] + text[pos:].lstrip()
-
-    # Remove Outlook/other "Original Message" or "On ... wrote:" blocks (often at end of body)
-    # Match from "-----Original Message-----" or "On ... wrote:" to end (common reply boundaries)
-    for pattern in (
-        r'-----Original Message-----.*$',
-        r'(?:<[^>]+>|\s)*On\s+.+?\s+wrote\s*:.*$',
-        r'(?:<[^>]+>|\s)*From:\s*.+?Sent:\s*.+?To:\s*.+?Subject:.*$',
-    ):
-        text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
+        else:
+            break
 
     result = text.strip() or html
     return mark_safe(result)

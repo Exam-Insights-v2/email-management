@@ -97,13 +97,7 @@ if all(
     if sslmode:
         db_config["OPTIONS"] = {"sslmode": sslmode.lower()}
     DATABASES = {"default": db_config}
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -155,6 +149,12 @@ MICROSOFT_OAUTH_TENANT_ID = os.environ.get("MICROSOFT_OAUTH_TENANT_ID", "common"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = "/auth/login/"
+
+# Email sync: caps for first sync vs incremental (paginated; avoid missing emails)
+EMAIL_FIRST_SYNC_MAX_MESSAGES = int(os.environ.get("EMAIL_FIRST_SYNC_MAX_MESSAGES", "500"))
+EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES = int(
+    os.environ.get("EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES", "200")
+)
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")

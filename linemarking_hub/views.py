@@ -1,6 +1,9 @@
 import json
 import logging
+import os
+import time
 from datetime import datetime
+from django.conf import settings
 from django.contrib import messages
 
 logger = logging.getLogger(__name__)
@@ -18,6 +21,7 @@ from accounts.models import Account, OAuthToken
 from automation.models import Action, EmailLabel, Label
 from jobs.models import Job, Task
 from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
+from linemarking_hub.templatetags.db_filters import _strip_quoted_email_html
 from linemarking_hub.forms import (
     AccountForm,
     ActionForm,
@@ -329,7 +333,7 @@ def tasks_list(request):
             if draft.email_message_id not in drafts_by_email:
                 drafts_by_email[draft.email_message_id] = draft
     
-    # Batch load all thread messages (group by thread to avoid duplicates)
+    # Step 2: Load all thread messages from DB only (same thread_id = same thread). Order: oldest first.
     thread_ids = {em.thread_id for em in email_messages if em.thread_id}
     threads_with_messages = {}
     if thread_ids:
@@ -337,7 +341,7 @@ def tasks_list(request):
         threads = EmailThread.objects.filter(pk__in=thread_ids).prefetch_related(
             Prefetch(
                 "messages",
-                queryset=EmailMessage.objects.all().order_by('-date_sent', '-created_at')
+                queryset=EmailMessage.objects.all().order_by("date_sent", "created_at")
             )
         )
         for thread in threads:
@@ -347,11 +351,11 @@ def tasks_list(request):
                     "subject": msg.subject,
                     "from_address": msg.from_address,
                     "from_name": msg.from_name,
-                    "to_addresses": msg.to_addresses,
-                    "cc_addresses": msg.cc_addresses,
-                    "bcc_addresses": msg.bcc_addresses,
+                    "to_addresses": msg.to_addresses or [],
+                    "cc_addresses": msg.cc_addresses or [],
+                    "bcc_addresses": msg.bcc_addresses or [],
                     "date_sent": msg.date_sent,
-                    "body_html": msg.body_html,
+                    "body_html": msg.body_html or "",
                 }
                 for msg in thread.messages.all()
             ]
@@ -370,28 +374,20 @@ def tasks_list(request):
                     has_draft_reply = True
                     break
             
-            # Get thread messages from prefetched data
+            # Get thread messages from DB only (Gmail/API is used only to sync messages into the DB)
             thread_messages = threads_with_messages.get(email.thread_id, []) if email.thread_id else []
-            
+            account = email.account
+
             # Get draft from prefetched data
             draft = drafts_by_email.get(email.pk)
             
-            # If no draft exists and we should have one, create it
+            # If no draft exists and we should have one, create it (body = draft only, no thread history)
             if not draft and has_draft_reply:
                 reply_subject = f"Re: {email.subject or 'No subject'}"
                 reply_to = [email.from_address]
-                reply_body = f"""
-<div>
-  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
-  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
-    {email.body_html or ''}
-  </blockquote>
-</div>
-"""
-                # Append signature if available
+                reply_body = ""
                 if email.account.signature_html:
-                    reply_body += f"\n<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
-                
+                    reply_body = f"<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
                 draft = Draft.objects.create(
                     account=email.account,
                     email_message=email,
@@ -405,12 +401,22 @@ def tasks_list(request):
                 "thread_messages": thread_messages,
                 "has_draft_reply": has_draft_reply,
                 "draft": draft,
+                "draft_body_display": _strip_quoted_email_html(draft.body_html) if (draft and draft.body_html) else "",
             }
     
     form = TaskForm(user=request.user, account=account)
     
     # Check account connection status and token validity for user's accounts
     user_accounts = request.user.accounts.all() if request.user.is_authenticated else Account.objects.none()
+    # #region agent log
+    try:
+        _logpath = os.path.join(settings.BASE_DIR, ".cursor", "debug-a8fee3.log")
+        os.makedirs(os.path.dirname(_logpath), exist_ok=True)
+        with open(_logpath, "a") as _f:
+            _f.write(json.dumps({"sessionId": "a8fee3", "hypothesisId": "D", "location": "views.tasks_list", "message": "accounts on load", "data": {"accounts": [{"pk": a.pk, "email": a.email, "is_connected": a.is_connected} for a in user_accounts]}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
     account_statuses = {}
     for acc in user_accounts:
         has_token_error = False
@@ -433,9 +439,7 @@ def tasks_list(request):
                         has_token_error = True
                         token_error_message = "Unable to get valid credentials. Please reconnect your account."
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Error checking token for account {acc.pk}: {e}")
+                logger.warning("Error checking token for account %s: %s", acc.pk, e)
                 has_token_error = True
                 token_error_message = "Unable to verify token. Please reconnect your account."
         
@@ -471,6 +475,7 @@ def tasks_list(request):
         "task_email_data": task_email_data,
         "account_statuses": account_statuses,
         "user_accounts": user_accounts,
+        "user_connected_accounts": list(user_accounts.filter(is_connected=True)),
         "active_filter_count": active_filter_count,
     })
 
@@ -518,6 +523,13 @@ def task_update(request, pk):
         if form.is_valid():
             try:
                 task = form.save()
+                from jobs.models import TaskStatus
+                if task.status == TaskStatus.DONE and not task.completed_at:
+                    task.completed_at = timezone.now()
+                    task.save(update_fields=["completed_at"])
+                elif task.status != TaskStatus.DONE and task.completed_at:
+                    task.completed_at = None
+                    task.save(update_fields=["completed_at"])
                 messages.success(request, f"Task '{task.title or task.pk}' updated successfully.")
                 return redirect("task_detail", pk=task.pk)
             except ValidationError as e:
@@ -539,6 +551,28 @@ def task_delete(request, pk):
     title = task.title or f"Task {task.pk}"
     task.delete()
     messages.success(request, f"Task '{title}' deleted successfully.")
+    return redirect("tasks_list")
+
+
+@login_required
+@require_http_methods(["POST"])
+def task_reprocess(request, pk):
+    """Delete this task (and any other tasks for the same email), then queue process_email so the email is reclassified and a new task is created. Use to verify processing fixes."""
+    task = get_object_or_404(Task, pk=pk, account__users=request.user)
+    if not task.email_message_id:
+        messages.error(request, "This task has no linked email, so it cannot be reprocessed.")
+        return redirect("tasks_list")
+    email_message_id = task.email_message_id
+    email = task.email_message
+    # Delete all tasks for this email so process_email will run (it skips when tasks exist)
+    for t in email.tasks.all():
+        t.delete()
+    from automation.tasks import process_email
+    process_email.delay(email_message_id)
+    messages.success(
+        request,
+        "Reprocessing started. Refresh in a few seconds to see the updated task.",
+    )
     return redirect("tasks_list")
 
 
@@ -594,10 +628,11 @@ def email_detail(request, pk):
 
 @login_required
 def task_email_data(request, pk):
-    """API endpoint to get email thread and draft data for a task"""
+    """API endpoint to get email thread and draft data for a task (thread messages from DB only)."""
     task = get_object_or_404(
         Task.objects.select_related("email_message__account", "email_message__thread").prefetch_related(
-            "email_message__labels__label"
+            "email_message__labels__label",
+            "email_message__thread__messages",
         ),
         pk=pk,
     )
@@ -614,21 +649,21 @@ def task_email_data(request, pk):
             has_draft_reply = True
             break
     
-    # Get thread messages if account is connected
+    # Step 2: Get all email messages for this thread from DB (same thread_id). Order: oldest first.
     thread_messages = []
-    if email.account.is_connected and email.thread:
-        try:
-            from mail.services import GmailService
-            gmail_service = GmailService()
-            thread_messages = gmail_service.get_thread_messages(
-                email.account, email.thread.external_thread_id
-            )
-            # Sort by date
-            thread_messages.sort(key=lambda x: x.get("date_sent") or datetime.min, reverse=True)
-        except Exception as e:
-            # Clear cache for this account on error to force refresh next time
-            GmailService.clear_cache(email.account.pk)
-            logger.error(f"Error fetching thread messages: {e}")
+    if email.thread_id:
+        for msg in EmailMessage.objects.filter(thread_id=email.thread_id).order_by("date_sent", "created_at"):
+            thread_messages.append({
+                "external_message_id": msg.external_message_id,
+                "subject": msg.subject,
+                "from_address": msg.from_address,
+                "from_name": msg.from_name,
+                "to_addresses": msg.to_addresses or [],
+                "cc_addresses": msg.cc_addresses or [],
+                "bcc_addresses": msg.bcc_addresses or [],
+                "date_sent": msg.date_sent,
+                "body_html": msg.body_html or "",
+            })
     
     # Get or create draft for this email
     draft = Draft.objects.filter(account=email.account, email_message=email).order_by("-updated_at").first()
@@ -637,14 +672,9 @@ def task_email_data(request, pk):
     if not draft and has_draft_reply:
         reply_subject = f"Re: {email.subject or 'No subject'}"
         reply_to = [email.from_address]
-        reply_body = f"""
-<div>
-  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
-  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
-    {email.body_html or ''}
-  </blockquote>
-</div>
-"""
+        reply_body = ""
+        if email.account.signature_html:
+            reply_body = f"<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
         draft = Draft.objects.create(
             account=email.account,
             email_message=email,
@@ -676,7 +706,7 @@ def task_email_data(request, pk):
             "to_addresses": draft.to_addresses or [],
             "cc_addresses": draft.cc_addresses or [],
             "subject": draft.subject or "",
-            "body_html": draft.body_html or "",
+            "body_html": _strip_quoted_email_html(draft.body_html or "") or "",
         }
     
     return JsonResponse(data)
@@ -721,6 +751,27 @@ def email_archive(request, pk):
     except Exception as e:
         messages.error(request, f"Error archiving email: {str(e)}")
     
+    return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
+
+
+@login_required
+@require_http_methods(["POST"])
+def email_unarchive(request, pk):
+    """Move email back to inbox (undo archive / mark as undone)"""
+    email = get_object_or_404(EmailMessage, pk=pk)
+
+    if not email.account.is_connected:
+        messages.error(request, "Account is not connected to Gmail.")
+        return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
+
+    try:
+        from mail.services import GmailService
+        gmail_service = GmailService()
+        gmail_service.unarchive_message(email.account, email.external_message_id)
+        messages.success(request, f"Email '{email.subject or 'Untitled'}' moved back to inbox.")
+    except Exception as e:
+        messages.error(request, f"Error moving email to inbox: {str(e)}")
+
     return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
 
@@ -783,24 +834,12 @@ def email_reply(request, pk):
         messages.error(request, "Account is not connected to Gmail.")
         return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
     
-    # Create reply draft
+    # Create reply draft (body = draft only, no thread history)
     reply_subject = f"Re: {email.subject or 'No subject'}"
     reply_to = [email.from_address]
-    
-    # Include original message
-    reply_body = f"""
-<div>
-  <p>On {email.date_sent.strftime('%Y-%m-%d %H:%M') if email.date_sent else 'date'}, {email.from_name or email.from_address} wrote:</p>
-  <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 0;">
-    {email.body_html}
-  </blockquote>
-</div>
-"""
-    
-    # Append signature if available
+    reply_body = ""
     if email.account.signature_html:
-        reply_body += f"\n<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
-    
+        reply_body = f"<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
     try:
         draft = Draft.objects.create(
             account=email.account,
@@ -819,53 +858,145 @@ def email_reply(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def draft_send(request, pk):
-    """Send a draft via Gmail"""
+    """Send a draft. Uses from_account from POST if provided (user's connected account)."""
+    from accounts.models import Account
     from mail.models import Draft
-    
+
     draft = get_object_or_404(Draft, pk=pk)
-    
-    if not draft.account.is_connected:
-        messages.error(request, "Account is not connected to Gmail.")
+
+    send_account = draft.account
+    from_account_id = request.POST.get("from_account")
+    if from_account_id:
+        try:
+            chosen = Account.objects.get(pk=from_account_id, users=request.user, is_connected=True)
+            send_account = chosen
+        except Account.DoesNotExist:
+            pass
+
+    if not send_account.is_connected:
+        messages.error(request, "The chosen account is not connected.")
         return redirect("draft_detail", pk=draft.pk)
-    
+
     try:
         from mail.services import GmailService
         gmail_service = GmailService()
-        result = gmail_service.send_draft(draft.account, draft.pk)
-        
-        # Create EmailMessage record for sent email
-        from mail.models import EmailMessage, EmailThread
-        # If thread ID is missing/empty, use message ID as fallback to ensure unique threads
-        thread_id = result.get("threadId", "")
-        if not thread_id or thread_id.strip() == "":
-            # Use message ID as thread ID to ensure each email gets its own thread
-            message_id = result.get("id", f"sent-{draft.pk}")
-            thread_id = f"single-{message_id}"
-        
-        thread, _ = EmailThread.objects.get_or_create(
-            account=draft.account,
-            external_thread_id=thread_id,
-        )
-        
-        EmailMessage.objects.create(
-            account=draft.account,
-            thread=thread,
-            external_message_id=result["id"],
+
+        if send_account.provider != "gmail":
+            messages.error(
+                request,
+                f"Sending from {send_account.email} is not supported yet. Please choose a Gmail account.",
+            )
+            return redirect("draft_detail", pk=draft.pk)
+
+        if send_account.pk == draft.account_id:
+            result = gmail_service.send_draft(send_account, draft.pk)
+        else:
+            result = gmail_service.send_message(
+                account=send_account,
+                to_addresses=draft.to_addresses or [],
+                subject=draft.subject or "",
+                body_html=draft.body_html or "",
+                cc_addresses=draft.cc_addresses or [],
+                bcc_addresses=draft.bcc_addresses or [],
+            )
+
+        from mail.services import persist_sent_message
+        persist_sent_message(
+            account=send_account,
+            send_result=result,
             subject=draft.subject or "",
-            from_address=draft.account.email,
+            from_address=send_account.email,
             to_addresses=draft.to_addresses or [],
             cc_addresses=draft.cc_addresses or [],
             bcc_addresses=draft.bcc_addresses or [],
             body_html=draft.body_html or "",
-            date_sent=timezone.now(),
         )
-        
-        messages.success(request, f"Draft '{draft.subject or 'Untitled'}' sent successfully!")
-        draft.delete()  # Remove draft after sending
+
+        messages.success(request, f"Draft '{draft.subject or 'Untitled'}' sent successfully from {send_account.email}!")
+        draft.delete()
         return redirect("drafts_list")
     except Exception as e:
         messages.error(request, f"Error sending draft: {str(e)}")
         return redirect("draft_detail", pk=draft.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def draft_send_and_mark_done(request, pk):
+    """Send a draft and mark the given task as done. Uses from_account from POST if provided."""
+    from accounts.models import Account
+    from jobs.models import Task, TaskStatus
+    from mail.models import Draft
+
+    draft = get_object_or_404(Draft, pk=pk)
+
+    send_account = draft.account
+    from_account_id = request.POST.get("from_account")
+    if from_account_id:
+        try:
+            chosen = Account.objects.get(pk=from_account_id, users=request.user, is_connected=True)
+            send_account = chosen
+        except Account.DoesNotExist:
+            pass
+
+    if not send_account.is_connected:
+        messages.error(request, "The chosen account is not connected.")
+        return redirect("tasks_list")
+
+    try:
+        from mail.services import GmailService
+        gmail_service = GmailService()
+
+        if send_account.provider != "gmail":
+            messages.error(
+                request,
+                f"Sending from {send_account.email} is not supported yet. Please choose a Gmail account.",
+            )
+            return redirect("tasks_list")
+
+        if send_account.pk == draft.account_id:
+            result = gmail_service.send_draft(send_account, draft.pk)
+        else:
+            result = gmail_service.send_message(
+                account=send_account,
+                to_addresses=draft.to_addresses or [],
+                subject=draft.subject or "",
+                body_html=draft.body_html or "",
+                cc_addresses=draft.cc_addresses or [],
+                bcc_addresses=draft.bcc_addresses or [],
+            )
+
+        from mail.services import persist_sent_message
+        persist_sent_message(
+            account=send_account,
+            send_result=result,
+            subject=draft.subject or "",
+            from_address=send_account.email,
+            to_addresses=draft.to_addresses or [],
+            cc_addresses=draft.cc_addresses or [],
+            bcc_addresses=draft.bcc_addresses or [],
+            body_html=draft.body_html or "",
+        )
+
+        draft_email_message_id = draft.email_message_id
+        draft.delete()
+
+        task_id = request.POST.get("task_id")
+        if task_id:
+            try:
+                task = Task.objects.get(pk=task_id, account__users=request.user)
+                if task.email_message_id == draft_email_message_id:
+                    task.status = TaskStatus.DONE
+                    task.completed_at = timezone.now()
+                    task.save()
+            except (Task.DoesNotExist, ValueError):
+                pass
+
+        messages.success(request, f"Email sent from {send_account.email} and task marked as done.")
+        return redirect("tasks_list")
+    except Exception as e:
+        messages.error(request, f"Error sending draft: {str(e)}")
+        return redirect("tasks_list")
 
 
 # Labels CRUD
@@ -1034,8 +1165,15 @@ def accounts_list(request):
 
 @login_required
 def account_detail(request, pk):
+    from mail.sync_status import get_last_sync_error, get_sync_in_progress
+
     account = get_object_or_404(Account, pk=pk)
-    return render(request, "accounts/detail.html", {"account": account})
+    context = {
+        "account": account,
+        "sync_in_progress": get_sync_in_progress(account.pk),
+        "last_sync_error": get_last_sync_error(account.pk),
+    }
+    return render(request, "accounts/detail.html", context)
 
 
 @login_required
@@ -1133,7 +1271,11 @@ def drafts_list(request):
     ).order_by("-updated_at")
     accounts = Account.objects.all()
     emails = EmailMessage.objects.all()[:100]  # Limit for dropdown
-    return render(request, "drafts/list.html", {"drafts": drafts, "accounts": accounts, "emails": emails})
+    return render(
+        request,
+        "drafts/list.html",
+        {"drafts": drafts, "accounts": accounts, "emails": emails, "form": None},
+    )
 
 
 @login_required
@@ -1153,6 +1295,7 @@ def draft_create(request):
         to_addresses = request.POST.get("to_addresses", "")
         subject = request.POST.get("subject", "")
         body_html = request.POST.get("body_html", "")
+        body_html = _strip_quoted_email_html(body_html)
 
         try:
             account = Account.objects.get(pk=account_id)
@@ -1199,7 +1342,7 @@ def draft_update(request, pk):
         draft.cc_addresses = json.loads(request.POST.get("cc_addresses", "[]"))
         draft.bcc_addresses = json.loads(request.POST.get("bcc_addresses", "[]"))
         draft.subject = request.POST.get("subject", "")
-        draft.body_html = request.POST.get("body_html", "")
+        draft.body_html = _strip_quoted_email_html(request.POST.get("body_html", ""))
         draft.save()
         messages.success(request, f"Draft '{draft.subject or 'Untitled'}' updated successfully.")
         return redirect("draft_detail", pk=draft.pk)
@@ -1482,9 +1625,7 @@ def settings_view(request):
                         has_token_error = True
                         token_error_message = "Unable to get valid credentials. Please reconnect your account."
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Error checking token for account {account.pk}: {e}")
+                logger.warning("Error checking token for account %s: %s", account.pk, e)
                 has_token_error = True
                 token_error_message = "Unable to verify token. Please reconnect your account."
         

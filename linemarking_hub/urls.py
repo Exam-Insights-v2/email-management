@@ -42,7 +42,9 @@ from linemarking_hub.views import (
     email_detail,
     email_delete,
     draft_send,
+    draft_send_and_mark_done,
     email_archive,
+    email_unarchive,
     email_forward,
     email_label_add,
     email_label_remove,
@@ -62,6 +64,7 @@ from linemarking_hub.views import (
     task_delete,
     task_detail,
     task_email_data,
+    task_reprocess,
     task_update,
     tasks_list,
 )
@@ -94,12 +97,14 @@ urlpatterns = [
     path("tasks/<int:pk>/", task_detail, name="task_detail"),
     path("tasks/<int:pk>/edit/", task_update, name="task_update"),
     path("tasks/<int:pk>/delete/", task_delete, name="task_delete"),
+    path("tasks/<int:pk>/reprocess/", task_reprocess, name="task_reprocess"),
     path("tasks/<int:pk>/email-data/", task_email_data, name="task_email_data"),
     # Emails
     path("emails/", emails_list, name="emails_list"),
     path("emails/<int:pk>/", email_detail, name="email_detail"),  # Redirects to emails_list with modal
     path("emails/<int:pk>/delete/", email_delete, name="email_delete"),
     path("emails/<int:pk>/archive/", email_archive, name="email_archive"),
+    path("emails/<int:pk>/unarchive/", email_unarchive, name="email_unarchive"),
     path("emails/<int:pk>/reply/", email_reply, name="email_reply"),
     path("emails/<int:pk>/forward/", email_forward, name="email_forward"),
     path("emails/<int:pk>/forward/form/", email_forward, name="email_forward_form"),
@@ -131,6 +136,7 @@ urlpatterns = [
     path("drafts/<int:pk>/rewrite/", draft_rewrite, name="draft_rewrite"),
     path("drafts/<int:pk>/delete/", draft_delete, name="draft_delete"),
     path("drafts/<int:pk>/send/", draft_send, name="draft_send"),
+    path("drafts/<int:pk>/send-and-mark-done/", draft_send_and_mark_done, name="draft_send_and_mark_done"),
     # Actions
     path("actions/", actions_list, name="actions_list"),
     path("actions/create/", action_create, name="action_create"),
