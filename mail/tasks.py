@@ -116,7 +116,7 @@ def sync_account_emails(account_id: int):
             task_count=Count('tasks')
         ).filter(
             task_count__gt=0
-        ).order_by("-updated_at")[:50]
+        ).order_by("-created_at")[:50]
 
         if emails_with_tasks.exists():
             status_result = sync_service.sync_email_status(account, list(emails_with_tasks))
