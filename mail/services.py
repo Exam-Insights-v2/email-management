@@ -705,24 +705,37 @@ class GmailService(EmailProviderService):
         try:
             # If draft doesn't exist in Gmail, send as new message instead
             if not draft.external_draft_id:
-                # Send as new message
+                # Send as new message (use effective_to_addresses so replies have recipient)
                 return self.send_message(
                     account=account,
-                    to_addresses=draft.to_addresses or [],
+                    to_addresses=draft.effective_to_addresses,
                     subject=draft.subject or "",
                     body_html=draft.body_html or "",
                     cc_addresses=draft.cc_addresses or [],
                     bcc_addresses=draft.bcc_addresses or [],
                 )
             
-            # Send existing draft
-            sent_message = (
-                service.users()
-                .drafts()
-                .send(userId="me", body={"id": draft.external_draft_id})
-                .execute()
-            )
-            return {"id": sent_message["id"], "threadId": sent_message.get("threadId")}
+            # Send existing draft (fall back to send_message if Gmail draft has no recipient)
+            try:
+                sent_message = (
+                    service.users()
+                    .drafts()
+                    .send(userId="me", body={"id": draft.external_draft_id})
+                    .execute()
+                )
+                return {"id": sent_message["id"], "threadId": sent_message.get("threadId")}
+            except Exception as send_err:
+                err_msg = str(send_err).lower()
+                if ("recipient" in err_msg or "invalidargument" in err_msg) and draft.effective_to_addresses:
+                    return self.send_message(
+                        account=account,
+                        to_addresses=draft.effective_to_addresses,
+                        subject=draft.subject or "",
+                        body_html=draft.body_html or "",
+                        cc_addresses=draft.cc_addresses or [],
+                        bcc_addresses=draft.bcc_addresses or [],
+                    )
+                raise
         except Exception as e:
             raise ValueError(f"Error sending draft: {str(e)}")
 
@@ -733,9 +746,9 @@ class GmailService(EmailProviderService):
 
         service = self._get_service(account)
 
-        # Create message
+        # Create message (use effective_to_addresses so reply drafts always have a recipient)
         message = email.mime.multipart.MIMEMultipart("alternative")
-        message["to"] = ", ".join(draft.to_addresses or [])
+        message["to"] = ", ".join(draft.effective_to_addresses)
         message["subject"] = draft.subject or ""
         if draft.cc_addresses:
             message["cc"] = ", ".join(draft.cc_addresses)

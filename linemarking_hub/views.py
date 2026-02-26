@@ -790,7 +790,7 @@ def email_forward(request, pk):
                 body_html=forward_body,
             )
             messages.success(request, f"Forward draft created. <a href='/drafts/{draft.pk}/edit/'>Edit draft</a>")
-            return redirect("draft_detail", pk=draft.pk)
+            return redirect("tasks_list")
         except Exception as e:
             messages.error(request, f"Error creating forward draft: {str(e)}")
             return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
@@ -826,7 +826,7 @@ def email_reply(request, pk):
         messages.success(request, f"Reply draft created. <a href='/drafts/{draft.pk}/edit/'>Edit draft</a>")
     except Exception as e:
         messages.error(request, f"Error creating reply draft: {str(e)}")
-    
+
     return redirect("{}?email={}".format(reverse("emails_list"), email.pk))
 
 
@@ -850,7 +850,7 @@ def draft_send(request, pk):
 
     if not send_account.is_connected:
         messages.error(request, "The chosen account is not connected.")
-        return redirect("draft_detail", pk=draft.pk)
+        return redirect("tasks_list")
 
     try:
         gmail_service = GmailService()
@@ -860,14 +860,19 @@ def draft_send(request, pk):
                 request,
                 f"Sending from {send_account.email} is not supported yet. Please choose a Gmail account.",
             )
-            return redirect("draft_detail", pk=draft.pk)
+            return redirect("tasks_list")
+
+        to_addresses = draft.effective_to_addresses
+        if not to_addresses:
+            messages.error(request, "Recipient address required. Please add at least one To address.")
+            return redirect("tasks_list")
 
         if send_account.pk == draft.account_id:
             result = gmail_service.send_draft(send_account, draft.pk)
         else:
             result = gmail_service.send_message(
                 account=send_account,
-                to_addresses=draft.to_addresses or [],
+                to_addresses=to_addresses,
                 subject=draft.subject or "",
                 body_html=draft.body_html or "",
                 cc_addresses=draft.cc_addresses or [],
@@ -879,7 +884,7 @@ def draft_send(request, pk):
             send_result=result,
             subject=draft.subject or "",
             from_address=send_account.email,
-            to_addresses=draft.to_addresses or [],
+            to_addresses=to_addresses,
             cc_addresses=draft.cc_addresses or [],
             bcc_addresses=draft.bcc_addresses or [],
             body_html=draft.body_html or "",
@@ -887,10 +892,10 @@ def draft_send(request, pk):
 
         messages.success(request, f"Draft '{draft.subject or 'Untitled'}' sent successfully from {send_account.email}!")
         draft.delete()
-        return redirect("drafts_list")
+        return redirect("tasks_list")
     except Exception as e:
         messages.error(request, f"Error sending draft: {str(e)}")
-        return redirect("draft_detail", pk=draft.pk)
+        return redirect("tasks_list")
 
 
 @login_required
@@ -926,12 +931,17 @@ def draft_send_and_mark_done(request, pk):
             )
             return redirect("tasks_list")
 
+        to_addresses = draft.effective_to_addresses
+        if not to_addresses:
+            messages.error(request, "Recipient address required. Please add at least one To address.")
+            return redirect("tasks_list")
+
         if send_account.pk == draft.account_id:
             result = gmail_service.send_draft(send_account, draft.pk)
         else:
             result = gmail_service.send_message(
                 account=send_account,
-                to_addresses=draft.to_addresses or [],
+                to_addresses=to_addresses,
                 subject=draft.subject or "",
                 body_html=draft.body_html or "",
                 cc_addresses=draft.cc_addresses or [],
@@ -943,7 +953,7 @@ def draft_send_and_mark_done(request, pk):
             send_result=result,
             subject=draft.subject or "",
             from_address=send_account.email,
-            to_addresses=draft.to_addresses or [],
+            to_addresses=to_addresses,
             cc_addresses=draft.cc_addresses or [],
             bcc_addresses=draft.bcc_addresses or [],
             body_html=draft.body_html or "",
@@ -1230,28 +1240,11 @@ def account_clear_writing_style(request, pk):
     return redirect("account_detail", pk=account.pk)
 
 
-# Drafts CRUD
-@login_required
-def drafts_list(request):
-    drafts = Draft.objects.select_related("account", "email_message").prefetch_related(
-        "attachments"
-    ).order_by("-updated_at")
-    accounts = Account.objects.all()
-    emails = EmailMessage.objects.all()[:100]  # Limit for dropdown
-    return render(
-        request,
-        "drafts/list.html",
-        {"drafts": drafts, "accounts": accounts, "emails": emails, "form": None},
-    )
-
-
+# Drafts CRUD (no standalone draft pages; /drafts/<pk>/ redirects to home)
 @login_required
 def draft_detail(request, pk):
-    draft = get_object_or_404(
-        Draft.objects.select_related("account", "email_message").prefetch_related("attachments"),
-        pk=pk,
-    )
-    return render(request, "drafts/detail.html", {"draft": draft, "create_url": None})
+    """Individual draft pages removed; redirect to home (tasks)."""
+    return redirect("tasks_list")
 
 
 @login_required
@@ -1270,8 +1263,10 @@ def draft_create(request):
                 EmailMessage.objects.get(pk=email_message_id) if email_message_id else None
             )
 
-            # Parse JSON arrays
+            # Parse JSON arrays; for replies with no To, default to original sender
             to_list = json.loads(to_addresses) if to_addresses else []
+            if not to_list and email_message:
+                to_list = [email_message.from_address]
             cc_list = json.loads(request.POST.get("cc_addresses", "[]")) if request.POST.get(
                 "cc_addresses"
             ) else []
@@ -1288,10 +1283,14 @@ def draft_create(request):
                 subject=subject,
                 body_html=body_html,
             )
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": True, "draft_id": draft.pk})
             messages.success(request, f"Draft '{draft.subject or 'Untitled'}' created successfully.")
-            return redirect("draft_detail", pk=draft.pk)
+            return redirect("tasks_list")
         except (Account.DoesNotExist, EmailMessage.DoesNotExist, json.JSONDecodeError) as e:
             messages.error(request, f"Error creating draft: {str(e)}")
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "error": str(e)}, status=400)
 
     accounts = Account.objects.all()
     emails = EmailMessage.objects.all()[:100]  # Limit for dropdown
@@ -1305,14 +1304,19 @@ def draft_update(request, pk):
         draft.account = Account.objects.get(pk=request.POST.get("account"))
         if request.POST.get("email_message"):
             draft.email_message = EmailMessage.objects.get(pk=request.POST.get("email_message"))
-        draft.to_addresses = json.loads(request.POST.get("to_addresses", "[]"))
+        to_list = json.loads(request.POST.get("to_addresses", "[]"))
+        if not to_list and getattr(draft, "email_message", None):
+            to_list = [draft.email_message.from_address]
+        draft.to_addresses = to_list
         draft.cc_addresses = json.loads(request.POST.get("cc_addresses", "[]"))
         draft.bcc_addresses = json.loads(request.POST.get("bcc_addresses", "[]"))
         draft.subject = request.POST.get("subject", "")
         draft.body_html = _strip_quoted_email_html(request.POST.get("body_html", ""))
         draft.save()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "draft_id": draft.pk})
         messages.success(request, f"Draft '{draft.subject or 'Untitled'}' updated successfully.")
-        return redirect("draft_detail", pk=draft.pk)
+        return redirect("tasks_list")
 
     accounts = Account.objects.all()
     emails = EmailMessage.objects.all()[:100]
@@ -1401,7 +1405,7 @@ def draft_delete(request, pk):
     subject = draft.subject or f"Draft {draft.pk}"
     draft.delete()
     messages.success(request, f"Draft '{subject}' deleted successfully.")
-    return redirect("drafts_list")
+    return redirect("tasks_list")
 
 
 # Actions CRUD

@@ -79,6 +79,15 @@ class Draft(models.Model):
     def __str__(self):
         return self.subject or f"Draft {self.pk}"
 
+    @property
+    def effective_to_addresses(self):
+        """Recipients for sending; for replies with no To set, use original sender."""
+        if self.to_addresses:
+            return list(self.to_addresses)
+        if self.email_message_id and self.email_message:
+            return [self.email_message.from_address]
+        return []
+
 
 class DraftAttachment(models.Model):
     draft = models.ForeignKey(

@@ -38,7 +38,6 @@ from linemarking_hub.views import (
     draft_detail,
     draft_rewrite,
     draft_update,
-    drafts_list,
     email_detail,
     email_delete,
     draft_send,
@@ -128,8 +127,7 @@ urlpatterns = [
     path("accounts/microsoft/callback/", account_microsoft_oauth_callback, name="microsoft_email_oauth_callback"),
     path("accounts/<int:pk>/disconnect/", account_disconnect, name="disconnect_account"),
     path("accounts/<int:pk>/sync/", account_sync, name="sync_account"),
-    # Drafts
-    path("drafts/", drafts_list, name="drafts_list"),
+    # Drafts (list page removed; create/detail/edit/send/delete kept for task modal flow)
     path("drafts/create/", draft_create, name="draft_create"),
     path("drafts/<int:pk>/", draft_detail, name="draft_detail"),
     path("drafts/<int:pk>/edit/", draft_update, name="draft_update"),
