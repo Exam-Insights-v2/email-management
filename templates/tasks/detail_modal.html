@@ -482,9 +482,13 @@ Usage:
                   const AUTOSAVE_DELAY_MS = 1500;
                   let autosaveTimer = null;
 
-                  // Get signature from data attribute
-                  const signatureHtml = bodyEditor ? (bodyEditor.getAttribute('data-signature') || '') : '';
-                  
+                  // Get signature from data attribute (Django escapejs uses \uXXXX; decode so we use real HTML, not literal text)
+                  function decodeEscapeJs(s) {
+                    if (!s || typeof s !== 'string') return '';
+                    return s.replace(/\\u([0-9a-fA-F]{4})/g, function(_, hex) { return String.fromCharCode(parseInt(hex, 16)); });
+                  }
+                  const signatureHtml = bodyEditor ? decodeEscapeJs(bodyEditor.getAttribute('data-signature') || '') : '';
+
                   // Helper to ensure signature is appended to body
                   function ensureSignature(bodyHtml) {
                     if (!signatureHtml) return bodyHtml;
