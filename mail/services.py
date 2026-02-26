@@ -651,8 +651,9 @@ class GmailService(EmailProviderService):
         cc_addresses: List[str] = None,
         bcc_addresses: List[str] = None,
         reply_to_message_id: str = None,
+        thread_id: str = None,
     ) -> dict:
-        """Send an email via Gmail API"""
+        """Send an email via Gmail API. For replies, pass reply_to_message_id and thread_id so the message is in the same thread."""
         import email.mime.text
         import email.mime.multipart
 
@@ -667,14 +668,18 @@ class GmailService(EmailProviderService):
         if bcc_addresses:
             message["bcc"] = ", ".join(bcc_addresses)
         if reply_to_message_id:
-            # Get original message for In-Reply-To header
+            # Get original message for In-Reply-To and References (RFC 2822)
             try:
                 original = service.users().messages().get(
                     userId="me", id=reply_to_message_id, format="metadata"
                 ).execute()
                 headers = {h["name"].lower(): h["value"] for h in original.get("payload", {}).get("headers", [])}
-                message["In-Reply-To"] = headers.get("message-id", "")
-                message["References"] = headers.get("references", "")
+                message_id = headers.get("message-id", "").strip()
+                message["In-Reply-To"] = message_id
+                references = (headers.get("references", "") or "").strip()
+                if message_id and message_id not in references:
+                    references = f"{references} {message_id}".strip() if references else message_id
+                message["References"] = references
             except Exception:
                 pass
 
@@ -686,11 +691,13 @@ class GmailService(EmailProviderService):
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
         try:
-            # Send message
+            send_body = {"raw": raw_message}
+            if thread_id:
+                send_body["threadId"] = thread_id
             sent_message = (
                 service.users()
                 .messages()
-                .send(userId="me", body={"raw": raw_message})
+                .send(userId="me", body=send_body)
                 .execute()
             )
             return {"id": sent_message["id"], "threadId": sent_message.get("threadId")}
@@ -705,7 +712,11 @@ class GmailService(EmailProviderService):
         try:
             # If draft doesn't exist in Gmail, send as new message instead
             if not draft.external_draft_id:
-                # Send as new message (use effective_to_addresses so replies have recipient)
+                reply_to_id = None
+                thread_id = None
+                if getattr(draft, "email_message", None):
+                    reply_to_id = draft.email_message.external_message_id
+                    thread_id = draft.email_message.thread.external_thread_id
                 return self.send_message(
                     account=account,
                     to_addresses=draft.effective_to_addresses,
@@ -713,6 +724,8 @@ class GmailService(EmailProviderService):
                     body_html=draft.body_html or "",
                     cc_addresses=draft.cc_addresses or [],
                     bcc_addresses=draft.bcc_addresses or [],
+                    reply_to_message_id=reply_to_id,
+                    thread_id=thread_id,
                 )
             
             # Send existing draft (fall back to send_message if Gmail draft has no recipient)
@@ -727,6 +740,11 @@ class GmailService(EmailProviderService):
             except Exception as send_err:
                 err_msg = str(send_err).lower()
                 if ("recipient" in err_msg or "invalidargument" in err_msg) and draft.effective_to_addresses:
+                    reply_to_id = None
+                    thread_id = None
+                    if getattr(draft, "email_message", None):
+                        reply_to_id = draft.email_message.external_message_id
+                        thread_id = draft.email_message.thread.external_thread_id
                     return self.send_message(
                         account=account,
                         to_addresses=draft.effective_to_addresses,
@@ -734,13 +752,15 @@ class GmailService(EmailProviderService):
                         body_html=draft.body_html or "",
                         cc_addresses=draft.cc_addresses or [],
                         bcc_addresses=draft.bcc_addresses or [],
+                        reply_to_message_id=reply_to_id,
+                        thread_id=thread_id,
                     )
                 raise
         except Exception as e:
             raise ValueError(f"Error sending draft: {str(e)}")
 
     def create_draft(self, account: Account, draft) -> Draft:
-        """Create or update a draft in Gmail"""
+        """Create or update a draft in Gmail. For replies, set In-Reply-To/References and threadId so the draft is in the same thread."""
         import email.mime.text
         import email.mime.multipart
 
@@ -755,6 +775,21 @@ class GmailService(EmailProviderService):
         if draft.bcc_addresses:
             message["bcc"] = ", ".join(draft.bcc_addresses)
 
+        if getattr(draft, "email_message", None) and draft.email_message.external_message_id:
+            try:
+                original = service.users().messages().get(
+                    userId="me", id=draft.email_message.external_message_id, format="metadata"
+                ).execute()
+                headers = {h["name"].lower(): h["value"] for h in original.get("payload", {}).get("headers", [])}
+                message_id = headers.get("message-id", "").strip()
+                message["In-Reply-To"] = message_id
+                references = (headers.get("references", "") or "").strip()
+                if message_id and message_id not in references:
+                    references = f"{references} {message_id}".strip() if references else message_id
+                message["References"] = references
+            except Exception:
+                pass
+
         # Add HTML body
         html_part = email.mime.text.MIMEText(draft.body_html or "", "html")
         message.attach(html_part)
@@ -763,11 +798,13 @@ class GmailService(EmailProviderService):
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
         try:
-            # Create draft
+            create_body = {"message": {"raw": raw_message}}
+            if getattr(draft, "email_message", None) and draft.email_message.thread_id:
+                create_body["message"]["threadId"] = draft.email_message.thread.external_thread_id
             draft_obj = (
                 service.users()
                 .drafts()
-                .create(userId="me", body={"message": {"raw": raw_message}})
+                .create(userId="me", body=create_body)
                 .execute()
             )
             draft.external_draft_id = draft_obj["id"]
