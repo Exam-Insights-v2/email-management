@@ -542,11 +542,7 @@ Usage:
                     }
                   }
                   if (bodyEditor && bodyHtmlInput) {
-                    // Ensure signature is in the initial display if draft exists
-                    if (bodyEditor.innerHTML && signatureHtml && bodyEditor.innerHTML.indexOf(signatureHtml) === -1) {
-                      const separator = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>';
-                      bodyEditor.innerHTML = bodyEditor.innerHTML + separator + signatureHtml;
-                    }
+                    // Do not append signature on load: draft body from server already includes it when present; appending again caused duplicate signatures (serialisation differences made indexOf miss).
                     syncBodyToHidden();
                     bodyEditor.addEventListener('input', function() { syncBodyToHidden(); scheduleAutosave(); });
                     bodyEditor.addEventListener('paste', function() { setTimeout(syncBodyToHidden, 0); });
