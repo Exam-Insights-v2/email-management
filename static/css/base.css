@@ -35,6 +35,19 @@
       .material-icons.size-6 { font-size: 1.5rem; }
       .material-icons.size-\[18px\] { font-size: 18px; }
 
+      /* Mobile icon-only pattern for nav tabs and compact action buttons */
+      @media (max-width: 639px) {
+        .mobile-icon-only {
+          padding-left: 0.625rem !important;
+          padding-right: 0.625rem !important;
+          min-width: 2.25rem;
+          justify-content: center;
+        }
+        .mobile-icon-only .mobile-icon-only-text {
+          display: none !important;
+        }
+      }
+
       /* Keep page layout stable when vertical scrollbars appear/disappear. */
       #app-main-shell > main {
         scrollbar-gutter: stable both-edges;

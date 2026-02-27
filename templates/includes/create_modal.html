@@ -4,9 +4,9 @@ Usage:
   {% include 'includes/create_modal.html' with modal_id="create-task" title="Create Task" form_template="tasks/form_content.html" form_url="task_create" button_text="Create" form=form %}
 {% endcomment %}
 
-<button type="button" onclick="document.getElementById('{{ modal_id }}').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors">
+<button type="button" onclick="document.getElementById('{{ modal_id }}').showModal();" aria-label="{{ button_text|default:'Create New' }}" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors">
   <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">add</span>
-  {{ button_text|default:"Create New" }}
+  <span class="mobile-icon-only-text">{{ button_text|default:"Create New" }}</span>
 </button>
 
 <el-dialog>

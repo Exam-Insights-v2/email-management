@@ -2,7 +2,7 @@
 {% comment %}
 Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from viewport with rounded corners and soft shadow.
 {% endcomment %}
-<aside id="app-sidebar" class="fade-in-chrome sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm" data-chrome-order="0" aria-label="Main navigation">
+<aside id="app-sidebar" class="fade-in-chrome sidebar-modern fixed left-3 top-3 bottom-3 z-50 hidden w-[200px] flex-col rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm md:flex" data-chrome-order="0" aria-label="Main navigation">
   {% if user.is_authenticated %}
   <!-- Brand -->
   <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-gray-100 dark:border-white/10">
@@ -73,15 +73,37 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
   {% endif %}
 </aside>
 
+{% if user.is_authenticated %}
+<nav class="fade-in-chrome fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 dark:border-white/10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm md:hidden" aria-label="Mobile navigation">
+  <ul class="grid grid-cols-3 px-2 py-2">
+    <li class="flex justify-center">
+      <span class="inline-flex w-full max-w-[112px] items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60" aria-disabled="true" title="Jobs coming soon" aria-label="Jobs">
+        <span class="material-icons size-4" aria-hidden="true">business_center</span>
+        <span class="mobile-icon-only-text">Jobs</span>
+      </span>
+    </li>
+    <li class="flex justify-center">
+      <a href="{% url 'tasks_list' %}" class="inline-flex w-full max-w-[112px] items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs font-medium no-underline transition-colors {% if 'tasks' in request.path or request.path == '/' %}bg-cyan-500/15 text-cyan-600 dark:text-cyan-400{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10{% endif %}" aria-label="Tasks">
+        <span class="material-icons size-4" aria-hidden="true">task_alt</span>
+        <span class="mobile-icon-only-text">Tasks</span>
+      </a>
+    </li>
+    <li class="flex justify-center">
+      <a href="{% url 'settings' %}" class="inline-flex w-full max-w-[112px] items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs font-medium no-underline transition-colors {% if 'settings' in request.path %}bg-cyan-500/15 text-cyan-600 dark:text-cyan-400{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10{% endif %}" aria-label="Settings">
+        <span class="material-icons size-4" aria-hidden="true">settings</span>
+        <span class="mobile-icon-only-text">Settings</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
 <style>
   .sidebar-modern .sidebar-nav-link { position: relative; }
   .sidebar-modern .sidebar-nav-link:hover span:first-of-type:not(.bg-cyan-500/20) { background: rgb(226 232 240); color: rgb(71 85 105); }
   .dark .sidebar-modern .sidebar-nav-link:hover span:first-of-type:not(.bg-cyan-500/20) { background: rgba(255,255,255,0.1); color: rgb(226 232 240); }
   #app-sidebar {
     width: 72px;
-  }
-  #app-main-shell {
-    padding-left: 87px !important;
   }
   #app-sidebar .sidebar-text {
     display: none;

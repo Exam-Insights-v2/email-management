@@ -6,26 +6,33 @@
 {% block header_title %}Settings{% endblock %}
 
 {% block header_center %}
-<div class="inline-flex rounded-full bg-gray-200 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist" aria-label="Settings sections">
-  <button type="button" role="tab" id="settings-tab-accounts" aria-controls="settings-panel-accounts" aria-selected="false" data-settings-tab="accounts" class="settings-tab rounded-full px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-    <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">person</span>
-    Accounts
-  </button>
-  <button type="button" role="tab" id="settings-tab-actions" aria-controls="settings-panel-actions" aria-selected="false" data-settings-tab="actions" class="settings-tab rounded-full px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-    <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">rule</span>
-    Actions
-  </button>
-  <button type="button" role="tab" id="settings-tab-labels" aria-controls="settings-panel-labels" aria-selected="false" data-settings-tab="labels" class="settings-tab rounded-full px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
-    <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">label</span>
-    Labels
-  </button>
+<div class="flex w-full justify-start sm:justify-center overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+  <div class="inline-flex min-w-max whitespace-nowrap rounded-full bg-gray-200 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist" aria-label="Settings sections">
+    <button type="button" role="tab" id="settings-tab-accounts" aria-label="Accounts" aria-controls="settings-panel-accounts" aria-selected="false" data-settings-tab="accounts" class="settings-tab mobile-icon-only rounded-full px-3 sm:px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">person</span>
+      <span class="mobile-icon-only-text">Accounts</span>
+    </button>
+    <button type="button" role="tab" id="settings-tab-actions" aria-label="Actions" aria-controls="settings-panel-actions" aria-selected="false" data-settings-tab="actions" class="settings-tab mobile-icon-only rounded-full px-3 sm:px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">rule</span>
+      <span class="mobile-icon-only-text">Actions</span>
+    </button>
+    <button type="button" role="tab" id="settings-tab-labels" aria-label="Labels" aria-controls="settings-panel-labels" aria-selected="false" data-settings-tab="labels" class="settings-tab mobile-icon-only rounded-full px-3 sm:px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">label</span>
+      <span class="mobile-icon-only-text">Labels</span>
+    </button>
+  </div>
 </div>
 {% endblock %}
 
 {% block header_action %}
-<a href="{% url 'logout' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors no-underline">
+<button type="button" onclick="toggleTheme()" aria-label="Toggle theme" class="mobile-icon-only sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+  <span class="material-icons w-3.5 h-3.5 flex-shrink-0 hidden dark:inline-flex" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">wb_sunny</span>
+  <span class="material-icons w-3.5 h-3.5 flex-shrink-0 inline-flex dark:hidden" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">nights_stay</span>
+  <span class="mobile-icon-only-text">Theme</span>
+</button>
+<a href="{% url 'logout' %}" aria-label="Logout" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors no-underline">
   <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">logout</span>
-  Logout
+  <span class="mobile-icon-only-text">Logout</span>
 </a>
 {% endblock %}
 
@@ -52,13 +59,13 @@
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Accounts</h2>
     <div class="flex items-center gap-1.5">
-      <a href="{% url 'connect_gmail' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors no-underline">
+      <a href="{% url 'connect_gmail' %}" aria-label="Connect Google account" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors no-underline">
         <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">mail</span>
-        Connect Google
+        <span class="mobile-icon-only-text">Connect Google</span>
       </a>
-      <a href="{% url 'connect_microsoft' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-700 text-white text-xs font-medium hover:bg-slate-600 shadow-sm transition-colors no-underline">
+      <a href="{% url 'connect_microsoft' %}" aria-label="Connect Microsoft account" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-700 text-white text-xs font-medium hover:bg-slate-600 shadow-sm transition-colors no-underline">
         <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">business</span>
-        Connect Microsoft
+        <span class="mobile-icon-only-text">Connect Microsoft</span>
       </a>
     </div>
   </div>
@@ -197,9 +204,9 @@
 <div id="settings-panel-actions" role="tabpanel" aria-labelledby="settings-tab-actions" data-settings-panel="actions" class="settings-panel mx-auto max-w-7xl hidden" hidden>
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Actions</h2>
-    <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors">
+    <button type="button" onclick="document.getElementById('create-action').showModal();" aria-label="Create action" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">add</span>
-      Create
+      <span class="mobile-icon-only-text">Create</span>
     </button>
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -239,9 +246,9 @@
 <div id="settings-panel-labels" role="tabpanel" aria-labelledby="settings-tab-labels" data-settings-panel="labels" class="settings-panel mx-auto max-w-7xl hidden" hidden>
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Labels</h2>
-    <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors flex-shrink-0">
+    <button type="button" onclick="document.getElementById('create-label').showModal();" aria-label="Create label" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors flex-shrink-0">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">add</span>
-      Create
+      <span class="mobile-icon-only-text">Create</span>
     </button>
   </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

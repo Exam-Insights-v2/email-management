@@ -6,19 +6,19 @@
 {% block header_title %}Tasks{% endblock %}
 
 {% block header_center %}
-  <div class="flex items-center gap-3 flex-wrap justify-center">
-    <div class="inline-flex rounded-full bg-gray-100 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist" aria-label="Task view">
-      <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="panel-list" data-view="list" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+  <div class="flex w-full justify-start sm:justify-center overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div class="inline-flex min-w-max whitespace-nowrap rounded-full bg-gray-100 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist" aria-label="Task view">
+      <button type="button" role="tab" id="tab-list" aria-label="List view" aria-selected="true" aria-controls="panel-list" data-view="list" class="tasks-view-tab mobile-icon-only inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
         <span class="material-icons size-4" aria-hidden="true">view_list</span>
-        List
+        <span class="mobile-icon-only-text">List</span>
       </button>
-      <button type="button" role="tab" id="tab-email" aria-selected="false" aria-controls="panel-email" data-view="email" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <button type="button" role="tab" id="tab-email" aria-label="Inbox view" aria-selected="false" aria-controls="panel-email" data-view="email" class="tasks-view-tab mobile-icon-only inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
         <span class="material-icons size-4" aria-hidden="true">inbox</span>
-        Inbox
+        <span class="mobile-icon-only-text">Inbox</span>
       </button>
-      <button type="button" role="tab" id="tab-cards" aria-selected="false" aria-controls="panel-cards" data-view="cards" class="tasks-view-tab inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
+      <button type="button" role="tab" id="tab-cards" aria-label="Cards view" aria-selected="false" aria-controls="panel-cards" data-view="cards" class="tasks-view-tab mobile-icon-only inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
         <span class="material-icons size-4" aria-hidden="true">grid_view</span>
-        Cards
+        <span class="mobile-icon-only-text">Cards</span>
       </button>
     </div>
   </div>
@@ -31,20 +31,20 @@
 {% endblock %}
 
 {% block header_action %}
-  <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+  <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end sm:flex-nowrap">
+    <button type="button" onclick="document.getElementById('filter-tasks').showModal();" aria-label="Filter tasks" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">filter_list</span>
-      Filter{% if active_filter_count > 0 %} ({{ active_filter_count }}){% endif %}
+      <span class="mobile-icon-only-text">Filter{% if active_filter_count > 0 %} ({{ active_filter_count }}){% endif %}</span>
     </button>
     {% if active_filter_count > 0 %}
-    <a href="{% url 'tasks_list' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/50 shadow-sm transition-colors no-underline">
+    <a href="{% url 'tasks_list' %}" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/50 shadow-sm transition-colors no-underline">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">close</span>
       Clear
     </a>
     {% endif %}
-    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
+    <button type="button" onclick="window.openCommandPalette && window.openCommandPalette()" aria-label="Search tasks" class="mobile-icon-only inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">search</span>
-      Search
+      <span class="mobile-icon-only-text">Search</span>
     </button>
     {% include 'includes/create_modal.html' with modal_id="create-task" title="Create Task" form_template="tasks/form_content.html" form_url="task_create" button_text="Create" form=form %}
   </div>
@@ -89,7 +89,7 @@
   {% endfor %}
 {% endif %}
 
-<div class="mt-4 flex items-center gap-2">
+<div class="mt-4 flex items-center gap-2 px-1 sm:px-0">
   <p class="text-xs text-gray-500 dark:text-gray-400">{{ all_tasks|length }} task{{ all_tasks|length|pluralize }}</p>
   <div id="refresh-sync-message" class="hidden sm:flex items-center" style="display: none !important;">
     <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50/90 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-200/50 dark:border-cyan-700/50 shadow-sm transition-colors">
@@ -100,7 +100,7 @@
 </div>
 
 <!-- List view -->
-<section id="panel-list" role="tabpanel" aria-labelledby="tab-list" class="tasks-view-panel mt-4" data-view="list">
+<section id="panel-list" role="tabpanel" aria-labelledby="tab-list" class="tasks-view-panel mt-4 -mx-1 sm:mx-0" data-view="list">
   {% if tasks_by_priority.5 %}
   <div class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
@@ -166,7 +166,7 @@
 </section>
 
 <!-- Inbox view (inbox-style list) -->
-<section id="panel-email" role="tabpanel" aria-labelledby="tab-email" class="tasks-view-panel mt-4 hidden" data-view="email" hidden>
+<section id="panel-email" role="tabpanel" aria-labelledby="tab-email" class="tasks-view-panel mt-4 -mx-1 sm:mx-0 hidden" data-view="email" hidden>
   {% if all_tasks %}
   <div class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
     <ul role="list" class="divide-y divide-gray-100 dark:divide-white/5">
@@ -185,7 +185,7 @@
 </section>
 
 <!-- Cards view -->
-<section id="panel-cards" role="tabpanel" aria-labelledby="tab-cards" class="tasks-view-panel mt-4 hidden" data-view="cards" hidden>
+<section id="panel-cards" role="tabpanel" aria-labelledby="tab-cards" class="tasks-view-panel mt-4 -mx-1 sm:mx-0 hidden" data-view="cards" hidden>
   {% if all_tasks %}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for task in tasks_by_priority.5 %}{% include 'tasks/card_item.html' with task=task %}{% endfor %}
