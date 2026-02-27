@@ -18,7 +18,7 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
       <li>
         <span class="sidebar-nav-link flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal text-gray-400 dark:text-gray-500 no-underline cursor-not-allowed pointer-events-none opacity-50" aria-disabled="true" title="Jobs coming soon">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500">
-            <span class="material-icons size-4" aria-hidden="true">work</span>
+            <span class="material-icons size-4" aria-hidden="true">business_center</span>
           </span>
           <span class="sidebar-text">Jobs</span>
         </span>
@@ -26,7 +26,7 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
       <li>
         <a href="{% url 'tasks_list' %}" class="sidebar-nav-link flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal no-underline transition-all duration-200">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors {% if 'tasks' in request.path or request.path == '/' %}bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400{% endif %}">
-            <span class="material-icons size-4" aria-hidden="true">view_list</span>
+            <span class="material-icons size-4" aria-hidden="true">task_alt</span>
           </span>
           <span class="sidebar-text">Tasks</span>
         </a>
