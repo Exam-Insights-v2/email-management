@@ -163,34 +163,41 @@ Usage:
                 <!-- Message: email body or task description (when no email) -->
                 <div class="{% if task.email_message and task.description %}lg:col-span-8{% endif %}">
                   <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden h-full flex flex-col">
-                    <div class="px-4 sm:px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-cyan-600 dark:bg-gray-700/50">
-                      <h3 id="task-detail-{{ task.pk }}-message-heading" class="text-sm font-medium text-white dark:text-gray-200">
-                        {% if task.email_message %}Email Message{% else %}Task Description{% endif %}
-                      </h3>
-                    </div>
-                    <div class="px-4 sm:px-5 py-4 flex-1">
-                      {% if task.email_message %}
-                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        <button type="button" class="email-filter-link hover:underline cursor-pointer" data-email="{{ task.email_message.from_address }}">{{ task.email_message.from_address }}</button>
-                        {% if task.email_message.to_addresses %} → {% for e in task.email_message.to_addresses %}<button type="button" class="email-filter-link hover:underline cursor-pointer" data-email="{{ e }}">{{ e }}</button>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}
-                        {% if task.email_message.date_sent %} · {% load db_filters %}{{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}{% endif %}
-                      </p>
-                      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{{ task.email_message.subject|default:"(No subject)" }}</p>
-                      <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none">
-                        {% if task.email_message.body_html %}
-                        <div class="email-body" style="contain: layout style paint; isolation: isolate;">
-                          {{ task.email_message.body_html|remove_global_style_script|strip_quoted_email }}
+                    <details
+                      id="task-detail-{{ task.pk }}-message-accordion"
+                      data-task-responsive-accordion
+                      class="group h-full"
+                    >
+                      <summary class="list-none px-4 sm:px-5 py-3 bg-cyan-600 dark:bg-gray-700/50 cursor-pointer flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                        <h3 id="task-detail-{{ task.pk }}-message-heading" class="text-sm font-medium text-white dark:text-gray-200">
+                          {% if task.email_message %}Email Message{% else %}Task Description{% endif %}
+                        </h3>
+                        <span class="material-icons size-5 text-white dark:text-gray-300 transition-transform duration-200 group-open:rotate-180" aria-hidden="true">expand_more</span>
+                      </summary>
+                      <div class="px-4 sm:px-5 py-4 border-t border-gray-100 dark:border-white/10">
+                        {% if task.email_message %}
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          <button type="button" class="email-filter-link hover:underline cursor-pointer" data-email="{{ task.email_message.from_address }}">{{ task.email_message.from_address }}</button>
+                          {% if task.email_message.to_addresses %} → {% for e in task.email_message.to_addresses %}<button type="button" class="email-filter-link hover:underline cursor-pointer" data-email="{{ e }}">{{ e }}</button>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}
+                          {% if task.email_message.date_sent %} · {% load db_filters %}{{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}{% endif %}
+                        </p>
+                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{{ task.email_message.subject|default:"(No subject)" }}</p>
+                        <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none">
+                          {% if task.email_message.body_html %}
+                          <div class="email-body" style="contain: layout style paint; isolation: isolate;">
+                            {{ task.email_message.body_html|remove_global_style_script|strip_quoted_email }}
+                          </div>
+                          {% else %}
+                          <p class="text-gray-500 dark:text-gray-400 italic">No body content</p>
+                          {% endif %}
                         </div>
                         {% else %}
-                        <p class="text-gray-500 dark:text-gray-400 italic">No body content</p>
+                        <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                          {% if task.description %}{{ task.description|strip_whitespace }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
+                        </div>
                         {% endif %}
                       </div>
-                      {% else %}
-                      <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
-                        {% if task.description %}{{ task.description|strip_whitespace }}{% else %}<span class="text-gray-500 dark:text-gray-400 italic">No description</span>{% endif %}
-                      </div>
-                      {% endif %}
-                    </div>
+                    </details>
                   </div>
                 </div>
 
@@ -198,12 +205,19 @@ Usage:
                 {% if task.email_message and task.description %}
                 <div class="lg:col-span-4" aria-labelledby="task-detail-{{ task.pk }}-desc-heading">
                   <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden h-full flex flex-col">
-                    <div class="px-4 sm:px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-cyan-600 dark:bg-gray-700/50">
-                      <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-medium text-white dark:text-gray-200">Task Description</h3>
-                    </div>
-                    <div class="px-4 sm:px-5 py-4 flex-1">
-                      <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{{ task.description|strip_whitespace }}</div>
-                    </div>
+                    <details
+                      id="task-detail-{{ task.pk }}-desc-accordion"
+                      data-task-responsive-accordion
+                      class="group h-full"
+                    >
+                      <summary class="list-none px-4 sm:px-5 py-3 bg-cyan-600 dark:bg-gray-700/50 cursor-pointer flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                        <h3 id="task-detail-{{ task.pk }}-desc-heading" class="text-sm font-medium text-white dark:text-gray-200">Task Description</h3>
+                        <span class="material-icons size-5 text-white dark:text-gray-300 transition-transform duration-200 group-open:rotate-180" aria-hidden="true">expand_more</span>
+                      </summary>
+                      <div class="px-4 sm:px-5 py-4 border-t border-gray-100 dark:border-white/10">
+                        <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{{ task.description|strip_whitespace }}</div>
+                      </div>
+                    </details>
                   </div>
                 </div>
                 {% endif %}
@@ -1501,6 +1515,30 @@ Usage:
         return;
       }
     });
+  })();
+
+  // Task detail accordions: open by default on desktop, collapsed by default on small screens
+  (function() {
+    function setTaskDetailAccordionDefaults() {
+      const isSmallScreen = window.matchMedia('(max-width: 639px)').matches;
+      document.querySelectorAll('details[data-task-responsive-accordion]').forEach(function(accordion) {
+        if (accordion.dataset.defaultApplied === '1') {
+          return;
+        }
+        if (isSmallScreen) {
+          accordion.removeAttribute('open');
+        } else {
+          accordion.setAttribute('open', '');
+        }
+        accordion.dataset.defaultApplied = '1';
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setTaskDetailAccordionDefaults);
+    } else {
+      setTaskDetailAccordionDefaults();
+    }
   })();
 
   // Relative time display functionality
