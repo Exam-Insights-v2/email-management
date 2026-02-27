@@ -357,6 +357,7 @@ class MicrosoftOAuthService:
     MAIL_SCOPES = [
         "Mail.Read",
         "Mail.ReadWrite",  # For drafts
+        "Mail.Send",
     ]
 
     @staticmethod
@@ -542,10 +543,18 @@ class MicrosoftEmailOAuthService:
         except OAuthToken.DoesNotExist:
             return None
 
-        # Use the scopes that were originally granted with this token
+        # Use the scopes that were originally granted with this token.
+        # MSAL refresh call must not include reserved scopes.
         token_scopes = oauth_token.get_scopes_list()
         if not token_scopes:
             token_scopes = MicrosoftEmailOAuthService.SCOPES
+        reserved_scopes = {"openid", "profile", "offline_access"}
+        refresh_scopes = [s for s in token_scopes if s and s.lower() not in reserved_scopes]
+        if not refresh_scopes:
+            refresh_scopes = [
+                s for s in MicrosoftEmailOAuthService.SCOPES
+                if s and s.lower() not in reserved_scopes
+            ]
 
         # Check if token is expired or will expire soon (within 5 minutes)
         # This prevents using expired tokens and refreshes proactively
@@ -571,7 +580,7 @@ class MicrosoftEmailOAuthService:
                 
                 result = app.acquire_token_by_refresh_token(
                     refresh_token=oauth_token.refresh_token,
-                    scopes=token_scopes,
+                    scopes=refresh_scopes,
                 )
                 
                 if "error" in result:

@@ -1,68 +1,79 @@
 {% load db_filters %}
-{% comment %}Task card for card view - clickable, opens detail modal. {% endcomment %}
+{% comment %}Task card for cards view - grouped metadata and persistent actions.{% endcomment %}
 <article class="task-row task-card group relative rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer overflow-hidden" data-task-pk="{{ task.pk }}">
-  <div class="p-4 sm:p-5 flex flex-col min-h-[140px]">
-    <div class="flex items-start justify-between gap-2 mb-2 pr-8">
-      <div class="min-w-0 flex-1">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{{ task.title|default:"Untitled Task" }}</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">TASK-{{ task.account_task_number|default:task.pk }}</p>
+  <div class="p-4 sm:p-5 flex flex-col min-h-[170px]">
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0 flex-1 flex items-start gap-2">
+        <span class="inline-flex items-end gap-0.5 h-4 mt-0.5 shrink-0" title="Priority">
+          {% include 'tasks/priority_bars.html' with priority=task.priority %}
+        </span>
+        <div class="min-w-0">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{{ task.title|default:"Untitled Task" }}</h3>
+          <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <span class="truncate">
+              {% if task.email_message %}
+                {{ task.email_message.from_name|default:task.email_message.from_address }}
+              {% else %}
+                Manual task
+              {% endif %}
+            </span>
+            {% if task.email_message and task.email_message.labels.all %}
+              {% for email_label in task.email_message.labels.all %}
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium {{ email_label.label.name|label_color_bg }}">
+                  <span class="w-1 h-1 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
+                  <span class="max-w-[5.5rem] truncate">{{ email_label.label.name }}</span>
+                </span>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
-        {% include 'tasks/priority_bars.html' with priority=task.priority %}
-        {% if task.status == 'done' %}
-          <span class="material-icons size-4 text-emerald-500 dark:text-emerald-400" aria-hidden="true" title="Done">check_circle</span>
-        {% elif task.status == 'in_progress' %}
-          <span class="material-icons size-4 text-blue-500 dark:text-blue-400" aria-hidden="true" title="In Progress">play_circle</span>
-        {% elif task.status == 'cancelled' %}
-          <span class="material-icons size-4 text-red-500 dark:text-red-400" aria-hidden="true" title="Cancelled">cancel</span>
+        {% if task.status != 'done' %}
+        <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
+          {% csrf_token %}
+          <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+          <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+          <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+          <input type="hidden" name="status" value="done">
+          {% if task.due_at %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
+          <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" aria-label="Mark as Done"><span class="material-icons size-4">check_circle</span></button>
+        </form>
         {% else %}
-          <span class="material-icons size-4 text-amber-500 dark:text-amber-400" aria-hidden="true" title="Pending">schedule</span>
+        <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
+          {% csrf_token %}
+          <input type="hidden" name="title" value="{{ task.title|default:'' }}">
+          <input type="hidden" name="description" value="{{ task.description|default:'' }}">
+          <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
+          <input type="hidden" name="status" value="pending">
+          {% if task.due_at %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
+          <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-md p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" aria-label="Undone"><span class="material-icons size-4">radio_button_unchecked</span></button>
+        </form>
         {% endif %}
       </div>
     </div>
-    {% if task.description %}
-      <p class="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 flex-1 mb-3">{{ task.description|striptags|truncatewords:20 }}</p>
-    {% else %}
-      <div class="flex-1 mb-3"></div>
-    {% endif %}
-    <div class="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-white/5">
-      <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+
+    <div class="flex-1"></div>
+
+    <div class="mt-3 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-2">
+      <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+        TASK-{{ task.account_task_number|default:task.pk }}
+        {% if task.status == 'done' %}
+          <span class="material-icons size-3.5 text-emerald-500 dark:text-emerald-400" aria-hidden="true" title="Done">check_circle</span>
+        {% elif task.status == 'in_progress' %}
+          <span class="material-icons size-3.5 text-blue-500 dark:text-blue-400" aria-hidden="true" title="In Progress">play_circle</span>
+        {% elif task.status == 'cancelled' %}
+          <span class="material-icons size-3.5 text-red-500 dark:text-red-400" aria-hidden="true" title="Cancelled">cancel</span>
+        {% else %}
+          <span class="material-icons size-3.5 text-amber-500 dark:text-amber-400" aria-hidden="true" title="Pending">schedule</span>
+        {% endif %}
+      </span>
+      <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 shrink-0">
         <span class="material-icons size-3.5" aria-hidden="true">calendar_today</span>
-        <time datetime="{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|date:'Y-m-d' }}{% else %}{{ task.created_at|date:'Y-m-d' }}{% endif %}">{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|aus_time:"d M" }}{% else %}{{ task.created_at|aus_time:"d M" }}{% endif %}</time>
+        <time datetime="{% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|date:'Y-m-d' }}{% else %}{{ task.created_at|date:'Y-m-d' }}{% endif %}">
+          {% if task.email_message and task.email_message.date_sent %}{{ task.email_message.date_sent|aus_time:"d M g:i A" }}{% else %}{{ task.created_at|aus_time:"d M g:i A" }}{% endif %}
+        </time>
       </div>
-      {% if task.email_message and task.email_message.labels.all %}
-        <div class="flex items-center gap-1 flex-wrap justify-end">
-          {% for email_label in task.email_message.labels.all %}
-            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium {{ email_label.label.name|label_color_bg }}">
-              <span class="w-1 h-1 rounded-full {{ email_label.label.name|label_color_dot }}"></span>
-              <span class="max-w-[4rem] truncate">{{ email_label.label.name }}</span>
-            </span>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-    <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-      {% if task.status != 'done' %}
-      <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
-        {% csrf_token %}
-        <input type="hidden" name="title" value="{{ task.title|default:'' }}">
-        <input type="hidden" name="description" value="{{ task.description|default:'' }}">
-        <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
-        <input type="hidden" name="status" value="done">
-        {% if task.due_at %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
-        <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-lg p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" aria-label="Mark as Done"><span class="material-icons size-4">check_circle</span></button>
-      </form>
-      {% else %}
-      <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
-        {% csrf_token %}
-        <input type="hidden" name="title" value="{{ task.title|default:'' }}">
-        <input type="hidden" name="description" value="{{ task.description|default:'' }}">
-        <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
-        <input type="hidden" name="status" value="pending">
-        {% if task.due_at %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
-        <button type="submit" onclick="event.stopPropagation();" class="flex items-center justify-center rounded-lg p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" aria-label="Undone"><span class="material-icons size-4">radio_button_unchecked</span></button>
-      </form>
-      {% endif %}
     </div>
   </div>
 </article>

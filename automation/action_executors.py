@@ -9,7 +9,7 @@ from automation.models import Action, Label, EmailLabel
 from automation.services import OpenAIClient
 from jobs.models import Job, Task, TaskStatus, JobStatus
 from mail.models import Draft, EmailMessage, EmailThread
-from mail.services import GmailService
+from mail.services import GmailService, MicrosoftService
 from django.utils import timezone
 from datetime import datetime, timedelta
 import json
@@ -201,7 +201,7 @@ def execute_send_reply(
     if not email.account.is_connected:
         return {
             "success": False,
-            "message": "Account is not connected to Gmail",
+            "message": "Account is not connected",
             "data": None
         }
     
@@ -215,10 +215,21 @@ def execute_send_reply(
     # Generate reply body using AI
     html_body = client.draft_reply(instructions, email_context)
     
-    # Send immediately via Gmail API
+    provider_services = {
+        "gmail": GmailService(),
+        "microsoft": MicrosoftService(),
+    }
+    provider_service = provider_services.get(email.account.provider)
+    if not provider_service:
+        return {
+            "success": False,
+            "message": f"Provider '{email.account.provider}' does not support sending",
+            "data": None,
+        }
+
+    # Send immediately via provider API
     try:
-        gmail_service = GmailService()
-        result = gmail_service.send_message(
+        result = provider_service.send_message(
             account=email.account,
             to_addresses=[email.from_address],
             subject=f"Re: {email.subject or 'your message'}",

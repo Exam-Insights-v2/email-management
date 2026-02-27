@@ -12,7 +12,7 @@
     Accounts
   </a>
   <a href="?tab=actions" class="{% if tab == 'actions' %}bg-white dark:bg-gray-800 text-cyan-600 dark:text-cyan-400 shadow-sm{% else %}text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white{% endif %} rounded-full px-4 py-2 text-xs font-medium transition-colors no-underline inline-flex items-center gap-1.5">
-    <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">bolt</span>
+    <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">rule</span>
     Actions
   </a>
   <a href="?tab=labels" class="{% if tab == 'labels' %}bg-white dark:bg-gray-800 text-cyan-600 dark:text-cyan-400 shadow-sm{% else %}text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white{% endif %} rounded-full px-4 py-2 text-xs font-medium transition-colors no-underline inline-flex items-center gap-1.5">
@@ -22,6 +22,13 @@
 </div>
 {% endblock %}
 
+{% block header_action %}
+<a href="{% url 'logout' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors no-underline">
+  <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">logout</span>
+  Logout
+</a>
+{% endblock %}
+
 {% block content %}
 <!-- Accounts Tab -->
 {% if tab == 'accounts' %}
@@ -29,13 +36,13 @@
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Accounts</h2>
     <div class="flex items-center gap-1.5">
-      <a href="{% url 'logout' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-sm transition-colors no-underline">
-        <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">logout</span>
-        Logout
+      <a href="{% url 'connect_gmail' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors no-underline">
+        <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">mail</span>
+        Connect Google
       </a>
-      <a href="{% url 'account_create' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors no-underline">
-        <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">bolt</span>
-        Connect
+      <a href="{% url 'connect_microsoft' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-700 text-white text-xs font-medium hover:bg-slate-600 shadow-sm transition-colors no-underline">
+        <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="vertical-align: middle; font-size: inherit;" aria-hidden="true">business</span>
+        Connect Microsoft
       </a>
     </div>
   </div>
@@ -183,13 +190,20 @@
       <p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 flex-1">
         {% if action_group.primary.instructions %}{{ action_group.primary.instructions|truncatewords:15 }}{% else %}{{ action_group.primary.function }}{% endif %}
       </p>
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+      {% if connected_account_count > 1 %}
+      <div class="flex flex-wrap gap-1.5 mt-3 pt-3">
         <span class="text-xs text-gray-500 dark:text-gray-500">Accounts:</span>
         {% for action in action_group.instances %}
-        <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">
+        <span class="inline-flex items-center rounded-md bg-blue-400/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
           {{ action.account.email }}
         </span>
         {% endfor %}
+      </div>
+      {% endif %}
+      <div class="flex flex-wrap items-center gap-2 {% if connected_account_count > 1 %}mt-2{% else %}mt-3 pt-3{% endif %}">
+        <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">
+          {{ action_group.primary.labels.count }} label{{ action_group.primary.labels.count|pluralize }}
+        </span>
       </div>
     </article>
     {% include 'actions/detail_modal.html' with action=action_group.primary labels=action_group.primary.labels.all %}
@@ -213,13 +227,19 @@
       Create
     </button>
   </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for label_group in labels %}
     <article class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openLabelDetailModal) window.openLabelDetailModal({{ label_group.primary.pk }});">
-      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{{ label_group.name }}</h3>
+      <div class="mb-1 flex items-start gap-2">
+        <span class="mt-0.5 inline-flex h-5 min-w-[20px] items-center justify-center flex-shrink-0 whitespace-nowrap leading-none" title="{{ label_group.primary.priority|priority_word }}" aria-hidden="true">
+          {% include 'tasks/priority_bars.html' with priority=label_group.primary.priority %}
+        </span>
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">{{ label_group.name }}</h3>
+      </div>
       <p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 flex-1">
         {% if label_group.primary.prompt %}{{ label_group.primary.prompt|truncatewords:15 }}{% else %}No description{% endif %}
       </p>
+      {% if connected_account_count > 1 %}
       <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
         <span class="text-xs text-gray-500 dark:text-gray-500">Accounts:</span>
         {% for label in label_group.instances %}
@@ -228,16 +248,15 @@
         </span>
         {% endfor %}
       </div>
+      {% endif %}
       <div class="flex flex-wrap items-center gap-2 mt-2">
+        {% if label_group.primary.actions.all %}
+        <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">{{ label_group.primary.actions.count }} action{{ label_group.primary.actions.count|pluralize }}</span>
+        {% endif %}
         {% if label_group.primary.is_active %}
         <span class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">Active</span>
         {% else %}
         <span class="inline-flex items-center rounded-md bg-gray-400/10 px-2 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Inactive</span>
-        {% endif %}
-        {% load db_filters %}
-        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ label_group.primary.priority|priority_color }}">{{ label_group.primary.priority|priority_word }}</span>
-        {% if label_group.primary.actions.all %}
-        <span class="text-xs text-gray-500 dark:text-gray-400">{{ label_group.primary.actions.count }} action{{ label_group.primary.actions.count|pluralize }}</span>
         {% endif %}
       </div>
     </article>

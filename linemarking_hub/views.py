@@ -22,7 +22,7 @@ from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from automation.models import Action, EmailLabel, Label
 from jobs.models import Job, Task
 from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
-from mail.services import GmailService, persist_sent_message
+from mail.services import GmailService, MicrosoftService, persist_sent_message
 from linemarking_hub.templatetags.db_filters import _strip_quoted_email_html
 from linemarking_hub.forms import (
     AccountForm,
@@ -853,13 +853,13 @@ def draft_send(request, pk):
         return redirect("tasks_list")
 
     try:
-        gmail_service = GmailService()
-
-        if send_account.provider != "gmail":
-            messages.error(
-                request,
-                f"Sending from {send_account.email} is not supported yet. Please choose a Gmail account.",
-            )
+        provider_services = {
+            "gmail": GmailService(),
+            "microsoft": MicrosoftService(),
+        }
+        provider_service = provider_services.get(send_account.provider)
+        if not provider_service:
+            messages.error(request, f"Provider '{send_account.provider}' does not support sending.")
             return redirect("tasks_list")
 
         to_addresses = draft.effective_to_addresses
@@ -868,14 +868,14 @@ def draft_send(request, pk):
             return redirect("tasks_list")
 
         if send_account.pk == draft.account_id:
-            result = gmail_service.send_draft(send_account, draft.pk)
+            result = provider_service.send_draft(send_account, draft.pk)
         else:
             reply_to_id = None
             thread_id = None
             if getattr(draft, "email_message", None):
                 reply_to_id = draft.email_message.external_message_id
                 thread_id = draft.email_message.thread.external_thread_id
-            result = gmail_service.send_message(
+            result = provider_service.send_message(
                 account=send_account,
                 to_addresses=to_addresses,
                 subject=draft.subject or "",
@@ -929,13 +929,13 @@ def draft_send_and_mark_done(request, pk):
         return redirect("tasks_list")
 
     try:
-        gmail_service = GmailService()
-
-        if send_account.provider != "gmail":
-            messages.error(
-                request,
-                f"Sending from {send_account.email} is not supported yet. Please choose a Gmail account.",
-            )
+        provider_services = {
+            "gmail": GmailService(),
+            "microsoft": MicrosoftService(),
+        }
+        provider_service = provider_services.get(send_account.provider)
+        if not provider_service:
+            messages.error(request, f"Provider '{send_account.provider}' does not support sending.")
             return redirect("tasks_list")
 
         to_addresses = draft.effective_to_addresses
@@ -944,14 +944,14 @@ def draft_send_and_mark_done(request, pk):
             return redirect("tasks_list")
 
         if send_account.pk == draft.account_id:
-            result = gmail_service.send_draft(send_account, draft.pk)
+            result = provider_service.send_draft(send_account, draft.pk)
         else:
             reply_to_id = None
             thread_id = None
             if getattr(draft, "email_message", None):
                 reply_to_id = draft.email_message.external_message_id
                 thread_id = draft.email_message.thread.external_thread_id
-            result = gmail_service.send_message(
+            result = provider_service.send_message(
                 account=send_account,
                 to_addresses=to_addresses,
                 subject=draft.subject or "",
@@ -1578,6 +1578,7 @@ def settings_view(request):
     
     # Accounts list - filter to show only user's accounts
     accounts = user_accounts.order_by("email")
+    connected_account_count = user_accounts.filter(is_connected=True).count()
     
     # Check account connection status and token validity
     account_statuses = {}
@@ -1643,6 +1644,7 @@ def settings_view(request):
         "actions": actions,
         "labels": labels,
         "accounts": accounts,
+        "connected_account_count": connected_account_count,
         "account_statuses": account_statuses,
         "action_form": action_form,
         "label_form": label_form,

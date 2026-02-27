@@ -2,15 +2,13 @@
 {% comment %}
 Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from viewport with rounded corners and soft shadow.
 {% endcomment %}
-<aside id="app-sidebar" class="sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-r-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm" aria-label="Main navigation">
+<aside id="app-sidebar" class="sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm" aria-label="Main navigation">
   {% if user.is_authenticated %}
   <!-- Brand -->
   <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-gray-100 dark:border-white/10">
-    <a href="{% url 'tasks_list' %}" class="flex items-center gap-2 no-underline min-w-0 group">
-      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/10 ring-1 ring-cyan-500/20 transition group-hover:bg-cyan-500/20 group-hover:ring-cyan-500/30">
-        <img src="{% static 'images/logo.png' %}" alt="" class="h-4 w-4 object-contain" />
-      </span>
-      <span class="truncate text-[13px] font-medium tracking-tight text-gray-900 dark:text-white">Email IQ</span>
+    <a href="{% url 'tasks_list' %}" class="sidebar-brand flex w-full items-center gap-2 no-underline min-w-0 group">
+        <img src="{% static 'images/logo.png' %}" alt="" class="h-6 w-6 object-contain" />
+      <span class="sidebar-text truncate text-[13px] font-medium tracking-tight text-gray-900 dark:text-white">Email IQ</span>
     </a>
   </div>
 
@@ -18,19 +16,19 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
   <nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Primary">
     <ul class="space-y-0.5">
       <li>
-        <span class="sidebar-nav-link flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal text-gray-400 dark:text-gray-500 no-underline cursor-not-allowed pointer-events-none" aria-disabled="true" title="Jobs coming soon">
+        <span class="sidebar-nav-link flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal text-gray-400 dark:text-gray-500 no-underline cursor-not-allowed pointer-events-none opacity-50" aria-disabled="true" title="Jobs coming soon">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500">
             <span class="material-icons size-4" aria-hidden="true">work</span>
           </span>
-          <span>Jobs</span>
+          <span class="sidebar-text">Jobs</span>
         </span>
       </li>
       <li>
-        <a href="{% url 'tasks_list' %}" class="sidebar-nav-link flex items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal no-underline transition-all duration-200 {% if 'tasks' in request.path or request.path == '/' %}sidebar-nav-active bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-l-2 border-cyan-500 -ml-0.5 pl-3{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white{% endif %}">
+        <a href="{% url 'tasks_list' %}" class="sidebar-nav-link flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-[12px] font-normal no-underline transition-all duration-200">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors {% if 'tasks' in request.path or request.path == '/' %}bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400{% endif %}">
             <span class="material-icons size-4" aria-hidden="true">view_list</span>
           </span>
-          <span>Tasks</span>
+          <span class="sidebar-text">Tasks</span>
         </a>
       </li>
     </ul>
@@ -38,36 +36,34 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
 
   <!-- User block -->
   <div class="flex-shrink-0 p-2">
-    <div class="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/80 px-2.5 py-2">
-      <div class="flex items-center gap-2">
-        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[10px] font-medium text-cyan-600 dark:text-cyan-400 ring-1 ring-cyan-500/20" aria-hidden="true">
-          {% if user.get_full_name %}{{ user.get_full_name|slice:":2"|upper }}{% else %}{{ user.username|slice:":2"|upper }}{% endif %}
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-[11px] font-medium text-gray-900 dark:text-white">
-            {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}
-          </p>
-          <p class="truncate text-[10px] text-gray-500 dark:text-gray-400">Account</p>
-        </div>
-        <div class="flex shrink-0 items-center gap-0">
-          <button type="button" onclick="toggleTheme()" class="rounded-md p-1.5 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-2 focus:outline-offset-1 focus:outline-cyan-500" aria-label="Toggle theme">
-            <span id="theme-toggle-light-icon" class="material-icons size-3.5 hidden dark:block" aria-hidden="true">wb_sunny</span>
-            <span id="theme-toggle-dark-icon" class="material-icons size-3.5 block dark:hidden" aria-hidden="true">nights_stay</span>
-          </button>
-          <a href="{% url 'settings' %}" class="rounded-md p-1.5 text-gray-500 dark:text-gray-400 no-underline transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-2 focus:outline-offset-1 focus:outline-cyan-500 {% if 'settings' in request.path %}bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400{% endif %}" aria-label="Settings">
-            <span class="material-icons size-3.5" aria-hidden="true">settings</span>
-          </a>
-        </div>
+    <div class="sidebar-user-row flex flex-col items-center gap-1.5 px-1 py-1">
+      <div class="sidebar-user-actions flex shrink-0 flex-col items-center gap-1">
+        <button type="button" onclick="toggleTheme()" class="inline-flex h-7 w-7 items-center justify-center rounded-md p-1.5 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-2 focus:outline-offset-1 focus:outline-cyan-500" aria-label="Toggle theme">
+          <span id="theme-toggle-light-icon" class="material-icons size-3.5 hidden dark:block" aria-hidden="true">wb_sunny</span>
+          <span id="theme-toggle-dark-icon" class="material-icons size-3.5 block dark:hidden" aria-hidden="true">nights_stay</span>
+        </button>
+        <a href="{% url 'settings' %}" class="inline-flex h-7 w-7 items-center justify-center rounded-md p-1.5 text-gray-500 dark:text-gray-400 no-underline transition-colors hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-2 focus:outline-offset-1 focus:outline-cyan-500 {% if 'settings' in request.path %}bg-cyan-50 dark:bg-cyan-900/20{% endif %}" aria-label="Settings">
+          <span class="material-icons size-3.5 {% if 'settings' in request.path %}text-cyan-600 dark:text-cyan-400{% else %}text-gray-500 dark:text-gray-400{% endif %}" aria-hidden="true">settings</span>
+        </a>
+      </div>
+      <div class="flex h-7 w-7 my-2 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-[10px] font-medium text-cyan-600 dark:text-cyan-400 ring-1 ring-cyan-500/20" aria-hidden="true">
+        {% if user.get_full_name %}{{ user.get_full_name|slice:":2"|upper }}{% else %}{{ user.username|slice:":2"|upper }}{% endif %}
+      </div>
+      <div class="sidebar-text min-w-0 text-center">
+        <p class="truncate text-[11px] font-medium text-gray-900 dark:text-white">
+          {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}
+        </p>
+        <p class="truncate text-[10px] text-gray-500 dark:text-gray-400">Account</p>
       </div>
     </div>
   </div>
   {% else %}
   <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-gray-100 dark:border-white/10">
-    <a href="{% url 'tasks_list' %}" class="flex items-center gap-2 no-underline min-w-0">
+    <a href="{% url 'tasks_list' %}" class="sidebar-brand flex w-full items-center gap-2 no-underline min-w-0">
       <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-500/10 ring-1 ring-cyan-500/20">
         <img src="{% static 'images/logo.png' %}" alt="" class="h-4 w-4 object-contain" />
       </span>
-      <span class="truncate text-[13px] font-medium tracking-tight text-gray-900 dark:text-white">Email IQ</span>
+      <span class="sidebar-text truncate text-[13px] font-medium tracking-tight text-gray-900 dark:text-white">Email IQ</span>
     </a>
   </div>
   <div class="flex-1"></div>
@@ -81,6 +77,38 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
   .sidebar-modern .sidebar-nav-link { position: relative; }
   .sidebar-modern .sidebar-nav-link:hover span:first-of-type:not(.bg-cyan-500/20) { background: rgb(226 232 240); color: rgb(71 85 105); }
   .dark .sidebar-modern .sidebar-nav-link:hover span:first-of-type:not(.bg-cyan-500/20) { background: rgba(255,255,255,0.1); color: rgb(226 232 240); }
+  #app-sidebar {
+    width: 72px;
+  }
+  #app-main-shell {
+    padding-left: 87px !important;
+  }
+  #app-sidebar .sidebar-text {
+    display: none;
+  }
+  #app-sidebar .sidebar-brand,
+  #app-sidebar .sidebar-user-row {
+    justify-content: center;
+  }
+  #app-sidebar nav {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  #app-sidebar .sidebar-nav-link {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    border-left-width: 0 !important;
+    margin-left: 0 !important;
+  }
+  #app-sidebar .sidebar-user-card {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  #app-sidebar .sidebar-user-actions {
+    margin-left: 0;
+  }
 </style>
 
 <!-- Command Palette -->

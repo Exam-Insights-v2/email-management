@@ -135,8 +135,8 @@ class TaskForm(forms.ModelForm):
         ]
         field_order = ["title", "description", "due_at", "priority", "status"]
         widgets = {
-            "title": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Task title"}),
-            "description": forms.Textarea(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "rows": 4, "placeholder": "Task description"}),
+            "title": forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Review Q2 invoice discrepancies with finance"}),
+            "description": forms.Textarea(attrs={"class": "w-full px-3 py-2 rounded-md text-slate-900 bg-white", "rows": 4, "placeholder": "Compare line items against the source email, confirm totals, and flag any mismatches before replying."}),
             "due_at": forms.DateTimeInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "type": "datetime-local"}),
             "priority": forms.NumberInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "min": 1, "max": 5, "value": 1}),
             "status": forms.Select(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"}),
@@ -199,8 +199,8 @@ class TaskFilterForm(forms.Form):
     email = forms.CharField(
         required=False,
         label="Email",
-        widget=forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Filter by email address (comma-separated)"}),
-        help_text="Filter by email address (comma-separated for multiple)"
+        widget=forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Add email and press space or comma"}),
+        help_text="Add one or more email addresses (press space or comma to create tags)"
     )
     date_from = forms.DateField(
         required=False,
@@ -224,8 +224,8 @@ class TaskFilterForm(forms.Form):
     task_id = forms.CharField(
         required=False,
         label="Task ID",
-        widget=forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "e.g., 123, 456, 789"}),
-        help_text="Filter by task IDs (comma-separated)"
+        widget=forms.TextInput(attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white", "placeholder": "Add task ID and press space or comma"}),
+        help_text="Add one or more task IDs (press space or comma to create tags)"
     )
     priority = forms.MultipleChoiceField(
         required=False,
@@ -376,5 +376,3 @@ class ActionForm(forms.ModelForm):
             ("add_label", "Add Label"),
             ("remove_label", "Remove Label"),
         ], attrs={"class": "w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-white"})
-
-

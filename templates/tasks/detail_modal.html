@@ -199,44 +199,6 @@ Usage:
               <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Conversation</h3>
               <div id="task-email-thread-draft-{{ task.pk }}" class="overflow-y-auto dark:border-white/10 max-h-[70vh]">
               <div class="space-y-4" role="list">
-                {% for msg in email_data.thread_messages %}
-              <article class="task-thread-message-box rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden" role="listitem">
-                <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
-                  <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold {% if msg.external_message_id == task.email_message.external_message_id %}bg-cyan-500{% else %}bg-gray-500 dark:bg-gray-600{% endif %}" aria-hidden="true">
-                      {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
-                    </span>
-                    <div class="min-w-0 text-sm">
-                      <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
-                      <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
-                      <span class="text-gray-900 dark:text-white">
-                        {% if msg.to_addresses %}
-                          {% for email in msg.to_addresses %}
-                            <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
-                          {% endfor %}
-                        {% else %}—{% endif %}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="flex items-center flex-shrink-0">
-                    <time class="text-xs text-gray-500 dark:text-gray-400" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
-                  </div>
-                </div>
-                <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/10">
-                  <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
-                </div>
-                <div class="px-4 sm:px-5 py-4">
-                  {% if msg.body_html %}
-                  <div class="email-body task-thread-message-body" style="contain: layout style paint; isolation: isolate;">
-                    {{ msg.body_html|remove_global_style_script|strip_quoted_email }}
-                  </div>
-                  {% else %}
-                  <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
-                  {% endif %}
-                </div>
-              </article>
-              {% endfor %}
-
               {% if email_data.has_draft_reply %}
               <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-3">Reply</h3>
               {% if email_data.draft %}
@@ -461,6 +423,49 @@ Usage:
                   </div>
                 </article>
               </form>
+              {% endif %}
+
+              {% if email_data.thread_messages|length > 1 %}
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-3">Earlier Messages</h3>
+              {% for msg in email_data.thread_messages %}
+              {% if msg.external_message_id != task.email_message.external_message_id %}
+              <article class="task-thread-message-box rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden" role="listitem">
+                <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-gray-500 dark:bg-gray-600" aria-hidden="true">
+                      {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
+                    </span>
+                    <div class="min-w-0 text-sm">
+                      <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
+                      <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
+                      <span class="text-gray-900 dark:text-white">
+                        {% if msg.to_addresses %}
+                          {% for email in msg.to_addresses %}
+                            <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
+                          {% endfor %}
+                        {% else %}—{% endif %}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex items-center flex-shrink-0">
+                    <time class="text-xs text-gray-500 dark:text-gray-400" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
+                  </div>
+                </div>
+                <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/10">
+                  <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
+                </div>
+                <div class="px-4 sm:px-5 py-4">
+                  {% if msg.body_html %}
+                  <div class="email-body task-thread-message-body" style="contain: layout style paint; isolation: isolate;">
+                    {{ msg.body_html|remove_global_style_script|strip_quoted_email }}
+                  </div>
+                  {% else %}
+                  <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
+                  {% endif %}
+                </div>
+              </article>
+              {% endif %}
+              {% endfor %}
               {% endif %}
               </div>
               </div>

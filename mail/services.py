@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime, timezone as utc_tz
 from email.utils import parsedate_to_datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import requests
 from django.db import transaction
@@ -140,6 +140,24 @@ class EmailProviderService:
 
     def get_message(self, account: Account, external_message_id: str) -> dict:
         """Get a single message by external ID"""
+        raise NotImplementedError
+
+    def send_message(
+        self,
+        account: Account,
+        to_addresses: List[str],
+        subject: str,
+        body_html: str,
+        cc_addresses: Optional[List[str]] = None,
+        bcc_addresses: Optional[List[str]] = None,
+        reply_to_message_id: Optional[str] = None,
+        thread_id: Optional[str] = None,
+    ) -> dict:
+        """Send a message via provider API."""
+        raise NotImplementedError
+
+    def send_draft(self, account: Account, draft_id: int) -> dict:
+        """Send a local draft via provider API."""
         raise NotImplementedError
 
 
@@ -877,6 +895,131 @@ class MicrosoftService(EmailProviderService):
             "date_sent": date_sent,
             "body_html": body_html or "",
         }
+
+    @staticmethod
+    def _format_recipients(addresses: Optional[List[str]]) -> List[Dict[str, Dict[str, str]]]:
+        return [
+            {"emailAddress": {"address": addr}}
+            for addr in (addresses or [])
+            if addr
+        ]
+
+    @staticmethod
+    def _ensure_send_scope(account: Account) -> None:
+        try:
+            token_scopes = account.oauth_token.get_scopes_list()
+        except Exception:
+            token_scopes = []
+        normalized_scopes = {s.lower() for s in token_scopes}
+        if token_scopes and "mail.send" not in normalized_scopes:
+            raise ValueError(
+                "Microsoft account is missing Mail.Send permission. Please reconnect the account and grant send access."
+            )
+
+    def send_message(
+        self,
+        account: Account,
+        to_addresses: List[str],
+        subject: str,
+        body_html: str,
+        cc_addresses: Optional[List[str]] = None,
+        bcc_addresses: Optional[List[str]] = None,
+        reply_to_message_id: Optional[str] = None,
+        thread_id: Optional[str] = None,
+    ) -> dict:
+        """Send an email via Microsoft Graph API."""
+        self._ensure_send_scope(account)
+        headers = self._get_headers(account)
+
+        if reply_to_message_id:
+            try:
+                draft_resp = requests.post(
+                    f"https://graph.microsoft.com/v1.0/me/messages/{reply_to_message_id}/createReply",
+                    headers=headers,
+                    timeout=30,
+                )
+                draft_resp.raise_for_status()
+                draft_data = draft_resp.json()
+                draft_id = draft_data.get("id")
+                conversation_id = draft_data.get("conversationId") or thread_id or ""
+                if not draft_id:
+                    raise ValueError("Microsoft reply draft was created without an id")
+
+                patch_payload = {
+                    "subject": subject,
+                    "body": {"contentType": "HTML", "content": body_html or ""},
+                    "toRecipients": self._format_recipients(to_addresses),
+                    "ccRecipients": self._format_recipients(cc_addresses),
+                    "bccRecipients": self._format_recipients(bcc_addresses),
+                }
+                patch_resp = requests.patch(
+                    f"https://graph.microsoft.com/v1.0/me/messages/{draft_id}",
+                    headers=headers,
+                    json=patch_payload,
+                    timeout=30,
+                )
+                patch_resp.raise_for_status()
+
+                send_resp = requests.post(
+                    f"https://graph.microsoft.com/v1.0/me/messages/{draft_id}/send",
+                    headers=headers,
+                    timeout=30,
+                )
+                send_resp.raise_for_status()
+                return {"id": draft_id, "threadId": conversation_id}
+            except Exception as e:
+                raise ValueError(f"Error sending Microsoft reply: {str(e)}")
+
+        message_payload = {
+            "subject": subject,
+            "body": {"contentType": "HTML", "content": body_html or ""},
+            "toRecipients": self._format_recipients(to_addresses),
+            "ccRecipients": self._format_recipients(cc_addresses),
+            "bccRecipients": self._format_recipients(bcc_addresses),
+            "isDraft": True,
+        }
+        try:
+            create_resp = requests.post(
+                "https://graph.microsoft.com/v1.0/me/messages",
+                headers=headers,
+                json=message_payload,
+                timeout=30,
+            )
+            create_resp.raise_for_status()
+            message_data = create_resp.json()
+            message_id = message_data.get("id")
+            conversation_id = message_data.get("conversationId") or thread_id or ""
+            if not message_id:
+                raise ValueError("Microsoft draft was created without an id")
+
+            send_resp = requests.post(
+                f"https://graph.microsoft.com/v1.0/me/messages/{message_id}/send",
+                headers=headers,
+                timeout=30,
+            )
+            send_resp.raise_for_status()
+            return {"id": message_id, "threadId": conversation_id}
+        except Exception as e:
+            raise ValueError(f"Error sending Microsoft message: {str(e)}")
+
+    def send_draft(self, account: Account, draft_id: int) -> dict:
+        """Send a local draft via Microsoft Graph API."""
+        draft = Draft.objects.get(pk=draft_id, account=account)
+        reply_to_id = None
+        thread_id = None
+        if getattr(draft, "email_message", None):
+            reply_to_id = draft.email_message.external_message_id
+            thread_id = draft.email_message.thread.external_thread_id
+        return self.send_message(
+            account=account,
+            to_addresses=draft.effective_to_addresses,
+            subject=draft.subject or "",
+            body_html=draft.body_html or "",
+            cc_addresses=draft.cc_addresses or [],
+            bcc_addresses=draft.bcc_addresses or [],
+            reply_to_message_id=reply_to_id,
+            thread_id=thread_id,
+        )
 
     def _ms_request_with_backoff(self, url: str, headers: dict, params: Optional[dict] = None, max_retries: int = 3):
         """GET with exponential backoff on 429/5xx."""

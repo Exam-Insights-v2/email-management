@@ -47,7 +47,9 @@
           {% if not field.is_hidden and field.name in "task_id,email" %}
             <div class="modal-form-field">
               <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
-              <div class="mt-1 [&_input]:block [&_input]:w-full [&_input]:rounded-lg [&_input]:bg-gray-100 [&_input]:dark:bg-white/5 [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:border-0 [&_input]:placeholder:text-gray-500 [&_input]:focus:ring-2 [&_input]:focus:ring-cyan-500">{{ field }}</div>
+              <div class="mt-1 tokenized-field" data-tokenize-name="{{ field.name }}" data-tokenize-label="{{ field.label }}">
+                <div class="[&_input]:block [&_input]:w-full [&_input]:rounded-lg [&_input]:bg-gray-100 [&_input]:dark:bg-white/5 [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:border-0 [&_input]:placeholder:text-gray-500 [&_input]:focus:ring-2 [&_input]:focus:ring-cyan-500">{{ field }}</div>
+              </div>
               {% if field.help_text %}<p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text }}</p>{% endif %}
               {% if field.errors %}<p class="mt-1 text-xs text-red-500 dark:text-red-400" role="alert">{{ field.errors.0 }}</p>{% endif %}
             </div>
@@ -90,9 +92,9 @@
     </section>
   </div>
 
-  <div class="flex items-center justify-end gap-3 pt-6 mt-6 -mx-4 sm:-mx-5 px-4 sm:px-5 py-4 border-t border-gray-200 dark:border-white/10 bg-gray-100/80 dark:bg-gray-800/50 rounded-b-lg">
-    <a href="{% url 'tasks_list' %}" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-colors no-underline">Clear</a>
-    <button type="button" command="close" commandfor="{{ modal_id }}" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
+  <div class="flex items-center justify-end gap-3 mt-0 -mx-4 sm:-mx-5 px-4 sm:px-5 py-4 border-t border-gray-200 dark:border-white/10 bg-gray-100/80 dark:bg-gray-800/50 rounded-b-lg">
+    <a href="{% url 'tasks_list' %}" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg shadow-sm transition-colors no-underline">Clear</a>
+    <button type="button" command="close" commandfor="{{ modal_id }}" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg shadow-sm transition-colors">Cancel</button>
     <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">Apply filters</button>
   </div>
 </form>
@@ -103,6 +105,14 @@
     if (form) {
       form.querySelectorAll('.filter-checkbox-wrapper input[type="checkbox"]').forEach(function(cb) {
         cb.classList.add('col-start-1', 'row-start-1', 'size-4', 'rounded', 'border-0', 'appearance-none', 'cursor-pointer', 'opacity-0', 'absolute');
+        cb.style.position = 'absolute';
+        cb.style.inset = '0';
+        cb.style.width = '100%';
+        cb.style.height = '100%';
+        cb.style.margin = '0';
+        cb.style.padding = '0';
+        cb.style.opacity = '0';
+        cb.style.appearance = 'none';
       });
       form.querySelectorAll('.filter-checkbox-wrapper').forEach(function(wrapper) {
         const input = wrapper.querySelector('input[type="checkbox"]');
@@ -116,6 +126,119 @@
           input.addEventListener('change', update);
           update();
         }
+      });
+
+      form.querySelectorAll('.tokenized-field').forEach(function(fieldWrapper) {
+        const input = fieldWrapper.querySelector('input[type="text"]');
+        if (!input) return;
+
+        input.type = 'hidden';
+        const sourceName = fieldWrapper.dataset.tokenizeName || input.name;
+        const sourceLabel = fieldWrapper.dataset.tokenizeLabel || sourceName;
+        const chipInputPlaceholder = sourceName === 'email'
+          ? 'Type an email, then press space or comma'
+          : 'Type a task ID, then press space or comma';
+
+        const chipContainer = document.createElement('div');
+        chipContainer.className = 'flex min-h-[42px] w-full flex-wrap items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-cyan-500 dark:bg-white/5';
+        chipContainer.setAttribute('aria-label', sourceLabel);
+
+        const chipInput = document.createElement('input');
+        chipInput.type = 'text';
+        chipInput.className = 'min-w-[160px] flex-1 bg-transparent border-0 p-0 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none dark:text-gray-100';
+        chipInput.placeholder = chipInputPlaceholder;
+        chipInput.autocomplete = 'off';
+
+        chipContainer.appendChild(chipInput);
+        fieldWrapper.appendChild(chipContainer);
+
+        const tokens = [];
+        const seen = new Set();
+
+        function normalizeToken(value) {
+          const token = (value || '').trim().replace(/,+$/g, '');
+          if (!token) return '';
+          return sourceName === 'email' ? token.toLowerCase() : token;
+        }
+
+        function syncHiddenInput() {
+          input.value = tokens.join(', ');
+        }
+
+        function buildChip(token) {
+          const chip = document.createElement('span');
+          chip.className = 'inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-500/15 dark:text-cyan-200';
+          chip.dataset.token = token;
+
+          const label = document.createElement('span');
+          label.textContent = token;
+
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'inline-flex size-4 items-center justify-center rounded-full text-cyan-700 hover:bg-cyan-200/50 dark:text-cyan-200 dark:hover:bg-cyan-400/25';
+          remove.setAttribute('aria-label', `Remove ${token}`);
+          remove.textContent = '×';
+          remove.addEventListener('click', function() {
+            const idx = tokens.indexOf(token);
+            if (idx > -1) tokens.splice(idx, 1);
+            seen.delete(sourceName === 'email' ? token.toLowerCase() : token);
+            chip.remove();
+            syncHiddenInput();
+            chipInput.focus();
+          });
+
+          chip.appendChild(label);
+          chip.appendChild(remove);
+          chipContainer.insertBefore(chip, chipInput);
+        }
+
+        function addToken(raw) {
+          const token = normalizeToken(raw);
+          if (!token) return;
+          if (seen.has(token)) return;
+          seen.add(token);
+          tokens.push(token);
+          buildChip(token);
+          syncHiddenInput();
+        }
+
+        function addTokensFromText(text) {
+          (text || '')
+            .split(/[,\s]+/)
+            .forEach(addToken);
+        }
+
+        addTokensFromText(input.value);
+        syncHiddenInput();
+
+        chipInput.addEventListener('keydown', function(event) {
+          const shouldCommit = event.key === 'Enter' || event.key === ',' || event.key === ' ' || event.key === 'Tab';
+          if (shouldCommit && chipInput.value.trim()) {
+            event.preventDefault();
+            addTokensFromText(chipInput.value);
+            chipInput.value = '';
+          } else if (event.key === 'Backspace' && !chipInput.value && tokens.length) {
+            const last = tokens.pop();
+            seen.delete(sourceName === 'email' ? last.toLowerCase() : last);
+            const chip = chipContainer.querySelector(`[data-token="${CSS.escape(last)}"]`);
+            if (chip) chip.remove();
+            syncHiddenInput();
+          }
+        });
+
+        chipInput.addEventListener('input', function() {
+          if (/[,\s]/.test(chipInput.value)) {
+            addTokensFromText(chipInput.value);
+            chipInput.value = '';
+          }
+        });
+
+        chipInput.addEventListener('blur', function() {
+          if (chipInput.value.trim()) {
+            addTokensFromText(chipInput.value);
+            chipInput.value = '';
+          }
+        });
       });
     }
   })();
