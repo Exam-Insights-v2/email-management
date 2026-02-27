@@ -15,6 +15,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
 from accounts.models import Account, OAuthToken
@@ -522,6 +523,13 @@ def task_update(request, pk):
                     task.completed_at = None
                     task.save(update_fields=["completed_at"])
                 messages.success(request, f"Task '{task.title or task.pk}' updated successfully.")
+                next_url = (request.POST.get("next") or "").strip()
+                if next_url and url_has_allowed_host_and_scheme(
+                    url=next_url,
+                    allowed_hosts={request.get_host()},
+                    require_https=request.is_secure(),
+                ):
+                    return redirect(next_url)
                 return redirect("task_detail", pk=task.pk)
             except ValidationError as e:
                 messages.error(request, str(e))

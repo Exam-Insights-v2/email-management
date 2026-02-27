@@ -32,6 +32,7 @@
         {% if task.status != 'done' %}
         <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
           {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <input type="hidden" name="title" value="{{ task.title|default:'' }}">
           <input type="hidden" name="description" value="{{ task.description|default:'' }}">
           <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">
@@ -42,6 +43,7 @@
         {% else %}
         <form method="post" action="{% url 'task_update' task.pk %}" class="inline" onsubmit="event.stopPropagation(); return true;">
           {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <input type="hidden" name="title" value="{{ task.title|default:'' }}">
           <input type="hidden" name="description" value="{{ task.description|default:'' }}">
           <input type="hidden" name="priority" value="{{ task.priority|default:1 }}">

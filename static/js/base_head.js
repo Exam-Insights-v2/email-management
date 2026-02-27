@@ -8,6 +8,26 @@
           return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         };
 
+        // Sync browser UI chrome color and manifest with current theme.
+        const syncBrowserTheme = (theme) => {
+          const meta = document.getElementById('theme-color-meta');
+          if (meta) {
+            const lightColor = meta.getAttribute('data-light-color') || '#ffffff';
+            const darkColor = meta.getAttribute('data-dark-color') || '#111827';
+            meta.setAttribute('content', theme === 'dark' ? darkColor : lightColor);
+          }
+
+          const manifest = document.getElementById('app-manifest');
+          if (manifest) {
+            const lightHref = manifest.getAttribute('data-light-href');
+            const darkHref = manifest.getAttribute('data-dark-href');
+            const targetHref = theme === 'dark' ? darkHref : lightHref;
+            if (targetHref && manifest.getAttribute('href') !== targetHref) {
+              manifest.setAttribute('href', targetHref);
+            }
+          }
+        };
+
         // Apply theme
         const applyTheme = (theme) => {
           const html = document.documentElement;
@@ -16,6 +36,7 @@
           } else {
             html.classList.remove('dark');
           }
+          syncBrowserTheme(theme);
         };
 
         // Set initial theme before page renders to prevent flash

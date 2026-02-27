@@ -7,6 +7,20 @@
     <title>{% block title %}Email IQ{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}" />
     <link rel="apple-touch-icon" href="{% static 'images/logo.png' %}" />
+    <link
+      id="app-manifest"
+      rel="manifest"
+      href="{% static 'manifest-light.webmanifest' %}"
+      data-light-href="{% static 'manifest-light.webmanifest' %}"
+      data-dark-href="{% static 'manifest-dark.webmanifest' %}"
+    />
+    <meta
+      id="theme-color-meta"
+      name="theme-color"
+      content="#ffffff"
+      data-light-color="#ffffff"
+      data-dark-color="#111827"
+    />
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
