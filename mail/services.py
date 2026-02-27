@@ -1289,31 +1289,43 @@ class EmailSyncService:
             logger.info(f"[Email Status Sync] Provider {account.provider} doesn't support status checking")
             return {"checked": 0, "updated": 0, "errors": 0}
         
-        logger.info(f"[Email Status Sync] Starting status check for {len(email_messages)} emails with tasks (account: {account.email})")
+        logger.info(
+            "[Email Status Sync] Starting status check for %s emails with open tasks (account: %s)",
+            len(email_messages),
+            account.email,
+        )
         
         checked_count = 0
         updated_count = 0
         error_count = 0
         
         for email_msg in email_messages:
-            # Only check emails that have tasks
-            if not email_msg.tasks.exists():
-                continue
-            
             try:
-                logger.info(f"[Email Status Sync] Checking email {email_msg.pk} (external_id: {email_msg.external_message_id}, subject: {email_msg.subject[:50] if email_msg.subject else 'No subject'})")
+                logger.debug(
+                    "[Email Status Sync] Checking email %s (external_id: %s, subject: %s)",
+                    email_msg.pk,
+                    email_msg.external_message_id,
+                    email_msg.subject[:50] if email_msg.subject else "No subject",
+                )
                 
                 # Check email status in provider
                 status = provider_service.check_email_status(account, email_msg.external_message_id)
                 checked_count += 1
                 
-                logger.info(f"[Email Status Sync] Email {email_msg.pk} status - exists: {status.get('exists')}, in_inbox: {status.get('in_inbox')}, deleted: {status.get('is_deleted')}, spam: {status.get('is_spam')}, archived: {status.get('is_archived')}")
+                logger.debug(
+                    "[Email Status Sync] Email %s status - exists: %s, in_inbox: %s, deleted: %s, spam: %s, archived: %s",
+                    email_msg.pk,
+                    status.get("exists"),
+                    status.get("in_inbox"),
+                    status.get("is_deleted"),
+                    status.get("is_spam"),
+                    status.get("is_archived"),
+                )
                 
                 # Determine what to do based on status
                 if status.get("is_deleted") or status.get("is_spam"):
                     # Email deleted or marked as spam - mark tasks as cancelled
                     tasks_to_update = email_msg.tasks.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
-                    task_count = tasks_to_update.count()
                     tasks_updated = tasks_to_update.update(status=TaskStatus.CANCELLED)
                     if tasks_updated > 0:
                         updated_count += tasks_updated
@@ -1321,7 +1333,6 @@ class EmailSyncService:
                 elif status.get("is_archived") and not status.get("in_inbox"):
                     # Email archived (not in inbox) - mark tasks as done
                     tasks_to_update = email_msg.tasks.filter(status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
-                    task_count = tasks_to_update.count()
                     tasks_updated = tasks_to_update.update(
                         status=TaskStatus.DONE,
                         completed_at=timezone.now()
@@ -1330,7 +1341,7 @@ class EmailSyncService:
                         updated_count += tasks_updated
                         logger.info(f"[Email Status Sync] ✅ Updated {tasks_updated} task(s) to DONE for email {email_msg.pk} (archived)")
                 else:
-                    logger.info(f"[Email Status Sync] No action needed for email {email_msg.pk} (still in inbox)")
+                    logger.debug("[Email Status Sync] No action needed for email %s (still in inbox)", email_msg.pk)
                 # If email is back in inbox and task was done/cancelled, we could reactivate it
                 # but that might be too aggressive, so we'll leave it as is
                 

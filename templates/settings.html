@@ -6,19 +6,19 @@
 {% block header_title %}Settings{% endblock %}
 
 {% block header_center %}
-<div class="inline-flex rounded-full bg-gray-200 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist">
-  <a href="?tab=accounts" class="{% if tab == 'accounts' %}bg-white dark:bg-gray-800 text-cyan-600 dark:text-cyan-400 shadow-sm{% else %}text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white{% endif %} rounded-full px-4 py-2 text-xs font-medium transition-colors no-underline inline-flex items-center gap-1.5">
+<div class="inline-flex rounded-full bg-gray-200 dark:bg-white/15 p-1 border border-gray-200 dark:border-white/10 shadow-sm" role="tablist" aria-label="Settings sections">
+  <button type="button" role="tab" id="settings-tab-accounts" aria-controls="settings-panel-accounts" aria-selected="false" data-settings-tab="accounts" class="settings-tab rounded-full px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
     <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">person</span>
     Accounts
-  </a>
-  <a href="?tab=actions" class="{% if tab == 'actions' %}bg-white dark:bg-gray-800 text-cyan-600 dark:text-cyan-400 shadow-sm{% else %}text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white{% endif %} rounded-full px-4 py-2 text-xs font-medium transition-colors no-underline inline-flex items-center gap-1.5">
+  </button>
+  <button type="button" role="tab" id="settings-tab-actions" aria-controls="settings-panel-actions" aria-selected="false" data-settings-tab="actions" class="settings-tab rounded-full px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
     <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">rule</span>
     Actions
-  </a>
-  <a href="?tab=labels" class="{% if tab == 'labels' %}bg-white dark:bg-gray-800 text-cyan-600 dark:text-cyan-400 shadow-sm{% else %}text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white{% endif %} rounded-full px-4 py-2 text-xs font-medium transition-colors no-underline inline-flex items-center gap-1.5">
+  </button>
+  <button type="button" role="tab" id="settings-tab-labels" aria-controls="settings-panel-labels" aria-selected="false" data-settings-tab="labels" class="settings-tab rounded-full px-4 py-2 text-xs font-medium transition-colors inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[active]:bg-white dark:data-[active]:bg-gray-800 data-[active]:text-cyan-600 dark:data-[active]:text-cyan-400 data-[active]:shadow-sm">
     <span class="material-icons size-3.5 sm:size-4 flex-shrink-0" aria-hidden="true">label</span>
     Labels
-  </a>
+  </button>
 </div>
 {% endblock %}
 
@@ -31,8 +31,24 @@
 
 {% block content %}
 <!-- Accounts Tab -->
-{% if tab == 'accounts' %}
-<div class="mx-auto max-w-7xl">
+<div id="settings-panel-accounts" role="tabpanel" aria-labelledby="settings-tab-accounts" data-settings-panel="accounts" class="settings-panel mx-auto max-w-7xl">
+  <style>
+    .account-accordion > summary::-webkit-details-marker { display: none; }
+    .account-accordion[open] .account-chevron { transform: rotate(180deg); }
+    .account-accordion-content {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows 260ms ease, opacity 180ms ease;
+    }
+    .account-accordion-content-inner {
+      overflow: hidden;
+    }
+    .account-accordion[open] .account-accordion-content {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  </style>
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Accounts</h2>
     <div class="flex items-center gap-1.5">
@@ -46,17 +62,17 @@
       </a>
     </div>
   </div>
-  <section class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+  <section class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
       {% for account in accounts %}
-      <div class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/5 last:border-b-0">
+      <details class="account-accordion group bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/5 last:border-b-0">
         <!-- Account Header -->
-        <div class="flex justify-between gap-x-3 sm:gap-x-6 py-4 sm:py-5 px-4 sm:px-6">
+        <summary class="list-none flex items-center justify-between gap-x-3 sm:gap-x-6 py-4 sm:py-5 px-4 cursor-pointer select-none">
           <div class="flex min-w-0 gap-x-3 sm:gap-x-4 flex-1">
             <div class="min-w-0 flex-auto">
               <p class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white break-words">{{ account.email }}</p>
             </div>
           </div>
-          <div class="hidden shrink-0 sm:flex sm:items-center sm:gap-3">
+          <div class="flex shrink-0 items-center gap-2 sm:gap-3">
             {% if account.is_connected %}
             <div class="flex items-center gap-x-1.5">
               <div class="flex-none rounded-full bg-emerald-500/30 p-1">
@@ -67,13 +83,16 @@
             {% else %}
             <p class="text-xs/5 text-gray-600 dark:text-gray-400">Not Connected</p>
             {% endif %}
+            <span class="account-chevron material-icons size-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 group-open:rotate-180" aria-hidden="true">expand_more</span>
           </div>
-        </div>
+        </summary>
         
         <!-- Connection Error Alert (only when account is actually disconnected) -->
+        <div class="account-accordion-content">
+        <div class="account-accordion-content-inner border-t border-gray-200 dark:border-white/5 px-4 pb-4 sm:pb-6">
         {% with status=account_statuses|get_item:account.pk %}
         {% if not account.is_connected %}
-        <div class="mx-4 sm:mx-6 mb-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 sm:p-4">
+        <div class="mt-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 sm:p-4">
           <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
               <span class="material-icons size-5 text-red-600 dark:text-red-400" aria-hidden="true">error</span>
@@ -105,10 +124,24 @@
         {% endwith %}
         
         <!-- Form Section -->
-        <div class="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200 dark:border-white/5">
-          <form method="post" action="{% url 'account_update' account.pk %}?from=settings" class="space-y-4 sm:space-y-6">
+        <div class="{% if not account.is_connected %}mt-4{% endif %}">
+          <form method="post" action="{% url 'account_update' account.pk %}?from=settings" class="space-y-4 sm:space-y-6 mt-4">
             {% csrf_token %}
             
+            <!-- Writing Style Field -->
+            <div>
+              <label for="writing_style_{{ account.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">
+                Writing Style
+              </label>
+              <textarea 
+                id="writing_style_{{ account.pk }}"
+                name="writing_style"
+                rows="4" 
+                class="block w-full rounded-md bg-gray-100 dark:bg-white/5 px-3 py-2 text-xs sm:text-sm text-gray-900 dark:text-white border-0 placeholder:text-gray-500 focus:ring-2 focus:ring-cyan-600"
+                placeholder="e.g., professional and concise, friendly and conversational"
+              >{{ account.writing_style|default:"" }}</textarea>
+            </div>
+
             <!-- Signature HTML Field -->
             <div>
               <label for="signature_html_{{ account.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">
@@ -139,20 +172,6 @@
               </div>
             </div>
             
-            <!-- Writing Style Field -->
-            <div>
-              <label for="writing_style_{{ account.pk }}" class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">
-                Writing Style
-              </label>
-              <textarea 
-                id="writing_style_{{ account.pk }}" 
-                name="writing_style" 
-                rows="4" 
-                class="block w-full rounded-md bg-gray-100 dark:bg-white/5 px-3 py-2 text-xs sm:text-sm text-gray-900 dark:text-white border-0 placeholder:text-gray-500 focus:ring-2 focus:ring-cyan-600"
-                placeholder="e.g., professional and concise, friendly and conversational"
-              >{{ account.writing_style|default:"" }}</textarea>
-            </div>
-            
             <!-- Submit Button -->
             <div class="flex items-center justify-end gap-x-3 pt-2">
               <button type="submit" class="rounded-full bg-cyan-600 px-4 py-2 text-xs font-medium text-white hover:bg-cyan-500 shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">Save Changes</button>
@@ -160,8 +179,10 @@
           </form>
         </div>
       </div>
+      </div>
+      </details>
       {% empty %}
-      <div class="px-6 py-16 text-center">
+      <div class="px-4 py-16 text-center">
         <p class="text-gray-600 dark:text-gray-400 text-sm my-4">No accounts yet.</p>
       </div>
       {% endfor %}
@@ -171,11 +192,9 @@
       {% include 'includes/edit_modal.html' with modal_id="edit-account-"|add:account.pk|stringformat:"s" title="Edit Account" form_template="accounts/form_content.html" form_url="account_update" object_pk=account.pk %}
     {% endfor %}
 </div>
-{% endif %}
 
 <!-- Actions Tab -->
-{% if tab == 'actions' %}
-<div class="mx-auto max-w-7xl">
+<div id="settings-panel-actions" role="tabpanel" aria-labelledby="settings-tab-actions" data-settings-panel="actions" class="settings-panel mx-auto max-w-7xl hidden" hidden>
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Actions</h2>
     <button type="button" onclick="document.getElementById('create-action').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors">
@@ -185,26 +204,26 @@
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for action_group in actions %}
-    <article class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openActionDetailModal) window.openActionDetailModal({{ action_group.primary.pk }});">
+    <article class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openActionDetailModal) window.openActionDetailModal({{ action_group.primary.pk }});">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{{ action_group.name }}</h3>
       <p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 flex-1">
         {% if action_group.primary.instructions %}{{ action_group.primary.instructions|truncatewords:15 }}{% else %}{{ action_group.primary.function }}{% endif %}
       </p>
-      {% if connected_account_count > 1 %}
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3">
-        <span class="text-xs text-gray-500 dark:text-gray-500">Accounts:</span>
-        {% for action in action_group.instances %}
-        <span class="inline-flex items-center rounded-md bg-blue-400/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
-          {{ action.account.email }}
-        </span>
-        {% endfor %}
-      </div>
-      {% endif %}
       <div class="flex flex-wrap items-center gap-2 {% if connected_account_count > 1 %}mt-2{% else %}mt-3 pt-3{% endif %}">
         <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">
           {{ action_group.primary.labels.count }} label{{ action_group.primary.labels.count|pluralize }}
         </span>
       </div>
+      {% if connected_account_count > 1 %}
+      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+        <span class="text-xs text-gray-500 dark:text-gray-500">Accounts:</span>
+        {% for action in action_group.instances %}
+        <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">
+          {{ action.account.email }}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </article>
     {% include 'actions/detail_modal.html' with action=action_group.primary labels=action_group.primary.labels.all %}
     {% empty %}
@@ -215,11 +234,9 @@
   </div>
   {% include 'includes/create_modal_dialog.html' with modal_id="create-action" title="Create Action" form_template="actions/form_content.html" form_url="action_create" form=action_form %}
 </div>
-{% endif %}
 
 <!-- Labels Tab -->
-{% if tab == 'labels' %}
-<div class="mx-auto max-w-7xl">
+<div id="settings-panel-labels" role="tabpanel" aria-labelledby="settings-tab-labels" data-settings-panel="labels" class="settings-panel mx-auto max-w-7xl hidden" hidden>
   <div class="flex flex-row justify-between items-center gap-2 sm:gap-3 mb-4">
     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Labels</h2>
     <button type="button" onclick="document.getElementById('create-label').showModal();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-600 text-white text-xs font-medium hover:bg-cyan-500 shadow-sm transition-colors flex-shrink-0">
@@ -229,7 +246,7 @@
   </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for label_group in labels %}
-    <article class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openLabelDetailModal) window.openLabelDetailModal({{ label_group.primary.pk }});">
+    <article class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openLabelDetailModal) window.openLabelDetailModal({{ label_group.primary.pk }});">
       <div class="mb-1 flex items-start gap-2">
         <span class="mt-0.5 inline-flex h-5 min-w-[20px] items-center justify-center flex-shrink-0 whitespace-nowrap leading-none" title="{{ label_group.primary.priority|priority_word }}" aria-hidden="true">
           {% include 'tasks/priority_bars.html' with priority=label_group.primary.priority %}
@@ -239,16 +256,6 @@
       <p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 flex-1">
         {% if label_group.primary.prompt %}{{ label_group.primary.prompt|truncatewords:15 }}{% else %}No description{% endif %}
       </p>
-      {% if connected_account_count > 1 %}
-      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
-        <span class="text-xs text-gray-500 dark:text-gray-500">Accounts:</span>
-        {% for label in label_group.instances %}
-        <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">
-          {{ label.account.email }}
-        </span>
-        {% endfor %}
-      </div>
-      {% endif %}
       <div class="flex flex-wrap items-center gap-2 mt-2">
         {% if label_group.primary.actions.all %}
         <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">{{ label_group.primary.actions.count }} action{{ label_group.primary.actions.count|pluralize }}</span>
@@ -259,6 +266,16 @@
         <span class="inline-flex items-center rounded-md bg-gray-400/10 px-2 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Inactive</span>
         {% endif %}
       </div>
+      {% if connected_account_count > 1 %}
+      <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+        <span class="text-xs text-gray-500 dark:text-gray-500">Accounts:</span>
+        {% for label in label_group.instances %}
+        <span class="inline-flex items-center rounded-md bg-cyan-400/10 px-2 py-0.5 text-xs font-medium text-cyan-600 dark:text-cyan-400">
+          {{ label.account.email }}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </article>
     {% empty %}
     <div class="col-span-full py-12 text-center">
@@ -276,7 +293,6 @@
     {% include 'includes/edit_modal.html' with modal_id="edit-label-"|add:label_group.primary.pk|stringformat:"s" title="Edit Label" form_template="labels/form_content.html" form_url="label_update" object_pk=label_group.primary.pk %}
   {% endfor %}
 </div>
-{% endif %}
 
 <script>
   // Global function to open label detail modal
@@ -493,6 +509,65 @@
     observer.observe(document.body, {
       childList: true,
       subtree: true
+    });
+  })();
+
+  // Client-side settings tabs (no full page reload)
+  (function() {
+    var validTabs = ['accounts', 'actions', 'labels'];
+    var defaultTab = '{{ tab|default:"accounts"|escapejs }}';
+    if (validTabs.indexOf(defaultTab) === -1) defaultTab = 'accounts';
+
+    function readTabFromUrl() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var v = params.get('tab');
+        return validTabs.indexOf(v) !== -1 ? v : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writeTabToUrl(tabName) {
+      try {
+        var url = new URL(window.location.href);
+        url.searchParams.set('tab', tabName);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+
+    function switchSettingsTab(tabName, syncUrl) {
+      var target = validTabs.indexOf(tabName) !== -1 ? tabName : defaultTab;
+
+      document.querySelectorAll('[data-settings-tab]').forEach(function(btn) {
+        var active = btn.getAttribute('data-settings-tab') === target;
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.removeAttribute('data-active');
+        if (active) btn.setAttribute('data-active', '');
+      });
+
+      document.querySelectorAll('[data-settings-panel]').forEach(function(panel) {
+        var active = panel.getAttribute('data-settings-panel') === target;
+        panel.classList.toggle('hidden', !active);
+        panel.hidden = !active;
+        if (active && window.runCardEntranceAnimations) {
+          window.runCardEntranceAnimations(panel);
+        }
+      });
+
+      if (syncUrl) writeTabToUrl(target);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var initialTab = readTabFromUrl() || defaultTab;
+      switchSettingsTab(initialTab, false);
+
+      document.querySelectorAll('[data-settings-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var tabName = btn.getAttribute('data-settings-tab');
+          if (tabName) switchSettingsTab(tabName, true);
+        });
+      });
     });
   })();
 </script>

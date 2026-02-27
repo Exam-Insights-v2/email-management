@@ -2,7 +2,7 @@
 {% comment %}
 Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from viewport with rounded corners and soft shadow.
 {% endcomment %}
-<aside id="app-sidebar" class="sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm" aria-label="Main navigation">
+<aside id="app-sidebar" class="fade-in-chrome sidebar-modern fixed left-3 top-3 bottom-3 z-50 flex w-[200px] flex-col rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm" data-chrome-order="0" aria-label="Main navigation">
   {% if user.is_authenticated %}
   <!-- Brand -->
   <div class="flex h-12 flex-shrink-0 items-center gap-2 px-3 border-b border-gray-100 dark:border-white/10">
@@ -93,6 +93,7 @@ Compact, minimalistic floating sidebar: narrow width, tight spacing, inset from 
   #app-sidebar nav {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    scrollbar-gutter: stable both-edges;
   }
   #app-sidebar .sidebar-nav-link {
     justify-content: center;

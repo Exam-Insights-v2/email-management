@@ -6,7 +6,7 @@
 
 {% block content %}
 
-<section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden mt-6">
+<section class="fade-in-card bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden mt-6">
   <ul role="list" class="divide-y divide-gray-200 dark:divide-white/5">
     {% for email in emails %}
     <li class="flex justify-between gap-x-6 py-5 px-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onclick="if (window.openEmailDetailModal) window.openEmailDetailModal({{ email.pk }});">

@@ -44,23 +44,19 @@ def account_connect_gmail(request):
             ).exclude(is_connected=True).first()
             if gmail_account:
                 email = gmail_account.email
-    
-    if not email:
-        messages.error(request, "Email address is required.")
-        return redirect(f"{reverse('settings')}?tab=accounts")
 
-    # Get or create account
-    account, created = Account.objects.get_or_create(
-        provider=Provider.GMAIL, email=email, defaults={"sync_enabled": True}
-    )
-    
-    # Link account to user
-    if request.user.is_authenticated and request.user not in account.users.all():
-        account.users.add(request.user)
-    
-    # Set up recommended labels and actions for new accounts
-    if created:
-        setup_account_automation(account)
+    account = None
+    if email:
+        # Reconnect/explicit connect path when an email is provided.
+        account, created = Account.objects.get_or_create(
+            provider=Provider.GMAIL, email=email, defaults={"sync_enabled": True}
+        )
+        # Link account to user
+        if request.user.is_authenticated and request.user not in account.users.all():
+            account.users.add(request.user)
+        # Set up recommended labels and actions for new accounts
+        if created:
+            setup_account_automation(account)
 
     # Force reconnection by using force_reauth=True
     # Get authorization URL
@@ -70,7 +66,10 @@ def account_connect_gmail(request):
         auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
         # Store state in session for verification
         request.session["oauth_state"] = state
-        request.session["oauth_account_id"] = account.pk
+        if account:
+            request.session["oauth_account_id"] = account.pk
+        else:
+            request.session.pop("oauth_account_id", None)
         return redirect(auth_url)
     except Exception as e:
         messages.error(request, f"Error initiating OAuth: {str(e)}")
@@ -236,23 +235,19 @@ def account_connect_microsoft(request):
             ).exclude(is_connected=True).first()
             if microsoft_account:
                 email = microsoft_account.email
-    
-    if not email:
-        messages.error(request, "Email address is required.")
-        return redirect(f"{reverse('settings')}?tab=accounts")
 
-    # Get or create account
-    account, created = Account.objects.get_or_create(
-        provider=Provider.MICROSOFT, email=email, defaults={"sync_enabled": True}
-    )
-    
-    # Link account to user
-    if request.user.is_authenticated and request.user not in account.users.all():
-        account.users.add(request.user)
-    
-    # Set up recommended labels and actions for new accounts
-    if created:
-        setup_account_automation(account)
+    account = None
+    if email:
+        # Reconnect/explicit connect path when an email is provided.
+        account, created = Account.objects.get_or_create(
+            provider=Provider.MICROSOFT, email=email, defaults={"sync_enabled": True}
+        )
+        # Link account to user
+        if request.user.is_authenticated and request.user not in account.users.all():
+            account.users.add(request.user)
+        # Set up recommended labels and actions for new accounts
+        if created:
+            setup_account_automation(account)
 
     # Force reconnection by using force_reauth=True
     # Get authorization URL
@@ -262,7 +257,10 @@ def account_connect_microsoft(request):
         auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
         # Store state in session for verification
         request.session["oauth_state"] = state
-        request.session["oauth_account_id"] = account.pk
+        if account:
+            request.session["oauth_account_id"] = account.pk
+        else:
+            request.session.pop("oauth_account_id", None)
         return redirect(auth_url)
     except Exception as e:
         messages.error(request, f"Error initiating OAuth: {str(e)}")

@@ -1,10 +1,11 @@
 import logging
 
 from celery import shared_task
-from django.db import transaction
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import Account
+from jobs.models import TaskStatus
 
 logger = logging.getLogger(__name__)
 sync_audit = logging.getLogger("mail.sync_audit")
@@ -12,10 +13,12 @@ from automation.tasks import process_email
 from mail.models import EmailMessage, SyncRun
 from mail.services import EmailSyncService
 from mail.sync_status import (
+    acquire_sync_lock,
     clear_last_sync_error,
-    get_sync_in_progress,
+    release_sync_lock,
     set_last_sync_error,
     set_sync_in_progress,
+    should_run_status_sync,
 )
 
 
@@ -37,12 +40,18 @@ def sync_account_emails(account_id: int):
         logger.warning("sync_account_emails: account_id=%s sync disabled", account_id)
         return {"error": "Sync is disabled for this account"}
 
+    lock_acquired = acquire_sync_lock(account_id, timeout_seconds=300)
+    if not lock_acquired:
+        logger.info(
+            "sync_account_emails skipped account_id=%s reason=lock-held",
+            account_id,
+        )
+        return {"skipped": "Sync already running for this account"}
+
     set_sync_in_progress(account_id, True)
     clear_last_sync_error(account_id)
     sync_run_started = timezone.now()
     try:
-        from django.db.models import Count
-
         from automation.task_from_email import get_emails_to_process
 
         sync_service = EmailSyncService()
@@ -110,21 +119,43 @@ def sync_account_emails(account_id: int):
             emails_queued_for_processing=queued_ids,
         )
 
-        emails_with_tasks = EmailMessage.objects.filter(
-            account=account
-        ).annotate(
-            task_count=Count('tasks')
-        ).filter(
-            task_count__gt=0
-        ).order_by("-created_at")[:50]
+        # Status sync is provider-expensive (one or more API requests per email).
+        # Run immediately when sync changed data; otherwise debounce to avoid repeating
+        # the same checks every minute.
+        created_count = result.get("created", 0)
+        updated_count = result.get("updated", 0)
+        has_fresh_changes = (created_count + updated_count) > 0
+        min_status_sync_interval = int(
+            getattr(settings, "EMAIL_STATUS_SYNC_MIN_INTERVAL_SECONDS", 300)
+        )
+        run_status_sync = has_fresh_changes or should_run_status_sync(
+            account_id, min_status_sync_interval
+        )
 
-        if emails_with_tasks.exists():
-            status_result = sync_service.sync_email_status(account, list(emails_with_tasks))
+        emails_with_open_tasks = list(
+            EmailMessage.objects.filter(
+                account=account,
+                tasks__status__in=[TaskStatus.PENDING, TaskStatus.IN_PROGRESS],
+            )
+            .distinct()
+            .order_by("-created_at")[:50]
+        )
+
+        if emails_with_open_tasks and run_status_sync:
+            status_result = sync_service.sync_email_status(account, emails_with_open_tasks)
             result["status_checked"] = status_result.get("checked", 0)
             result["status_updated"] = status_result.get("updated", 0)
             result["status_errors"] = status_result.get("errors", 0)
+        elif emails_with_open_tasks and not run_status_sync:
+            sync_audit.info(
+                "sync_account_emails status sync skipped by debounce",
+                extra={
+                    "account_id": account_id,
+                    "open_task_email_count": len(emails_with_open_tasks),
+                    "min_interval_seconds": min_status_sync_interval,
+                },
+            )
 
-        set_sync_in_progress(account_id, False)
         clear_last_sync_error(account_id)
         logger.info(
             "sync_account_emails completed account_id=%s created=%s updated=%s total=%s",
@@ -136,9 +167,11 @@ def sync_account_emails(account_id: int):
         return result
     except Exception as e:
         logger.exception("sync_account_emails failed account_id=%s", account_id)
-        set_sync_in_progress(account_id, False)
         set_last_sync_error(account_id, str(e))
         return {"error": str(e)}
+    finally:
+        set_sync_in_progress(account_id, False)
+        release_sync_lock(account_id)
 
 
 @shared_task

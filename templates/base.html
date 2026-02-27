@@ -64,6 +64,11 @@
       .material-icons.size-5 { font-size: 1.25rem; }
       .material-icons.size-6 { font-size: 1.5rem; }
       .material-icons.size-\[18px\] { font-size: 18px; }
+
+      /* Keep page layout stable when vertical scrollbars appear/disappear. */
+      #app-main-shell > main {
+        scrollbar-gutter: stable both-edges;
+      }
       
       /* Email body styling to look like a real email client */
       .email-body {
@@ -362,6 +367,79 @@
       .email-body > *:last-child {
         margin-bottom: 0;
       }
+
+      /* Card entrance animation (applied via .fade-in-card) */
+      .fade-in-card {
+        opacity: 1;
+        transform: none;
+        filter: none;
+      }
+
+      .fade-in-card.card-entering {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+        filter: blur(2px);
+        will-change: opacity, transform, filter;
+      }
+
+      .fade-in-card.card-entered {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+        transition:
+          opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
+          transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
+          filter 520ms cubic-bezier(0.22, 1, 0.36, 1);
+        transition-delay: var(--card-enter-delay, 0ms);
+      }
+
+      /* Dark-mode card surface with stronger separation from page background */
+      .dark .card-surface {
+        background-color: #162338 !important;
+        border-color: rgba(148, 163, 184, 0.26) !important;
+      }
+
+      /* Dark-mode modal header/footer chrome should be distinct from modal body */
+      .dark .modal-chrome {
+        background-color: rgba(15, 23, 42, 0.72) !important;
+      }
+
+      /* App chrome entrance animation (sidebar/header/shell) */
+      .fade-in-chrome {
+        opacity: 1;
+        transform: none;
+        filter: none;
+      }
+
+      .fade-in-chrome.chrome-entering {
+        opacity: 0;
+        transform: translateY(8px);
+        filter: blur(1.5px);
+        will-change: opacity, transform, filter;
+      }
+
+      .fade-in-chrome.chrome-entered {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+        transition:
+          opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+          transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
+          filter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        transition-delay: var(--chrome-enter-delay, 0ms);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .fade-in-card,
+        .fade-in-card.card-entered,
+        .fade-in-chrome,
+        .fade-in-chrome.chrome-entered {
+          opacity: 1;
+          transform: none;
+          filter: none;
+          transition: none;
+        }
+      }
     </style>
     <script>
       // Theme management
@@ -601,8 +679,8 @@
     {% block header %}
     {% include 'includes/sidebar.html' %}
     {% endblock %}
-    <div id="app-main-shell" class="flex flex-1 flex-col min-h-0 min-w-0 pl-[215px]">
-      <header class="sticky top-0 z-40 flex-shrink-0 px-4 pt-3 pb-2">
+    <div id="app-main-shell" class="fade-in-chrome flex flex-1 flex-col min-h-0 min-w-0 pl-[215px]" data-chrome-order="2">
+      <header class="fade-in-chrome sticky top-0 z-40 flex-shrink-0 px-4 pt-3 pb-2" data-chrome-order="1">
         <div class="mx-auto max-w-7xl">
           <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/95 shadow-sm px-4 py-2.5 sm:px-5 sm:py-3">
             <div class="grid grid-cols-3 items-center gap-2">
@@ -628,6 +706,64 @@
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-0 right-0 z-50 flex flex-col gap-2 p-4 pointer-events-none" style="max-width: 420px;"></div>
 
+    <script>
+      // Global app chrome entrance animation (sidebar/header/shell)
+      (function() {
+        function runChromeEntranceAnimations(root) {
+          const scope = root || document;
+          const chromeEls = Array.from(scope.querySelectorAll('.fade-in-chrome:not(.chrome-entered)'));
+          if (!chromeEls.length) return;
+
+          chromeEls.forEach(function(el, index) {
+            el.classList.add('chrome-entering');
+            const orderAttr = parseInt(el.getAttribute('data-chrome-order') || '', 10);
+            const order = Number.isFinite(orderAttr) ? orderAttr : index;
+            const delay = Math.min(order * 80, 320);
+            el.style.setProperty('--chrome-enter-delay', delay + 'ms');
+          });
+
+          requestAnimationFrame(function() {
+            chromeEls.forEach(function(el) {
+              el.classList.add('chrome-entered');
+              el.classList.remove('chrome-entering');
+            });
+          });
+        }
+
+        window.runChromeEntranceAnimations = runChromeEntranceAnimations;
+        document.addEventListener('DOMContentLoaded', function() {
+          runChromeEntranceAnimations(document);
+        });
+      })();
+    </script>
+    <script>
+      // Global card entrance animation
+      (function() {
+        function runCardEntranceAnimations(root) {
+          const scope = root || document;
+          const cards = Array.from(scope.querySelectorAll('.fade-in-card:not(.card-entered)'));
+          if (!cards.length) return;
+
+          cards.forEach(function(card, index) {
+            card.classList.add('card-entering');
+            const delay = Math.min(index * 55, 550);
+            card.style.setProperty('--card-enter-delay', delay + 'ms');
+          });
+
+          requestAnimationFrame(function() {
+            cards.forEach(function(card) {
+              card.classList.add('card-entered');
+              card.classList.remove('card-entering');
+            });
+          });
+        }
+
+        window.runCardEntranceAnimations = runCardEntranceAnimations;
+        document.addEventListener('DOMContentLoaded', function() {
+          runCardEntranceAnimations(document);
+        });
+      })();
+    </script>
     <script>
       // Toast System (Sonner-style)
       (function() {

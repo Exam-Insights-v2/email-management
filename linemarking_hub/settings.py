@@ -155,6 +155,9 @@ EMAIL_FIRST_SYNC_MAX_MESSAGES = int(os.environ.get("EMAIL_FIRST_SYNC_MAX_MESSAGE
 EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES = int(
     os.environ.get("EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES", "200")
 )
+EMAIL_STATUS_SYNC_MIN_INTERVAL_SECONDS = int(
+    os.environ.get("EMAIL_STATUS_SYNC_MIN_INTERVAL_SECONDS", "300")
+)
 # Email sync audit: log each onboarding/sync decision (Gmail fetch, store, queue). Set to false in production to keep logs quiet.
 EMAIL_SYNC_AUDIT_LOGGING = os.environ.get("EMAIL_SYNC_AUDIT_LOGGING", "true").lower() in ("1", "true", "yes")
 
