@@ -59,12 +59,11 @@ def account_connect_gmail(request):
         if created:
             setup_account_automation(account)
 
-    # Force reconnection by using force_reauth=True
     # Get authorization URL
     redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     try:
-        # Use force_reauth=True to ensure user re-authenticates
-        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
+        # Default to normal OAuth to avoid repeated consent screens.
+        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=False)
         # Store state in session for verification
         request.session["oauth_state"] = state
         if account:
@@ -250,12 +249,11 @@ def account_connect_microsoft(request):
         if created:
             setup_account_automation(account)
 
-    # Force reconnection by using force_reauth=True
     # Get authorization URL
     redirect_uri = build_oauth_redirect_uri(request, "microsoft_email_oauth_callback")
     try:
-        # Use force_reauth=True to ensure user re-authenticates
-        auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
+        # Default to normal OAuth to avoid repeated consent screens.
+        auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri, force_reauth=False)
         # Store state in session for verification
         request.session["oauth_state"] = state
         if account:

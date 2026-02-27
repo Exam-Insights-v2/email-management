@@ -12,75 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    <style>
-      html,
-      body {
-        scrollbar-gutter: stable both-edges;
-      }
-
-      body { font-weight: 400; }
-      .font-semibold { font-weight: 500 !important; }
-      .font-bold { font-weight: 600 !important; }
-      .material-icons { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; font-feature-settings: 'liga'; font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
-      .material-icons.size-4 { font-size: 1rem; }
-      .material-icons.size-5 { font-size: 1.25rem; }
-
-      /* Auth page entrance animations */
-      .fade-in-chrome,
-      .fade-in-card {
-        opacity: 1;
-        transform: none;
-        filter: none;
-      }
-
-      .fade-in-chrome.chrome-entering {
-        opacity: 0;
-        transform: translateY(8px);
-        filter: blur(1.5px);
-        will-change: opacity, transform, filter;
-      }
-
-      .fade-in-chrome.chrome-entered {
-        opacity: 1;
-        transform: translateY(0);
-        filter: blur(0);
-        transition:
-          opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
-          transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
-          filter 420ms cubic-bezier(0.22, 1, 0.36, 1);
-        transition-delay: var(--chrome-enter-delay, 0ms);
-      }
-
-      .fade-in-card.card-entering {
-        opacity: 0;
-        transform: translateY(14px) scale(0.985);
-        filter: blur(2px);
-        will-change: opacity, transform, filter;
-      }
-
-      .fade-in-card.card-entered {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
-        transition:
-          opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
-          transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
-          filter 520ms cubic-bezier(0.22, 1, 0.36, 1);
-        transition-delay: var(--card-enter-delay, 0ms);
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .fade-in-chrome,
-        .fade-in-chrome.chrome-entered,
-        .fade-in-card,
-        .fade-in-card.card-entered {
-          opacity: 1;
-          transform: none;
-          filter: none;
-          transition: none;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/base_auth.css' %}" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -94,46 +26,7 @@
         },
       }
     </script>
-    <script>
-      // Theme management
-      (function() {
-        // Get theme from localStorage or default to dark
-        const getTheme = () => {
-          const stored = localStorage.getItem('theme');
-          if (stored) return stored;
-          // Check system preference
-          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        };
-
-        // Apply theme
-        const applyTheme = (theme) => {
-          const html = document.documentElement;
-          if (theme === 'dark') {
-            html.classList.add('dark');
-          } else {
-            html.classList.remove('dark');
-          }
-        };
-
-        // Set initial theme before page renders to prevent flash
-        applyTheme(getTheme());
-
-        // Expose theme toggle function
-        window.toggleTheme = function() {
-          const currentTheme = getTheme();
-          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-          localStorage.setItem('theme', newTheme);
-          applyTheme(newTheme);
-        };
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-          if (!localStorage.getItem('theme')) {
-            applyTheme(e.matches ? 'dark' : 'light');
-          }
-        });
-      })();
-    </script>
+    <script src="{% static 'js/theme.js' %}"></script>
   </head>
   <body class="h-full bg-white dark:bg-gray-900">
     <!-- Theme Toggle Button -->
@@ -153,165 +46,21 @@
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-0 right-0 z-50 flex flex-col gap-2 p-4 pointer-events-none" style="max-width: 420px;"></div>
 
+    <script src="{% static 'js/auth_entrance.js' %}"></script>
+    <script src="{% static 'js/toast.js' %}"></script>
     <script>
-      // Auth chrome/card entrance animations
-      (function() {
-        function runChromeEntranceAnimations(root) {
-          const scope = root || document;
-          const chromeEls = Array.from(scope.querySelectorAll('.fade-in-chrome:not(.chrome-entered)'));
-          if (!chromeEls.length) return;
-
-          chromeEls.forEach(function(el, index) {
-            el.classList.add('chrome-entering');
-            const orderAttr = parseInt(el.getAttribute('data-chrome-order') || '', 10);
-            const order = Number.isFinite(orderAttr) ? orderAttr : index;
-            const delay = Math.min(order * 80, 320);
-            el.style.setProperty('--chrome-enter-delay', delay + 'ms');
-          });
-
-          requestAnimationFrame(function() {
-            chromeEls.forEach(function(el) {
-              el.classList.add('chrome-entered');
-              el.classList.remove('chrome-entering');
-            });
-          });
-        }
-
-        function runCardEntranceAnimations(root) {
-          const scope = root || document;
-          const cards = Array.from(scope.querySelectorAll('.fade-in-card:not(.card-entered)'));
-          if (!cards.length) return;
-
-          cards.forEach(function(card, index) {
-            card.classList.add('card-entering');
-            const delay = Math.min(index * 70, 560);
-            card.style.setProperty('--card-enter-delay', delay + 'ms');
-          });
-
-          requestAnimationFrame(function() {
-            cards.forEach(function(card) {
-              card.classList.add('card-entered');
-              card.classList.remove('card-entering');
-            });
-          });
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-          runChromeEntranceAnimations(document);
-          runCardEntranceAnimations(document);
-        });
-      })();
-    </script>
-    <script>
-      // Toast System (Sonner-style)
-      (function() {
-        const toastContainer = document.getElementById('toast-container');
-        let toastIdCounter = 0;
-        const toasts = new Map();
-
-        function createToast(message, type = 'info', duration = 5000) {
-          const toastId = `toast-${toastIdCounter++}`;
-          const toast = document.createElement('div');
-          toast.id = toastId;
-          toast.className = `pointer-events-auto flex items-start gap-3 rounded-lg border p-4 shadow-sm transition-all duration-300 animate-in slide-in-from-bottom-2 ${
-            type === 'success' 
-              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 border-emerald-200 dark:border-emerald-800' 
-              : type === 'error'
-              ? 'bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 border-red-200 dark:border-red-800'
-              : 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-900 dark:text-cyan-100 border-cyan-200 dark:border-cyan-800'
-          }`;
-          toast.style.opacity = '0';
-          toast.style.transform = 'translateY(20px)';
-
-          // Icon
-          const icon = document.createElement('div');
-          icon.className = 'flex-shrink-0 mt-0.5';
-          if (type === 'success') {
-            icon.innerHTML = '<span class="material-icons size-5 text-emerald-600 dark:text-emerald-400">check_circle</span>';
-          } else if (type === 'error') {
-            icon.innerHTML = '<span class="material-icons size-5 text-red-600 dark:text-red-400">cancel</span>';
-          } else {
-            icon.innerHTML = '<span class="material-icons size-5 text-cyan-600 dark:text-cyan-400">info</span>';
-          }
-
-          // Content
-          const content = document.createElement('div');
-          content.className = 'flex-1 text-sm font-medium';
-          content.textContent = message;
-
-          // Close button
-          const closeBtn = document.createElement('button');
-          closeBtn.className = 'flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors';
-          closeBtn.innerHTML = '<span class="material-icons size-4">close</span>';
-          closeBtn.onclick = () => removeToast(toastId);
-
-          toast.appendChild(icon);
-          toast.appendChild(content);
-          toast.appendChild(closeBtn);
-          toastContainer.appendChild(toast);
-
-          // Animate in
-          requestAnimationFrame(() => {
-            toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateY(0)';
-          });
-
-          toasts.set(toastId, { element: toast, timeout: null });
-
-          // Auto remove after duration
-          if (duration > 0) {
-            const timeout = setTimeout(() => {
-              removeToast(toastId);
-            }, duration);
-            toasts.get(toastId).timeout = timeout;
-          }
-
-          return toastId;
-        }
-
-        function removeToast(toastId) {
-          const toastData = toasts.get(toastId);
-          if (!toastData) return;
-
-          if (toastData.timeout) {
-            clearTimeout(toastData.timeout);
-          }
-
-          const toast = toastData.element;
-          toast.style.opacity = '0';
-          toast.style.transform = 'translateY(-20px)';
-
-          setTimeout(() => {
-            if (toast.parentNode) {
-              toast.parentNode.removeChild(toast);
-            }
-            toasts.delete(toastId);
-          }, 300);
-        }
-
-        // Toast API
-        window.toast = {
-          success: (message, duration) => createToast(message, 'success', duration),
-          error: (message, duration) => createToast(message, 'error', duration),
-          info: (message, duration) => createToast(message, 'info', duration),
-          remove: removeToast,
-        };
-
-        // Convert Django messages to toasts
-        document.addEventListener('DOMContentLoaded', function() {
-          {% if messages %}
-          {% for message in messages %}
-          (function() {
-            const messageText = '{{ message|escapejs }}';
-            const messageTags = '{{ message.tags|default:"info" }}';
-            const toastType = messageTags === 'error' ? 'error' : messageTags === 'success' ? 'success' : 'info';
-            window.toast[toastType](messageText);
-          })();
-          {% endfor %}
-          {% endif %}
-        });
-      })();
+      document.addEventListener('DOMContentLoaded', function() {
+        {% if messages %}
+        {% for message in messages %}
+        (function() {
+          const messageText = '{{ message|escapejs }}';
+          const messageTags = '{{ message.tags|default:"info" }}';
+          const toastType = messageTags === 'error' ? 'error' : messageTags === 'success' ? 'success' : 'info';
+          window.toast[toastType](messageText);
+        })();
+        {% endfor %}
+        {% endif %}
+      });
     </script>
   </body>
 </html>

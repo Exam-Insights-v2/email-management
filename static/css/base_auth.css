@@ -1,0 +1,11 @@
+      html,
+      body {
+        scrollbar-gutter: stable both-edges;
+      }
+
+      body { font-weight: 400; }
+      .font-semibold { font-weight: 500 !important; }
+      .font-bold { font-weight: 600 !important; }
+      .material-icons { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; font-feature-settings: 'liga'; font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+      .material-icons.size-4 { font-size: 1rem; }
+      .material-icons.size-5 { font-size: 1.25rem; }

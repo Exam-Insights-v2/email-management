@@ -25,7 +25,8 @@ def trigger_sync_after_connect(account: Account) -> tuple[bool, str | None]:
             "Onboarding: queuing full sync; audit logs will appear in Celery worker output",
             extra={"account_id": account.pk},
         )
-        sync_account_emails.delay(account.pk)
+        # Fail fast if broker is unavailable; do not block OAuth callback flow.
+        sync_account_emails.apply_async(args=[account.pk], retry=False)
         return True, None
     except Exception as e:
         return False, str(e)

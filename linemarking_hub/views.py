@@ -1176,10 +1176,10 @@ def account_detail(request, pk):
 def account_create(request):
     """Redirect directly to Gmail OAuth connection - email will be obtained from OAuth"""
     # Get authorization URL - we'll get the email from OAuth response
-    # Force re-auth to ensure we get all required scopes
+    # Default to normal OAuth to avoid repeated consent screens
     redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     try:
-        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
+        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=False)
         # Store state in session for verification
         request.session["oauth_state"] = state
         # Don't store account_id yet - we'll create it after getting email from OAuth

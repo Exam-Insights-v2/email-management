@@ -132,9 +132,13 @@ REST_FRAMEWORK = {
 }
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get(
-    "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
-)
+# Default result backend to the broker URL so prod does not silently fall back
+# to localhost when CELERY_RESULT_BACKEND is unset.
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+# Do not block request/response cycles with long publish retries when the
+# broker is down (e.g. during OAuth callback onboarding).
+CELERY_TASK_PUBLISH_RETRY = False
+CELERY_TASK_PUBLISH_RETRY_POLICY = {"max_retries": 0}
 
 # Google OAuth Configuration
 GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")

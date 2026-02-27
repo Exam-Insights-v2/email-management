@@ -204,7 +204,7 @@
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for action_group in actions %}
-    <article class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openActionDetailModal) window.openActionDetailModal({{ action_group.primary.pk }});">
+    <article class="fade-in-card-simple rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openActionDetailModal) window.openActionDetailModal({{ action_group.primary.pk }});">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{{ action_group.name }}</h3>
       <p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 flex-1">
         {% if action_group.primary.instructions %}{{ action_group.primary.instructions|truncatewords:15 }}{% else %}{{ action_group.primary.function }}{% endif %}
@@ -246,7 +246,7 @@
   </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for label_group in labels %}
-    <article class="fade-in-card rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openLabelDetailModal) window.openLabelDetailModal({{ label_group.primary.pk }});">
+    <article class="fade-in-card-simple rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm hover:border-cyan-500/40 dark:hover:border-cyan-400/40 transition-all duration-200 cursor-pointer min-h-[140px] flex flex-col p-4" onclick="if (window.openLabelDetailModal) window.openLabelDetailModal({{ label_group.primary.pk }});">
       <div class="mb-1 flex items-start gap-2">
         <span class="mt-0.5 inline-flex h-5 min-w-[20px] items-center justify-center flex-shrink-0 whitespace-nowrap leading-none" title="{{ label_group.primary.priority|priority_word }}" aria-hidden="true">
           {% include 'tasks/priority_bars.html' with priority=label_group.primary.priority %}
