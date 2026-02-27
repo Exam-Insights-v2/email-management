@@ -11,6 +11,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from accounts.models import Account, Provider
+from accounts.oauth_redirects import build_oauth_redirect_uri
 
 logger = logging.getLogger(__name__)
 from accounts.services import (
@@ -36,7 +37,7 @@ def google_oauth_login(request):
     if request.user.is_authenticated:
         return redirect("/")
 
-    redirect_uri = request.build_absolute_uri(reverse("google_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "google_oauth_callback")
     try:
         # Request both login and Gmail scopes to automatically connect email account
         combined_scopes = GoogleOAuthService.LOGIN_SCOPES + GoogleOAuthService.GMAIL_SCOPES
@@ -71,7 +72,7 @@ def google_oauth_callback(request):
         messages.error(request, "Invalid OAuth session.")
         return redirect("login")
 
-    redirect_uri = request.build_absolute_uri(reverse("google_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "google_oauth_callback")
     try:
         # Exchange code for token with combined scopes
         combined_scopes = GoogleOAuthService.LOGIN_SCOPES + GoogleOAuthService.GMAIL_SCOPES
@@ -138,7 +139,7 @@ def microsoft_oauth_login(request):
     if request.user.is_authenticated:
         return redirect("/")
 
-    redirect_uri = request.build_absolute_uri(reverse("microsoft_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "microsoft_oauth_callback")
     try:
         # Request both login and Mail scopes to automatically connect email account
         combined_scopes = MicrosoftOAuthService.LOGIN_SCOPES + MicrosoftOAuthService.MAIL_SCOPES
@@ -180,7 +181,7 @@ def microsoft_oauth_callback(request):
         messages.error(request, "Invalid OAuth session.")
         return redirect("login")
 
-    redirect_uri = request.build_absolute_uri(reverse("microsoft_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "microsoft_oauth_callback")
     try:
         # Exchange code for token with combined scopes
         combined_scopes = MicrosoftOAuthService.LOGIN_SCOPES + MicrosoftOAuthService.MAIL_SCOPES

@@ -18,6 +18,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from accounts.models import Account, OAuthToken
+from accounts.oauth_redirects import build_oauth_redirect_uri
 from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from automation.models import Action, EmailLabel, Label
 from jobs.models import Job, Task
@@ -1176,7 +1177,7 @@ def account_create(request):
     """Redirect directly to Gmail OAuth connection - email will be obtained from OAuth"""
     # Get authorization URL - we'll get the email from OAuth response
     # Force re-auth to ensure we get all required scopes
-    redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     try:
         auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
         # Store state in session for verification

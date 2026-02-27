@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import viewsets
 
 from .models import Account, Provider
+from .oauth_redirects import build_oauth_redirect_uri
 from .serializers import AccountSerializer
 from .services import (
     GmailOAuthService,
@@ -60,7 +61,7 @@ def account_connect_gmail(request):
 
     # Force reconnection by using force_reauth=True
     # Get authorization URL
-    redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     try:
         # Use force_reauth=True to ensure user re-authenticates
         auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
@@ -91,7 +92,7 @@ def account_gmail_oauth_callback(request):
         return redirect(f"{reverse('settings')}?tab=accounts")
 
     # Exchange code for token
-    redirect_uri = request.build_absolute_uri(reverse("gmail_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     credentials = None
     
     try:
@@ -251,7 +252,7 @@ def account_connect_microsoft(request):
 
     # Force reconnection by using force_reauth=True
     # Get authorization URL
-    redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "microsoft_email_oauth_callback")
     try:
         # Use force_reauth=True to ensure user re-authenticates
         auth_url, state = MicrosoftEmailOAuthService.get_authorization_url(redirect_uri, force_reauth=True)
@@ -289,7 +290,7 @@ def account_microsoft_oauth_callback(request):
         return redirect(f"{reverse('settings')}?tab=accounts")
 
     # Exchange code for token
-    redirect_uri = request.build_absolute_uri(reverse("microsoft_email_oauth_callback"))
+    redirect_uri = build_oauth_redirect_uri(request, "microsoft_email_oauth_callback")
     token_dict = None
     
     try:

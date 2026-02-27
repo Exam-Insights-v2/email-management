@@ -376,9 +376,9 @@
       }
 
       .fade-in-card.card-entering {
-        opacity: 0;
-        transform: translateY(14px) scale(0.985);
-        filter: blur(2px);
+        opacity: 0.84;
+        transform: translateY(6px) scale(0.995);
+        filter: blur(0.8px);
         will-change: opacity, transform, filter;
       }
 
@@ -387,9 +387,9 @@
         transform: translateY(0) scale(1);
         filter: blur(0);
         transition:
-          opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
-          transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
-          filter 520ms cubic-bezier(0.22, 1, 0.36, 1);
+          opacity 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          transform 340ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          filter 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
         transition-delay: var(--card-enter-delay, 0ms);
       }
 
@@ -412,9 +412,9 @@
       }
 
       .fade-in-chrome.chrome-entering {
-        opacity: 0;
-        transform: translateY(8px);
-        filter: blur(1.5px);
+        opacity: 0.9;
+        transform: translateY(4px);
+        filter: blur(0.6px);
         will-change: opacity, transform, filter;
       }
 
@@ -423,9 +423,9 @@
         transform: translateY(0);
         filter: blur(0);
         transition:
-          opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
-          transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
-          filter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+          opacity 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          filter 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
         transition-delay: var(--chrome-enter-delay, 0ms);
       }
 
@@ -729,7 +729,7 @@
             el.classList.add('chrome-entering');
             const orderAttr = parseInt(el.getAttribute('data-chrome-order') || '', 10);
             const order = Number.isFinite(orderAttr) ? orderAttr : index;
-            const delay = Math.min(order * 80, 320);
+            const delay = Math.min(order * 28, 140);
             el.style.setProperty('--chrome-enter-delay', delay + 'ms');
           });
 
@@ -773,7 +773,7 @@
 
           cards.forEach(function(card, index) {
             card.classList.add('card-entering');
-            const delay = Math.min(index * 55, 550);
+            const delay = Math.min(index * 22, 220);
             card.style.setProperty('--card-enter-delay', delay + 'ms');
           });
 

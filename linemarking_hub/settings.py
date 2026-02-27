@@ -150,6 +150,22 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = "/auth/login/"
 
+# Public app URL used to build absolute OAuth redirect URIs in a
+# deployment-safe way (instead of depending on incoming host/proto headers).
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "").strip().rstrip("/")
+
+# Optional explicit callback overrides for providers/environments that require
+# a fixed, pre-registered redirect URI.
+GOOGLE_OAUTH_REDIRECT_URI = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
+GMAIL_OAUTH_REDIRECT_URI = os.environ.get("GMAIL_OAUTH_REDIRECT_URI", "").strip()
+MICROSOFT_OAUTH_REDIRECT_URI = os.environ.get("MICROSOFT_OAUTH_REDIRECT_URI", "").strip()
+MICROSOFT_EMAIL_OAUTH_REDIRECT_URI = os.environ.get("MICROSOFT_EMAIL_OAUTH_REDIRECT_URI", "").strip()
+
+# Honor proxy headers so request.build_absolute_uri uses https + external host
+# when running behind a reverse proxy/load balancer.
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # Email sync: caps for first sync vs incremental (paginated; avoid missing emails)
 EMAIL_FIRST_SYNC_MAX_MESSAGES = int(os.environ.get("EMAIL_FIRST_SYNC_MAX_MESSAGES", "500"))
 EMAIL_INCREMENTAL_SYNC_MAX_MESSAGES = int(
