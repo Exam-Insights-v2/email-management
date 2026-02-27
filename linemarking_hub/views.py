@@ -1236,11 +1236,40 @@ def account_update(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def account_delete(request, pk):
-    account = get_object_or_404(Account, pk=pk)
+    account = get_object_or_404(Account, pk=pk, users=request.user)
     email = account.email
-    account.delete()
-    messages.success(request, f"Account '{email}' deleted successfully.")
-    return redirect("settings?tab=accounts")
+    try:
+        with transaction.atomic():
+            # 1) Revoke local auth first.
+            OAuthToken.objects.filter(account=account).delete()
+
+            # 2) Remove draft blobs before parent drafts.
+            DraftAttachment.objects.filter(draft__account=account).delete()
+            Draft.objects.filter(account=account).delete()
+
+            # 3) Remove task/job automation links and items.
+            EmailLabel.objects.filter(email_message__account=account).delete()
+            Task.objects.filter(account=account).delete()
+            Job.objects.filter(account=account).delete()
+
+            # 4) Remove account-scoped automation config.
+            Action.objects.filter(account=account).delete()
+            Label.objects.filter(account=account).delete()
+
+            # 5) Remove synced email data.
+            EmailMessage.objects.filter(account=account).delete()
+            EmailThread.objects.filter(account=account).delete()
+            account.sync_runs.all().delete()
+
+            # 6) Remove account access links then account itself.
+            account.users.clear()
+            account.delete()
+    except Exception as e:
+        messages.error(request, f"Could not delete account '{email}': {e}")
+        return redirect(f"{reverse('settings')}?tab=accounts")
+
+    messages.success(request, f"Disconnected and deleted account '{email}' with all related data.")
+    return redirect(f"{reverse('settings')}?tab=accounts")
 
 
 @login_required

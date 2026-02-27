@@ -22,12 +22,6 @@
       </button>
     </div>
   </div>
-  <div id="refresh-sync-message-mobile" class="hidden sm:hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none" style="display: none !important;">
-    <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50/95 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 text-sm font-medium shadow-sm border border-cyan-200/50 dark:border-cyan-700/50 pointer-events-auto transition-colors">
-      <span class="material-icons w-4 h-4 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
-      Refresh to sync
-    </button>
-  </div>
 {% endblock %}
 
 {% block header_action %}
@@ -91,7 +85,7 @@
 
 <div class="mt-4 flex items-center gap-2 px-1 sm:px-0">
   <p class="text-xs text-gray-500 dark:text-gray-400">{{ all_tasks|length }} task{{ all_tasks|length|pluralize }}</p>
-  <div id="refresh-sync-message" class="hidden sm:flex items-center" style="display: none !important;">
+  <div id="refresh-sync-message" class="hidden flex items-center" style="display: none !important;">
     <button type="button" onclick="window.location.reload();" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50/90 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-200/50 dark:border-cyan-700/50 shadow-sm transition-colors">
       <span class="material-icons w-3.5 h-3.5 flex-shrink-0" style="font-size: inherit;" aria-hidden="true">refresh</span>
       Refresh to sync

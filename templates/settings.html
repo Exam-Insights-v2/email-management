@@ -180,8 +180,20 @@
             </div>
             
             <!-- Submit Button -->
-            <div class="flex items-center justify-end gap-x-3 pt-2">
-              <button type="submit" class="rounded-full bg-cyan-600 px-4 py-2 text-xs font-medium text-white hover:bg-cyan-500 shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">Save Changes</button>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 pt-2">
+              <form method="post" action="{% url 'disconnect_account' account.pk %}?from=settings" class="w-full sm:w-auto" onsubmit="return confirm('Disconnect {{ account.email }}? This keeps account settings and synced data, but removes OAuth access.');">
+                {% csrf_token %}
+                <button type="submit" class="w-full sm:w-auto rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  Disconnect
+                </button>
+              </form>
+              <form method="post" action="{% url 'account_delete' account.pk %}" class="w-full sm:w-auto" onsubmit="return confirm('Disconnect and permanently delete {{ account.email }} and all related tasks, emails, drafts, labels, and actions? This cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit" class="w-full sm:w-auto rounded-full bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-500 shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors">
+                  Disconnect &amp; Delete Data
+                </button>
+              </form>
+              <button type="submit" class="w-full sm:w-auto rounded-full bg-cyan-600 px-4 py-2 text-xs font-medium text-white hover:bg-cyan-500 shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">Save Changes</button>
             </div>
           </form>
         </div>

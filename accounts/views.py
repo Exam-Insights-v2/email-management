@@ -377,7 +377,7 @@ def account_disconnect(request, pk):
     """Disconnect an account"""
     if request.method == "POST":
         try:
-            account = Account.objects.get(pk=pk)
+            account = Account.objects.get(pk=pk, users=request.user)
             if account.provider == Provider.GMAIL:
                 GmailOAuthService.disconnect_account(account)
             elif account.provider == Provider.MICROSOFT:
@@ -388,6 +388,8 @@ def account_disconnect(request, pk):
         except Exception as e:
             messages.error(request, f"Error disconnecting: {str(e)}")
 
+    if request.GET.get("from") == "settings" or "settings" in (request.headers.get("Referer") or ""):
+        return redirect(f"{reverse('settings')}?tab=accounts")
     return redirect("account_detail", pk=pk)
 
 
