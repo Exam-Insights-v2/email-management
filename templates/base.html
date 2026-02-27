@@ -709,10 +709,21 @@
     <script>
       // Global app chrome entrance animation (sidebar/header/shell)
       (function() {
-        function runChromeEntranceAnimations(root) {
+        function runChromeEntranceAnimations(root, options) {
+          const opts = options || {};
+          const animate = opts.animate !== false;
           const scope = root || document;
           const chromeEls = Array.from(scope.querySelectorAll('.fade-in-chrome:not(.chrome-entered)'));
           if (!chromeEls.length) return;
+
+          if (!animate) {
+            chromeEls.forEach(function(el) {
+              el.classList.add('chrome-entered');
+              el.classList.remove('chrome-entering');
+              el.style.removeProperty('--chrome-enter-delay');
+            });
+            return;
+          }
 
           chromeEls.forEach(function(el, index) {
             el.classList.add('chrome-entering');
@@ -732,17 +743,33 @@
 
         window.runChromeEntranceAnimations = runChromeEntranceAnimations;
         document.addEventListener('DOMContentLoaded', function() {
-          runChromeEntranceAnimations(document);
+          // Avoid first-paint flash: mark chrome entered on initial page load.
+          runChromeEntranceAnimations(document, { animate: false });
         });
       })();
     </script>
     <script>
       // Global card entrance animation
       (function() {
-        function runCardEntranceAnimations(root) {
+        function runCardEntranceAnimations(root, options) {
+          const opts = options || {};
+          const animate = opts.animate !== false;
           const scope = root || document;
           const cards = Array.from(scope.querySelectorAll('.fade-in-card:not(.card-entered)'));
           if (!cards.length) return;
+
+          if (!animate) {
+            const visibleCards = cards.filter(function(card) {
+              return card.getClientRects().length > 0;
+            });
+            const targetCards = visibleCards.length ? visibleCards : cards;
+            targetCards.forEach(function(card) {
+              card.classList.add('card-entered');
+              card.classList.remove('card-entering');
+              card.style.removeProperty('--card-enter-delay');
+            });
+            return;
+          }
 
           cards.forEach(function(card, index) {
             card.classList.add('card-entering');
@@ -760,7 +787,8 @@
 
         window.runCardEntranceAnimations = runCardEntranceAnimations;
         document.addEventListener('DOMContentLoaded', function() {
-          runCardEntranceAnimations(document);
+          // Avoid first-paint flash: mark cards entered on initial page load.
+          runCardEntranceAnimations(document, { animate: false });
         });
       })();
     </script>
