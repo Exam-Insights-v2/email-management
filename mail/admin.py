@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Draft, DraftAttachment, EmailMessage, EmailThread
+from .models import Draft, DraftAttachment, EmailAttachment, EmailMessage, EmailThread
 
 
 @admin.register(EmailThread)
@@ -26,3 +26,10 @@ class DraftAdmin(admin.ModelAdmin):
 class DraftAttachmentAdmin(admin.ModelAdmin):
     list_display = ("filename", "draft", "size_bytes")
     search_fields = ("filename",)
+
+
+@admin.register(EmailAttachment)
+class EmailAttachmentAdmin(admin.ModelAdmin):
+    list_display = ("filename", "email_message", "content_type", "size_bytes", "is_inline")
+    search_fields = ("filename", "provider_attachment_id")
+    list_filter = ("is_inline", "email_message__account")

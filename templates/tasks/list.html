@@ -340,6 +340,18 @@
     }
   });
   document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('dialog[id^="task-detail-"][open]').forEach(function(modal) {
+      try {
+        if (typeof modal.close === 'function') {
+          modal.close();
+        } else {
+          modal.removeAttribute('open');
+        }
+      } catch (e) {
+        modal.removeAttribute('open');
+      }
+    });
+
     var urlParams = new URLSearchParams(window.location.search);
     var taskPk = urlParams.get('task');
     if (taskPk) {

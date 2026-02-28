@@ -218,7 +218,9 @@ class TaskFilterForm(forms.Form):
         required=False,
         label="Progress",
         choices=[(choice.value, choice.label) for choice in TaskStatus],
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "mt-2 space-y-2"}),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            "class": "absolute inset-0 h-full w-full m-0 p-0 cursor-pointer appearance-none rounded border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 checked:border-cyan-500 checked:bg-cyan-500 focus-visible:outline-none"
+        }),
         help_text="Filter by task status (select multiple)"
     )
     task_id = forms.CharField(
@@ -231,14 +233,18 @@ class TaskFilterForm(forms.Form):
         required=False,
         label="Urgency",
         choices=[("5", "Urgent"), ("4", "High"), ("3", "Medium"), ("2", "Low"), ("1", "Lowest")],
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "mt-2 space-y-2"}),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            "class": "absolute inset-0 h-full w-full m-0 p-0 cursor-pointer appearance-none rounded border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 checked:border-cyan-500 checked:bg-cyan-500 focus-visible:outline-none"
+        }),
         help_text="Filter by priority level (select multiple)"
     )
     label = forms.ModelMultipleChoiceField(
         required=False,
         label="Label",
         queryset=None,
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "mt-2 space-y-2"}),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            "class": "absolute inset-0 h-full w-full m-0 p-0 cursor-pointer appearance-none rounded border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 checked:border-cyan-500 checked:bg-cyan-500 focus-visible:outline-none"
+        }),
         help_text="Filter by labels (select multiple)"
     )
     

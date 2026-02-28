@@ -74,9 +74,9 @@
                 <ul class="space-y-2" aria-label="{{ field.label }}">
                   {% for choice in field %}
                   <li class="flex items-center gap-2">
-                    <div class="relative grid size-4 flex-shrink-0 rounded border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800 focus-within:ring-2 focus-within:ring-cyan-500 filter-checkbox-wrapper">
+                    <div class="group relative grid size-4 flex-shrink-0 focus-within:ring-2 focus-within:ring-cyan-500 filter-checkbox-wrapper">
                       {{ choice.tag }}
-                      <span class="material-icons pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center text-white opacity-0 filter-checkbox-check" aria-hidden="true">check</span>
+                      <span class="material-icons pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center text-white opacity-0 group-has-checked:opacity-100" aria-hidden="true">check</span>
                     </div>
                     <label for="{{ choice.id_for_label }}" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">{{ choice.choice_label }}</label>
                   </li>
@@ -101,36 +101,14 @@
 
 <script>
   (function() {
-    const form = document.currentScript.closest('form');
+    const scriptEl = document.currentScript;
+    const form = scriptEl ? scriptEl.closest('form') : null;
     if (form) {
-      form.querySelectorAll('.filter-checkbox-wrapper input[type="checkbox"]').forEach(function(cb) {
-        cb.classList.add('col-start-1', 'row-start-1', 'size-4', 'rounded', 'border-0', 'appearance-none', 'cursor-pointer', 'opacity-0', 'absolute');
-        cb.style.position = 'absolute';
-        cb.style.inset = '0';
-        cb.style.width = '100%';
-        cb.style.height = '100%';
-        cb.style.margin = '0';
-        cb.style.padding = '0';
-        cb.style.opacity = '0';
-        cb.style.appearance = 'none';
-      });
-      form.querySelectorAll('.filter-checkbox-wrapper').forEach(function(wrapper) {
-        const input = wrapper.querySelector('input[type="checkbox"]');
-        const check = wrapper.querySelector('.filter-checkbox-check');
-        if (input && check) {
-          function update() {
-            wrapper.classList.toggle('!border-cyan-500', input.checked);
-            wrapper.classList.toggle('!bg-cyan-500', input.checked);
-            check.classList.toggle('opacity-100', input.checked);
-          }
-          input.addEventListener('change', update);
-          update();
-        }
-      });
-
       form.querySelectorAll('.tokenized-field').forEach(function(fieldWrapper) {
+        if (fieldWrapper.dataset.tokenizedReady === 'true') return;
         const input = fieldWrapper.querySelector('input[type="text"]');
         if (!input) return;
+        fieldWrapper.dataset.tokenizedReady = 'true';
 
         input.type = 'hidden';
         const sourceName = fieldWrapper.dataset.tokenizeName || input.name;
@@ -204,7 +182,7 @@
 
         function addTokensFromText(text) {
           (text || '')
-            .split(/[,\s]+/)
+            .split(/[,\s;]+/)
             .forEach(addToken);
         }
 
@@ -212,7 +190,13 @@
         syncHiddenInput();
 
         chipInput.addEventListener('keydown', function(event) {
-          const shouldCommit = event.key === 'Enter' || event.key === ',' || event.key === ' ' || event.key === 'Tab';
+          const shouldCommit = event.key === 'Enter'
+            || event.key === ','
+            || event.key === ';'
+            || event.key === ' '
+            || event.key === 'Tab'
+            || event.code === 'Comma'
+            || event.code === 'Semicolon';
           if (shouldCommit && chipInput.value.trim()) {
             event.preventDefault();
             addTokensFromText(chipInput.value);
@@ -227,8 +211,18 @@
         });
 
         chipInput.addEventListener('input', function() {
-          if (/[,\s]/.test(chipInput.value)) {
+          if (/[,\s;]/.test(chipInput.value)) {
             addTokensFromText(chipInput.value);
+            chipInput.value = '';
+          }
+        });
+
+        chipInput.addEventListener('paste', function(event) {
+          const pasted = (event.clipboardData || window.clipboardData).getData('text');
+          if (!pasted) return;
+          if (/[,\s;]/.test(pasted)) {
+            event.preventDefault();
+            addTokensFromText(pasted);
             chipInput.value = '';
           }
         });

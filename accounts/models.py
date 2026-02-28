@@ -72,3 +72,52 @@ class OAuthToken(models.Model):
     def set_scopes_list(self, scopes_list):
         """Set scopes from a list"""
         self.scopes = ",".join(scopes_list) if scopes_list else ""
+
+
+class NotificationPreference(models.Model):
+    """Per-user notification preferences for an account."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="notification_preferences"
+    )
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="notification_preferences"
+    )
+    task_push_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = (("user", "account"),)
+        indexes = [models.Index(fields=["user", "account"])]
+
+    def __str__(self):
+        return f"NotificationPreference<{self.user_id}:{self.account_id}>"
+
+
+class BrowserPushSubscription(models.Model):
+    """Web Push subscription per browser/device endpoint."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="push_subscriptions"
+    )
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="push_subscriptions"
+    )
+    endpoint = models.URLField(max_length=1024)
+    p256dh = models.TextField()
+    auth = models.TextField()
+    user_agent = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    last_active_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = (("user", "account", "endpoint"),)
+        indexes = [
+            models.Index(fields=["user", "account", "is_active"]),
+            models.Index(fields=["account", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"PushSubscription<{self.user_id}:{self.account_id}>"

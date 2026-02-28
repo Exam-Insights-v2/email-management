@@ -5,6 +5,18 @@ Usage:
 {% endcomment %}
 {% load db_filters %}
 <style>
+  /* Defensive guard: keep task detail dialogs hidden unless explicitly opened. */
+  dialog[id^="task-detail-"]:not([open]) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  dialog[id^="task-detail-"][open] {
+    display: block !important;
+    visibility: visible !important;
+    position: fixed !important;
+    inset: 0 !important;
+  }
+
   .draft-body-editor a[href] {
     color: #2563eb;
     text-decoration: underline;
@@ -91,7 +103,7 @@ Usage:
                 <input type="hidden" name="status" value="pending">
                 {% if task.due_at %}{% load db_filters %}<input type="hidden" name="due_at" value="{{ task.due_at|date:'Y-m-d' }}T{{ task.due_at|time:'H:i' }}">{% endif %}
                 <button type="submit" class="inline-flex items-center justify-center rounded-lg p-2 h-9 w-9 text-emerald-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" aria-label="Mark undone" title="Mark undone">
-                  <span class="material-icons size-5" aria-hidden="true">radio_button_unchecked</span>
+                  <span class="material-icons size-5" aria-hidden="true">check_circle</span>
                 </button>
               </form>
               {% endif %}
@@ -182,13 +194,38 @@ Usage:
                           {% if task.email_message.date_sent %} · {% load db_filters %}{{ task.email_message.date_sent|aus_time:"d M Y g:i A" }}{% endif %}
                         </p>
                         <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{{ task.email_message.subject|default:"(No subject)" }}</p>
-                        <div class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none">
+                        <div class="text-sm text-gray-700 dark:text-gray-300 max-w-none">
                           {% if task.email_message.body_html %}
-                          <div class="email-body" style="contain: layout style paint; isolation: isolate;">
-                            {{ task.email_message.body_html|remove_global_style_script|strip_quoted_email }}
-                          </div>
+                          <iframe
+                            class="w-full overflow-hidden"
+                            sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                            scrolling="no"
+                            loading="lazy"
+                            referrerpolicy="no-referrer"
+                            onload="this.style.height='0px';this.style.height=(this.contentWindow.document.documentElement.scrollHeight)+'px';"
+                            srcdoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><base target='_blank' rel='noopener noreferrer'><style>html,body{margin:0;padding:0;background:#fff;color:#374151;font:14px/1.55 'Google Sans',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;overflow-wrap:anywhere}body,img,table,pre,code,iframe,svg,video{max-width:100% !important;height:auto !important}a{color:#2563eb;text-decoration:underline}blockquote{margin:0.6em 0;padding-left:0.8em;border-left:2px solid #d1d5db}</style></head><body>{{ task.email_message.body_html|remove_global_style_script|strip_quoted_email|force_escape }}</body></html>"
+                            title="Email body"
+                          ></iframe>
                           {% else %}
                           <p class="text-gray-500 dark:text-gray-400 italic">No body content</p>
+                          {% endif %}
+                          {% if task.email_message.attachments.all %}
+                          <div class="mt-3">
+                            <ul class="space-y-2">
+                              {% for att in task.email_message.attachments.all %}
+                              <li class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 text-sm">
+                                <span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md {{ att.filename|attachment_icon_bg }}">
+                                  <span class="material-icons size-5 block" aria-hidden="true">{{ att.filename|attachment_icon }}</span>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                  <span class="text-gray-700 dark:text-gray-300 truncate block" title="{{ att.filename }}">{{ att.filename|default:"Attachment" }}</span>
+                                  {% if att.size_bytes %}<span class="text-xs text-gray-500 dark:text-gray-400">{{ att.size_bytes|filesizeformat }}</span>{% endif %}
+                                </div>
+                                <a href="{% url 'email_attachment_download' task.email_message.pk att.pk %}" class="flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download {{ att.filename|default:'attachment' }}" title="Download"><span class="material-icons size-4">download</span></a>
+                              </li>
+                              {% endfor %}
+                            </ul>
+                          </div>
                           {% endif %}
                         </div>
                         {% else %}
@@ -231,7 +268,6 @@ Usage:
               <div id="task-email-thread-draft-{{ task.pk }}" class="dark:border-white/10">
               <div class="space-y-4" role="list">
               {% if email_data.has_draft_reply %}
-              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-3">Reply</h3>
               {% if email_data.draft %}
               <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_update' email_data.draft.pk %}" data-draft-id="{{ email_data.draft.pk }}">
               {% else %}
@@ -243,22 +279,22 @@ Usage:
                 <input type="hidden" id="draft-to-json-{{ task.pk }}" name="to_addresses" value="">
                 <input type="hidden" id="draft-cc-json-{{ task.pk }}" name="cc_addresses" value="">
                 <input type="hidden" id="draft-bcc-json-{{ task.pk }}" name="bcc_addresses" value="">
-                <article class="task-thread-draft-box rounded-xl border border-cyan-200 dark:border-cyan-500/40 bg-white dark:bg-gray-800 shadow-sm overflow-visible" role="listitem">
+                <article class="task-thread-draft-box rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 shadow-sm overflow-visible" role="listitem">
                   <!-- Clickable header: toggles dropdown for To / From / CC / BCC -->
-                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-cyan-200 dark:border-cyan-500/40 bg-cyan-600 dark:bg-cyan-700 text-left transition-colors cursor-pointer hover:bg-cyan-500 dark:hover:bg-cyan-600" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
+                  <button type="button" id="draft-recipients-toggle-{{ task.pk }}" class="draft-recipients-toggle w-full rounded-t-lg flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10 bg-cyan-600 dark:bg-gray-700/50 text-left transition-colors cursor-pointer" aria-expanded="false" aria-controls="draft-recipients-dropdown-{{ task.pk }}">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-cyan-700 dark:bg-cyan-800" aria-hidden="true">Y</span>
+                      <span class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold bg-cyan-700 dark:bg-cyan-800" aria-hidden="true">Y</span>
                       <div class="min-w-0 text-sm">
                         <span class="text-cyan-100">You</span>
                         <span class="text-cyan-100">to</span>
                         <span id="draft-to-summary-{{ task.pk }}" class="text-white">{% if email_data.draft %}{{ email_data.draft.to_addresses|join:", " }}{% else %}{{ task.email_message.from_address }}{% endif %}</span>
-                        <span id="draft-cc-bcc-summary-{{ task.pk }}" class="text-cyan-100">{% if email_data.draft %}{% if email_data.draft.cc_addresses %}, CC: {{ email_data.draft.cc_addresses|join:", " }}{% endif %}{% if email_data.draft.bcc_addresses %}{% if email_data.draft.cc_addresses %}; {% endif %}BCC: {{ email_data.draft.bcc_addresses|join:", " }}{% endif %}{% endif %}</span>
+                        <span id="draft-cc-bcc-summary-{{ task.pk }}" class="text-cyan-100">{% if email_data.draft %}{% if email_data.draft.cc_addresses %}, CC: {{ email_data.draft.cc_addresses|join:", " }}{% endif %}{% if email_data.draft.bcc_addresses %}{% if email_data.draft.cc_addresses %}; {% endif %}BCC: {{ email_data.draft.bcc_addresses|join:", " }}{% endif %}{% else %}{% if task.email_message.cc_addresses %}, CC: {{ task.email_message.cc_addresses|join:", " }}{% endif %}{% if task.email_message.bcc_addresses %}{% if task.email_message.cc_addresses %}; {% endif %}BCC: {{ task.email_message.bcc_addresses|join:", " }}{% endif %}{% endif %}</span>
                       </div>
-                      <span class="material-icons size-5 text-cyan-100 flex-shrink-0 transition-transform duration-200 draft-recipients-chevron" aria-hidden="true">expand_more</span>
+                      <span class="material-icons size-5 text-white flex-shrink-0 transition-transform duration-200 draft-recipients-chevron" aria-hidden="true">expand_more</span>
                     </div>
                     <span class="inline-flex items-center rounded-md bg-white/20 px-2 py-1 text-xs font-medium text-white border border-white/25 flex-shrink-0 ml-2">Draft</span>
                   </button>
-                  <div id="draft-recipients-dropdown-{{ task.pk }}" class="draft-recipients-dropdown hidden border-b border-cyan-100 dark:border-cyan-500/30 bg-cyan-50/80 dark:bg-cyan-900/10" aria-hidden="true">
+                  <div id="draft-recipients-dropdown-{{ task.pk }}" class="draft-recipients-dropdown hidden border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-900/50" aria-hidden="true">
                     <div class="px-4 sm:px-5 py-3 flex flex-wrap gap-x-4 gap-y-3">
                       <div class="flex-1 min-w-0" style="min-width: 8rem;">
                         <label for="draft-to-{{ task.pk }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">To</label>
@@ -266,18 +302,18 @@ Usage:
                       </div>
                       <div class="flex-1 min-w-0" style="min-width: 8rem;">
                         <label for="draft-cc-{{ task.pk }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">CC (optional)</label>
-                        <input type="text" id="draft-cc-{{ task.pk }}" name="cc_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.cc_addresses|join:", " }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="cc@example.com" />
+                        <input type="text" id="draft-cc-{{ task.pk }}" name="cc_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.cc_addresses|join:", " }}{% else %}{{ task.email_message.cc_addresses|join:", " }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="cc@example.com" />
                       </div>
                       <div class="flex-1 min-w-0" style="min-width: 8rem;">
                         <label for="draft-bcc-{{ task.pk }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">BCC (optional)</label>
-                        <input type="text" id="draft-bcc-{{ task.pk }}" name="bcc_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.bcc_addresses|join:", " }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="bcc@example.com" />
+                        <input type="text" id="draft-bcc-{{ task.pk }}" name="bcc_addresses_input" value="{% if email_data.draft %}{{ email_data.draft.bcc_addresses|join:", " }}{% else %}{{ task.email_message.bcc_addresses|join:", " }}{% endif %}" class="block w-full rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="bcc@example.com" />
                       </div>
                     </div>
                   </div>
                   <!-- Subject (editable, same look as thread) -->
-                  <div class="px-4 sm:px-5 py-2 border-b border-cyan-100 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-900/10">
+                  <div class="px-4 sm:px-5 py-2 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-900/50">
                     <div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                      <span class="font-medium text-cyan-700 dark:text-cyan-300 shrink-0">Subject:</span>
+                      <span class="font-medium text-gray-500 dark:text-gray-400 shrink-0">Subject:</span>
                       <input
                         type="text"
                         id="draft-subject-{{ task.pk }}"
@@ -289,9 +325,9 @@ Usage:
                     </div>
                   </div>
                   <!-- Body (editable) + attachments inline. Rich text: looks like normal text, stored/sent as HTML. -->
-                  <div class="px-4 sm:px-5 py-4 bg-white dark:bg-gray-900/80">
+                  <div class="">
                     <input type="hidden" name="body_html" id="draft-body-html-{{ task.pk }}" value="">
-                    <div class="flex flex-wrap items-center gap-1 mb-2 border border-gray-200 dark:border-white/10 rounded-t-md bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 border-b-0">
+                    <div class="flex flex-wrap items-center gap-1 bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5">
                       <span class="relative group/tooltip inline-block">
                         <button type="button" class="draft-format-btn p-1.5 rounded text-gray-500 hover:bg-gray-200 dark:hover:text-gray-400 dark:hover:bg-gray-700" data-command="bold" title="Bold" aria-label="Bold"><span class="material-icons size-4">format_bold</span></button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Bold</span>
@@ -378,7 +414,7 @@ Usage:
                     </div>
                     <div
                       id="draft-body-{{ task.pk }}"
-                      class="draft-body-editor block w-full rounded-b-md bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/10 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
+                      class="draft-body-editor block w-full bg-white dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
                       contenteditable="true"
                       data-placeholder="Write your reply..."
                       data-signature="{{ task.account.signature_html|default:''|escapejs }}"
@@ -405,10 +441,10 @@ Usage:
                   </div>
                   <!-- Draft actions (icons) -->
                   <!-- Draft actions (icons) and Send buttons on one line -->
-                  <div class="modal-chrome px-4 sm:px-5 py-3 border-t border-cyan-100 dark:border-cyan-500/30 bg-cyan-50/70 dark:bg-cyan-900/10 flex flex-wrap items-center justify-between gap-2">
+                  <div class="modal-chrome rounded-b-lg px-4 sm:px-5 py-2 border-t border-gray-200 dark:border-white/10 bg-cyan-600 dark:bg-gray-700/50 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
                     <div class="flex items-center gap-1">
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="p-2 rounded-md text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors" title="Rewrite with AI" aria-label="Rewrite with AI" id="draft-rewrite-btn-{{ task.pk }}">
+                        <button type="button" class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors" title="Rewrite with AI" aria-label="Rewrite with AI" id="draft-rewrite-btn-{{ task.pk }}">
                           <span class="material-icons size-4" aria-hidden="true">auto_awesome</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Rewrite with AI</span>
@@ -424,30 +460,30 @@ Usage:
                         </div>
                       </span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" class="p-2 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors" title="Add attachment" aria-label="Add attachment" id="draft-attachment-btn-{{ task.pk }}">
+                        <button type="button" class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors" title="Add attachment" aria-label="Add attachment" id="draft-attachment-btn-{{ task.pk }}">
                           <span class="material-icons size-4" aria-hidden="true">attach_file</span>
                         </button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Add attachment</span>
                       </span>
                       <input type="file" id="draft-attachment-input-{{ task.pk }}" class="hidden" multiple accept="*/*">
                     </div>
-                    <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                       {% if user_connected_accounts and user_connected_accounts|length > 1 %}
-                        <label for="draft-from-account-{{ task.pk }}" class="text-sm text-gray-500 dark:text-gray-400 shrink-0">From:</label>
-                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="draft-from-select text-sm rounded-md border-0 bg-gray-100/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 py-1.5 pr-7 pl-2 focus:ring-2 focus:ring-cyan-500/50 focus:ring-inset cursor-pointer max-w-[11rem] hover:bg-gray-200/80 dark:hover:bg-white/10 transition-colors appearance-none bg-no-repeat bg-[length:0.75rem] bg-[right_0.35rem_center]" title="Choose which account to send from" aria-label="Send from account">
+                        <label for="draft-from-account-{{ task.pk }}" class="text-sm text-cyan-100 shrink-0">From:</label>
+                        <select id="draft-from-account-{{ task.pk }}" name="from_account" class="draft-from-select text-sm rounded-md border border-white/30 bg-white/15 text-white py-1.5 pr-7 pl-2 focus:ring-2 focus:ring-white/50 focus:ring-inset cursor-pointer max-w-[11rem] hover:bg-white/20 transition-colors appearance-none bg-no-repeat bg-[length:0.75rem] bg-[right_0.35rem_center]" title="Choose which account to send from" aria-label="Send from account">
                           {% for acc in user_connected_accounts %}
                             <option value="{{ acc.pk }}" {% if email_data.draft %}{% if acc.pk == email_data.draft.account_id %}selected{% endif %}{% else %}{% if acc.pk == task.account_id %}selected{% endif %}{% endif %}>{{ acc.email }}</option>
                           {% endfor %}
                         </select>
                       {% else %}
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mr-1 shrink-0">From: {{ task.account.email }}</p>
+                        <p class="text-sm text-cyan-100 mr-1 shrink-0">From: {{ task.account.email }}</p>
                       {% endif %}
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" id="draft-send-btn-{{ task.pk }}" class="rounded-md bg-slate-600 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Send Email</button>
+                        <button type="button" id="draft-send-btn-{{ task.pk }}" class="rounded-md border border-white/80 bg-transparent px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Send Email</button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Send Email</span>
                       </span>
                       <span class="relative group/tooltip inline-block">
-                        <button type="button" id="draft-send-mark-done-btn-{{ task.pk }}" class="rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Send Email and Mark as Done</button>
+                        <button type="button" id="draft-send-mark-done-btn-{{ task.pk }}" class="rounded-md border border-white/80 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Send Email and Mark as Done</button>
                         <span class="draft-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs font-medium text-white bg-gray-800 dark:bg-gray-700 rounded opacity-0 pointer-events-none group-hover/tooltip:opacity-100 [.tooltip-dismissed_&]:!opacity-0 transition-opacity whitespace-nowrap z-30">Send Email and Mark as Done</span>
                       </span>
                     </div>
@@ -457,43 +493,71 @@ Usage:
               {% endif %}
 
               {% if email_data.thread_messages|length > 1 %}
-              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-3">Earlier Messages</h3>
-              {% for msg in email_data.thread_messages %}
+              {% for msg in email_data.thread_messages reversed %}
               {% if msg.external_message_id != task.email_message.external_message_id %}
               <article class="task-thread-message-box rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/80 overflow-hidden" role="listitem">
-                <div class="bg-gray-100 dark:bg-gray-800/50 flex items-start justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/10">
-                  <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold bg-gray-500 dark:bg-gray-600" aria-hidden="true">
-                      {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
-                    </span>
-                    <div class="min-w-0 text-sm">
-                      <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
-                      <span class="text-gray-500 dark:text-gray-400 mx-1">to</span>
-                      <span class="text-gray-900 dark:text-white">
-                        {% if msg.to_addresses %}
-                          {% for email in msg.to_addresses %}
-                            <button type="button" class="email-filter-link text-gray-900 dark:text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
-                          {% endfor %}
-                        {% else %}—{% endif %}
+                <details class="group" open>
+                  <summary class="list-none px-4 sm:px-5 py-3 bg-cyan-600 dark:bg-gray-700/50 cursor-pointer flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <span class="me-2 inline-flex items-center rounded-md bg-white/20 px-2 py-0.5 text-[12px] font-medium text-white border border-white/25">{{ forloop.revcounter }}</span>
+                      <span class="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold bg-cyan-700 dark:bg-cyan-800" aria-hidden="true">
+                        {{ msg.from_name|default:msg.from_address|slice:":1"|upper }}
                       </span>
+                      <div class="min-w-0 text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                        <button type="button" class="email-filter-link text-cyan-50 hover:underline cursor-pointer" data-email="{{ msg.from_address }}">{{ msg.from_address }}</button>
+                        <span class="text-cyan-100 mx-1">to</span>
+                        <span class="text-white">
+                          {% if msg.to_addresses %}
+                            {% for email in msg.to_addresses %}
+                              <button type="button" class="email-filter-link text-white hover:underline cursor-pointer" data-email="{{ email }}">{{ email }}</button>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                          {% else %}—{% endif %}
+                        </span>
+                      </div>
                     </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                      <time class="text-xs text-cyan-100" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
+                      <span class="material-icons size-5 text-white transition-transform duration-200 group-open:rotate-180" aria-hidden="true">expand_more</span>
+                    </div>
+                  </summary>
+                  <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10 border-b border-gray-200 dark:border-white/10">
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
                   </div>
-                  <div class="flex items-center flex-shrink-0">
-                    <time class="text-xs text-gray-500 dark:text-gray-400" datetime="{{ msg.date_sent|date:'c' }}">{% if msg.date_sent %}{{ msg.date_sent|date:"d M, g:i A" }}{% else %}—{% endif %}</time>
+                  <div class="px-4 sm:px-5 py-4">
+                    {% if msg.body_html %}
+                    <iframe
+                      class="w-full overflow-hidden task-thread-message-body"
+                      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                      scrolling="no"
+                      loading="lazy"
+                      referrerpolicy="no-referrer"
+                      onload="this.style.height='0px';this.style.height=(this.contentWindow.document.documentElement.scrollHeight+4)+'px';"
+                      srcdoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><base target='_blank' rel='noopener noreferrer'><style>html,body{margin:0;padding:0;background:#fff;color:#374151;font:14px/1.55 'Google Sans',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;overflow-wrap:anywhere}body,img,table,pre,code,iframe,svg,video{max-width:100% !important;height:auto !important}a{color:#2563eb;text-decoration:underline}blockquote{margin:0.6em 0;padding-left:0.8em;border-left:2px solid #d1d5db}</style></head><body>{{ msg.body_html|remove_global_style_script|strip_quoted_email|force_escape }}</body></html>"
+                      title="Email body"
+                    ></iframe>
+                    {% else %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
+                    {% endif %}
+                    {% if msg.attachments %}
+                    <div class="mt-3">
+                      <ul class="space-y-2">
+                        {% for att in msg.attachments %}
+                        <li class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 text-sm">
+                          <span class="flex-shrink-0 grid place-items-center w-9 h-9 rounded-md {{ att.filename|attachment_icon_bg }}">
+                            <span class="material-icons size-5 block" aria-hidden="true">{{ att.filename|attachment_icon }}</span>
+                          </span>
+                          <div class="min-w-0 flex-1">
+                            <span class="text-gray-700 dark:text-gray-300 truncate block" title="{{ att.filename }}">{{ att.filename|default:"Attachment" }}</span>
+                            {% if att.size_bytes %}<span class="text-xs text-gray-500 dark:text-gray-400">{{ att.size_bytes|filesizeformat }}</span>{% endif %}
+                          </div>
+                          <a href="{% url 'email_attachment_download' msg.id att.id %}" class="flex-shrink-0 p-1.5 rounded-md text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-100 dark:hover:bg-white/10" download aria-label="Download {{ att.filename|default:'attachment' }}" title="Download"><span class="material-icons size-4">download</span></a>
+                        </li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    {% endif %}
                   </div>
-                </div>
-                <div class="px-4 sm:px-5 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-white/10">
-                  <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium text-gray-500 dark:text-gray-400">Subject:</span> {{ msg.subject|default:"(No subject)" }}</p>
-                </div>
-                <div class="px-4 sm:px-5 py-4">
-                  {% if msg.body_html %}
-                  <div class="email-body task-thread-message-body" style="contain: layout style paint; isolation: isolate;">
-                    {{ msg.body_html|remove_global_style_script|strip_quoted_email }}
-                  </div>
-                  {% else %}
-                  <p class="text-sm text-gray-500 dark:text-gray-400 italic">No body content</p>
-                  {% endif %}
-                </div>
+                </details>
               </article>
               {% endif %}
               {% endfor %}

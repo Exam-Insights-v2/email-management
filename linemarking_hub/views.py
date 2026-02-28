@@ -11,21 +11,27 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
-from accounts.models import Account, OAuthToken
+from accounts.models import (
+    Account,
+    BrowserPushSubscription,
+    NotificationPreference,
+    OAuthToken,
+)
 from accounts.oauth_redirects import build_oauth_redirect_uri
 from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
 from automation.models import Action, EmailLabel, Label
 from jobs.models import Job, Task
-from mail.models import Draft, DraftAttachment, EmailMessage, EmailThread
+from mail.models import Draft, DraftAttachment, EmailAttachment, EmailMessage, EmailThread
 from mail.services import GmailService, MicrosoftService, persist_sent_message
 from linemarking_hub.templatetags.db_filters import _strip_quoted_email_html
+from linemarking_hub.push_notifications import is_web_push_configured
 from linemarking_hub.forms import (
     AccountForm,
     ActionForm,
@@ -34,6 +40,44 @@ from linemarking_hub.forms import (
     TaskForm,
     TaskFilterForm,
 )
+
+
+def _build_reply_recipients(email_obj):
+    """Build sensible reply recipients from the message context (reply-all style)."""
+    account_email = (getattr(email_obj.account, "email", "") or "").strip().lower()
+
+    def _norm_list(values):
+        if not values:
+            return []
+        return [str(v).strip() for v in values if str(v).strip()]
+
+    def _dedupe(values, exclude=None):
+        exclude_set = {e.lower() for e in (exclude or []) if e}
+        seen = set()
+        out = []
+        for value in values:
+            key = value.lower()
+            if key in seen or key in exclude_set:
+                continue
+            seen.add(key)
+            out.append(value)
+        return out
+
+    msg_from = (email_obj.from_address or "").strip()
+    to_addresses = _norm_list(email_obj.to_addresses)
+    cc_addresses = _norm_list(email_obj.cc_addresses)
+    bcc_addresses = _norm_list(email_obj.bcc_addresses)
+
+    # Typical case: incoming email from someone else -> reply to sender.
+    if msg_from and msg_from.lower() != account_email:
+        reply_to = [msg_from]
+    else:
+        # If this is one of "our" sent messages in the thread, reply to first non-self recipient.
+        reply_to = [addr for addr in to_addresses if addr.lower() != account_email][:1]
+
+    reply_cc = _dedupe(to_addresses + cc_addresses, exclude=[account_email] + reply_to)
+    reply_bcc = _dedupe(bcc_addresses, exclude=[account_email] + reply_to + reply_cc)
+    return reply_to, reply_cc, reply_bcc
 
 
 # Jobs CRUD
@@ -235,6 +279,7 @@ def tasks_list(request):
         "email_message",
         "email_message__thread"
     ).prefetch_related(
+        "email_message__attachments",
         Prefetch(
             "email_message__labels",
             queryset=EmailLabel.objects.select_related("label").prefetch_related("label__actions")
@@ -345,12 +390,13 @@ def tasks_list(request):
         threads = EmailThread.objects.filter(pk__in=thread_ids).prefetch_related(
             Prefetch(
                 "messages",
-                queryset=EmailMessage.objects.all().order_by("date_sent", "created_at")
+                queryset=EmailMessage.objects.all().prefetch_related("attachments").order_by("date_sent", "created_at")
             )
         )
         for thread in threads:
             threads_with_messages[thread.pk] = [
                 {
+                    "id": msg.pk,
                     "external_message_id": msg.external_message_id,
                     "subject": msg.subject,
                     "from_address": msg.from_address,
@@ -360,6 +406,15 @@ def tasks_list(request):
                     "bcc_addresses": msg.bcc_addresses or [],
                     "date_sent": msg.date_sent,
                     "body_html": msg.body_html or "",
+                    "attachments": [
+                        {
+                            "id": att.pk,
+                            "filename": att.filename,
+                            "size_bytes": att.size_bytes,
+                            "content_type": att.content_type,
+                        }
+                        for att in msg.attachments.all()
+                    ],
                 }
                 for msg in thread.messages.all()
             ]
@@ -388,7 +443,7 @@ def tasks_list(request):
             # If no draft exists and we should have one, create it (body = draft only, no thread history)
             if not draft and has_draft_reply:
                 reply_subject = f"Re: {email.subject or 'No subject'}"
-                reply_to = [email.from_address]
+                reply_to, reply_cc, reply_bcc = _build_reply_recipients(email)
                 reply_body = ""
                 if email.account.signature_html:
                     reply_body = f"<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
@@ -396,6 +451,8 @@ def tasks_list(request):
                     account=email.account,
                     email_message=email,
                     to_addresses=reply_to,
+                    cc_addresses=reply_cc,
+                    bcc_addresses=reply_bcc,
                     subject=reply_subject,
                     body_html=reply_body,
                 )
@@ -614,11 +671,52 @@ def email_detail(request, pk):
 
 
 @login_required
+def email_attachment_download(request, email_id, attachment_id):
+    attachment = get_object_or_404(
+        EmailAttachment.objects.select_related("email_message__account"),
+        pk=attachment_id,
+        email_message_id=email_id,
+        email_message__account__users=request.user,
+    )
+    content = attachment.content
+    if isinstance(content, memoryview):
+        content = content.tobytes()
+
+    # Fallback: fetch from provider by provider attachment id if content is missing.
+    if not content and attachment.provider_attachment_id:
+        email_message = attachment.email_message
+        account = email_message.account
+        provider_services = {
+            "gmail": GmailService(),
+            "microsoft": MicrosoftService(),
+        }
+        provider_service = provider_services.get(account.provider)
+        if provider_service and hasattr(provider_service, "fetch_attachment_content"):
+            content = provider_service.fetch_attachment_content(
+                account,
+                email_message.external_message_id,
+                attachment.provider_attachment_id,
+            )
+            if content:
+                attachment.content = content
+                attachment.save(update_fields=["content"])
+
+    if not content:
+        return HttpResponse("Attachment content unavailable", status=404)
+
+    filename = os.path.basename(attachment.filename or f"attachment-{attachment.pk}")
+    response = HttpResponse(content, content_type=attachment.content_type or "application/octet-stream")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
 def task_email_data(request, pk):
     """API endpoint to get email thread and draft data for a task (thread messages from DB only)."""
     task = get_object_or_404(
         Task.objects.select_related("email_message__account", "email_message__thread").prefetch_related(
             "email_message__labels__label",
+            "email_message__attachments",
             "email_message__thread__messages",
         ),
         pk=pk,
@@ -639,8 +737,9 @@ def task_email_data(request, pk):
     # Step 2: Get all email messages for this thread from DB (same thread_id). Order: oldest first.
     thread_messages = []
     if email.thread_id:
-        for msg in EmailMessage.objects.filter(thread_id=email.thread_id).order_by("date_sent", "created_at"):
+        for msg in EmailMessage.objects.filter(thread_id=email.thread_id).prefetch_related("attachments").order_by("date_sent", "created_at"):
             thread_messages.append({
+                "id": msg.pk,
                 "external_message_id": msg.external_message_id,
                 "subject": msg.subject,
                 "from_address": msg.from_address,
@@ -650,6 +749,15 @@ def task_email_data(request, pk):
                 "bcc_addresses": msg.bcc_addresses or [],
                 "date_sent": msg.date_sent,
                 "body_html": msg.body_html or "",
+                "attachments": [
+                    {
+                        "id": att.pk,
+                        "filename": att.filename,
+                        "size_bytes": att.size_bytes,
+                        "content_type": att.content_type,
+                    }
+                    for att in msg.attachments.all()
+                ],
             })
     
     # Get or create draft for this email
@@ -658,7 +766,7 @@ def task_email_data(request, pk):
     # If no draft exists and we should have one, create it
     if not draft and has_draft_reply:
         reply_subject = f"Re: {email.subject or 'No subject'}"
-        reply_to = [email.from_address]
+        reply_to, reply_cc, reply_bcc = _build_reply_recipients(email)
         reply_body = ""
         if email.account.signature_html:
             reply_body = f"<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
@@ -666,6 +774,8 @@ def task_email_data(request, pk):
             account=email.account,
             email_message=email,
             to_addresses=reply_to,
+            cc_addresses=reply_cc,
+            bcc_addresses=reply_bcc,
             subject=reply_subject,
             body_html=reply_body,
         )
@@ -681,6 +791,15 @@ def task_email_data(request, pk):
             "cc_addresses": email.cc_addresses or [],
             "date_sent": email.date_sent.isoformat() if email.date_sent else None,
             "body_html": email.body_html or "",
+            "attachments": [
+                {
+                    "id": att.pk,
+                    "filename": att.filename,
+                    "size_bytes": att.size_bytes,
+                    "content_type": att.content_type,
+                }
+                for att in email.attachments.all()
+            ],
         },
         "thread_messages": thread_messages,
         "has_draft_reply": has_draft_reply,
@@ -820,7 +939,7 @@ def email_reply(request, pk):
     
     # Create reply draft (body = draft only, no thread history)
     reply_subject = f"Re: {email.subject or 'No subject'}"
-    reply_to = [email.from_address]
+    reply_to, reply_cc, reply_bcc = _build_reply_recipients(email)
     reply_body = ""
     if email.account.signature_html:
         reply_body = f"<div style=\"margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;\">{email.account.signature_html}</div>"
@@ -829,6 +948,8 @@ def email_reply(request, pk):
             account=email.account,
             email_message=email,
             to_addresses=reply_to,
+            cc_addresses=reply_cc,
+            bcc_addresses=reply_bcc,
             subject=reply_subject,
             body_html=reply_body,
         )
@@ -1567,6 +1688,159 @@ def email_label_remove(request, email_id, label_id):
 
 # Settings
 @login_required
+@require_http_methods(["POST"])
+def notification_preferences_update(request):
+    user_accounts = request.user.accounts.all()
+    enabled_account_ids = set(
+        int(value)
+        for value in request.POST.getlist("task_push_accounts")
+        if str(value).isdigit()
+    )
+
+    for account in user_accounts:
+        enabled = account.pk in enabled_account_ids
+        NotificationPreference.objects.update_or_create(
+            user=request.user,
+            account=account,
+            defaults={"task_push_enabled": enabled},
+        )
+
+    messages.success(request, "Notification preferences updated.")
+    return redirect(f"{reverse('settings')}?tab=accounts")
+
+
+@login_required
+@require_http_methods(["GET"])
+def push_vapid_public_key(request):
+    return JsonResponse(
+        {
+            "publicKey": settings.WEB_PUSH_VAPID_PUBLIC_KEY,
+            "configured": is_web_push_configured(),
+        }
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST", "DELETE"])
+def push_subscription(request, account_id):
+    account = get_object_or_404(Account, pk=account_id, users=request.user)
+
+    if request.method == "GET":
+        subscription = (
+            BrowserPushSubscription.objects.filter(
+                user=request.user,
+                account=account,
+                is_active=True,
+            )
+            .order_by("-updated_at")
+            .first()
+        )
+        return JsonResponse(
+            {
+                "is_subscribed": bool(subscription),
+                "endpoint": subscription.endpoint if subscription else None,
+            }
+        )
+
+    if request.method == "DELETE":
+        try:
+            payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            payload = {}
+        endpoint = payload.get("endpoint")
+        filters = {
+            "user": request.user,
+            "account": account,
+            "is_active": True,
+        }
+        if endpoint:
+            filters["endpoint"] = endpoint
+        BrowserPushSubscription.objects.filter(**filters).update(is_active=False)
+        return JsonResponse({"ok": True})
+
+    if not is_web_push_configured():
+        return JsonResponse(
+            {"ok": False, "error": "Web push is not configured on the server."},
+            status=400,
+        )
+
+    try:
+        payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "Invalid JSON body"}, status=400)
+
+    subscription = payload.get("subscription") or {}
+    endpoint = subscription.get("endpoint")
+    keys = subscription.get("keys") or {}
+    p256dh = keys.get("p256dh")
+    auth = keys.get("auth")
+    user_agent = (payload.get("user_agent") or request.META.get("HTTP_USER_AGENT") or "").strip()
+
+    if not endpoint or not p256dh or not auth:
+        return JsonResponse(
+            {"ok": False, "error": "Missing subscription endpoint or keys."},
+            status=400,
+        )
+
+    BrowserPushSubscription.objects.update_or_create(
+        user=request.user,
+        account=account,
+        endpoint=endpoint,
+        defaults={
+            "p256dh": p256dh,
+            "auth": auth,
+            "user_agent": user_agent,
+            "is_active": True,
+            "last_active_at": timezone.now(),
+        },
+    )
+    return JsonResponse({"ok": True})
+
+
+@require_http_methods(["GET"])
+def push_service_worker(request):
+    script = """self.addEventListener('push', function(event) {
+  var payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (e) {
+    payload = {};
+  }
+  var title = payload.title || 'Email IQ';
+  var options = {
+    body: payload.body || '',
+    icon: '/static/images/logo.png',
+    badge: '/static/images/logo.png',
+    tag: payload.tag || 'email-iq-notification',
+    data: {
+      url: payload.url || '/tasks/'
+    }
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  var targetUrl = (event.notification.data && event.notification.data.url) || '/tasks/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i += 1) {
+        var client = clientList[i];
+        if (client.url.indexOf(targetUrl) !== -1 && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+"""
+    return HttpResponse(script, content_type="application/javascript")
+
+
+@login_required
 def settings_view(request):
     """Settings page combining accounts, actions, and labels"""
     # Get data for each section
@@ -1689,4 +1963,6 @@ def settings_view(request):
         "recommended_labels": recommended_labels_with_status,
         "recommended_by_category": recommended_by_category,
         "recommended_categories": CATEGORIES,
+        "web_push_configured": is_web_push_configured(),
+        "web_push_vapid_public_key": settings.WEB_PUSH_VAPID_PUBLIC_KEY,
     })

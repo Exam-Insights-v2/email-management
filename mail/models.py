@@ -106,6 +106,30 @@ class DraftAttachment(models.Model):
         return self.filename
 
 
+class EmailAttachment(models.Model):
+    email_message = models.ForeignKey(
+        EmailMessage, on_delete=models.CASCADE, related_name="attachments"
+    )
+    provider_attachment_id = models.CharField(max_length=255, blank=True, null=True)
+    filename = models.CharField(max_length=255, blank=True, default="")
+    content_type = models.CharField(max_length=128, blank=True, default="")
+    size_bytes = models.PositiveIntegerField(default=0)
+    is_inline = models.BooleanField(default=False)
+    content_id = models.CharField(max_length=255, blank=True, null=True)
+    content = models.BinaryField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["email_message"]),
+            models.Index(fields=["provider_attachment_id"]),
+        ]
+        ordering = ["filename", "pk"]
+
+    def __str__(self):
+        return self.filename or f"Attachment {self.pk}"
+
+
 class SyncRun(models.Model):
     """
     Audit record for an onboarding/sync run. Used to inspect which emails were seen,

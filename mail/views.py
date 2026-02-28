@@ -10,7 +10,7 @@ class EmailThreadViewSet(viewsets.ModelViewSet):
 
 
 class EmailMessageViewSet(viewsets.ModelViewSet):
-    queryset = EmailMessage.objects.all().select_related("thread")
+    queryset = EmailMessage.objects.all().select_related("thread").prefetch_related("attachments")
     serializer_class = EmailMessageSerializer
 
 

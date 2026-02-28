@@ -118,9 +118,16 @@
         will-change: opacity;
       }
       
+      /* Force-hide closed dialogs in case browser/default styles are overridden. */
+      dialog:not([open]) {
+        display: none !important;
+        visibility: hidden !important;
+      }
+
       /* Ensure dialogs are visible when open */
       dialog[open] {
         display: block !important;
+        visibility: visible !important;
       }
       
       /* Ensure el-dialog wrapper doesn't hide content */

@@ -22,7 +22,6 @@ from linemarking_hub.auth_views import (
     microsoft_oauth_login,
 )
 from linemarking_hub.views import (
-    labels_add_recommended,
     account_clear_signature,
     account_clear_writing_style,
     account_create,
@@ -42,6 +41,7 @@ from linemarking_hub.views import (
     email_delete,
     draft_send,
     draft_send_and_mark_done,
+    email_attachment_download,
     email_archive,
     email_unarchive,
     email_forward,
@@ -57,7 +57,12 @@ from linemarking_hub.views import (
     jobs_list,
     label_create,
     label_delete,
+    labels_add_recommended,
     label_update,
+    notification_preferences_update,
+    push_service_worker,
+    push_subscription,
+    push_vapid_public_key,
     settings_view,
     task_create,
     task_delete,
@@ -107,6 +112,7 @@ urlpatterns = [
     path("emails/<int:pk>/reply/", email_reply, name="email_reply"),
     path("emails/<int:pk>/forward/", email_forward, name="email_forward"),
     path("emails/<int:pk>/forward/form/", email_forward, name="email_forward_form"),
+    path("emails/<int:email_id>/attachments/<int:attachment_id>/download/", email_attachment_download, name="email_attachment_download"),
     path("emails/<int:email_id>/labels/add/", email_label_add, name="email_label_add"),
     path("emails/<int:email_id>/labels/<int:label_id>/remove/", email_label_remove, name="email_label_remove"),
     # Labels
@@ -149,6 +155,10 @@ urlpatterns = [
     path("auth/microsoft/callback/", microsoft_oauth_callback, name="microsoft_oauth_callback"),
     # Settings
     path("settings/", settings_view, name="settings"),
+    path("settings/notifications/preferences/", notification_preferences_update, name="notification_preferences_update"),
+    path("notifications/push/vapid/", push_vapid_public_key, name="push_vapid_public_key"),
+    path("notifications/push/subscription/<int:account_id>/", push_subscription, name="push_subscription"),
+    path("push-sw.js", push_service_worker, name="push_service_worker"),
     # Admin & API
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),

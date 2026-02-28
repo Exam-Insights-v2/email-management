@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load db_filters %}
+{% load static db_filters %}
 
 {% block title %}Settings | Email IQ{% endblock %}
 
@@ -205,6 +205,9 @@
             
             <!-- Submit Button -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 pt-2">
+              <button type="button" data-push-toggle data-account-id="{{ account.pk }}" class="w-full sm:w-auto sm:mr-auto rounded-full border border-cyan-300/70 bg-cyan-50 px-4 py-2 text-xs font-medium text-cyan-700 hover:bg-cyan-100 transition-colors dark:bg-cyan-900/20 dark:text-cyan-300 dark:border-cyan-500/40">
+                Enable Browser Push
+              </button>
               <form method="post" action="{% url 'disconnect_account' account.pk %}?from=settings" class="w-full sm:w-auto" onsubmit="return confirm('Disconnect {{ account.email }}? This keeps account settings and synced data, but removes OAuth access.');">
                 {% csrf_token %}
                 <button type="submit" class="w-full sm:w-auto rounded-full bg-white dark:bg-gray-700/80 border border-gray-200 dark:border-white/10 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -219,6 +222,7 @@
               </form>
               <button type="submit" class="w-full sm:w-auto rounded-full bg-cyan-600 px-4 py-2 text-xs font-medium text-white hover:bg-cyan-500 shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-colors">Save Changes</button>
             </div>
+            <p data-push-status data-account-id="{{ account.pk }}" class="text-xs text-gray-600 dark:text-gray-400 sm:text-right"></p>
           </form>
         </div>
       </div>
@@ -613,6 +617,17 @@
       });
     });
   })();
+</script>
+<script src="{% static 'js/push_notifications.js' %}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.initPushNotificationsSettings) {
+      window.initPushNotificationsSettings({
+        configured: {{ web_push_configured|yesno:"true,false" }},
+        vapidPublicKey: '{{ web_push_vapid_public_key|escapejs }}'
+      });
+    }
+  });
 </script>
 
 {% endblock %}

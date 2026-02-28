@@ -15,7 +15,7 @@ from googleapiclient.errors import HttpError
 
 from accounts.models import Account
 from accounts.services import GmailOAuthService, MicrosoftEmailOAuthService
-from mail.models import Draft, EmailMessage, EmailThread
+from mail.models import Draft, EmailAttachment, EmailMessage, EmailThread
 
 logger = logging.getLogger(__name__)
 sync_audit = logging.getLogger("mail.sync_audit")
@@ -34,6 +34,29 @@ def _since_utc(since: Optional[datetime]) -> Optional[datetime]:
     if timezone.is_naive(since):
         since = timezone.make_aware(since)
     return since.astimezone(utc_tz.utc)
+
+
+def sync_email_attachments(email_message: EmailMessage, attachments: Optional[List[dict]]) -> None:
+    """Replace stored inbound attachments for an EmailMessage with latest parsed set."""
+    EmailAttachment.objects.filter(email_message=email_message).delete()
+    if not attachments:
+        return
+
+    records = []
+    for item in attachments:
+        records.append(
+            EmailAttachment(
+                email_message=email_message,
+                provider_attachment_id=item.get("provider_attachment_id") or None,
+                filename=item.get("filename") or "",
+                content_type=item.get("content_type") or "",
+                size_bytes=int(item.get("size_bytes") or 0),
+                is_inline=bool(item.get("is_inline", False)),
+                content_id=item.get("content_id") or None,
+                content=item.get("content_bytes"),
+            )
+        )
+    EmailAttachment.objects.bulk_create(records)
 
 
 def persist_sent_message(
@@ -92,7 +115,7 @@ def store_thread_messages(
     saved = 0
     for m in thread_messages:
         try:
-            EmailMessage.objects.update_or_create(
+            email_msg, _ = EmailMessage.objects.update_or_create(
                 account=account,
                 external_message_id=m["external_message_id"],
                 defaults={
@@ -107,6 +130,7 @@ def store_thread_messages(
                     "body_html": m.get("body_html") or "",
                 },
             )
+            sync_email_attachments(email_msg, m.get("attachments") or [])
             saved += 1
         except Exception as e:
             if audit_logger is not None:
@@ -224,10 +248,11 @@ class GmailService(EmailProviderService):
             cls._credentials_cache.clear()
             cls._cache_lock.clear()
 
-    def _parse_message(self, msg_data: dict) -> dict:
+    def _parse_message(self, msg_data: dict, service=None) -> dict:
         """Parse Gmail API message format"""
         payload = msg_data.get("payload", {})
         headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
+        message_id = msg_data.get("id", "")
 
         # Extract addresses
         def parse_addresses(header_value: str) -> List[str]:
@@ -255,7 +280,8 @@ class GmailService(EmailProviderService):
                 
                 # Check for body data in this part
                 body_data = part.get("body", {}).get("data", "")
-                if body_data:
+                filename = (part.get("filename") or "").strip()
+                if body_data and not filename:
                     try:
                         decoded = base64.urlsafe_b64decode(body_data).decode("utf-8")
                         if mime_type == "text/html":
@@ -267,24 +293,100 @@ class GmailService(EmailProviderService):
             
             return html_body, plain_body
 
+        def extract_attachments_from_parts(parts: List[dict]) -> List[dict]:
+            items = []
+            for part in parts:
+                if part.get("parts"):
+                    items.extend(extract_attachments_from_parts(part.get("parts", [])))
+
+                part_headers = {
+                    h.get("name", "").lower(): h.get("value", "")
+                    for h in part.get("headers", [])
+                }
+                body = part.get("body", {}) or {}
+                filename = (part.get("filename") or "").strip()
+                attachment_id = body.get("attachmentId")
+                mime_type = (part.get("mimeType") or "").strip() or "application/octet-stream"
+                content_disposition = (part_headers.get("content-disposition") or "").lower()
+                content_id_raw = (part_headers.get("content-id") or "").strip()
+                content_id = content_id_raw.strip("<>") if content_id_raw else ""
+                is_inline = "inline" in content_disposition or bool(content_id)
+                has_binary_data = bool(body.get("data")) and mime_type not in ("text/plain", "text/html")
+                looks_like_attachment = bool(
+                    filename
+                    or attachment_id
+                    or "attachment" in content_disposition
+                    or has_binary_data
+                )
+                if not looks_like_attachment:
+                    continue
+
+                content_bytes = None
+                if body.get("data"):
+                    try:
+                        content_bytes = base64.urlsafe_b64decode(body.get("data"))
+                    except Exception:
+                        content_bytes = None
+                elif attachment_id and service and message_id:
+                    try:
+                        resp = self._gmail_request_with_backoff(
+                            lambda mid=message_id, aid=attachment_id: service.users()
+                            .messages()
+                            .attachments()
+                            .get(userId="me", messageId=mid, id=aid)
+                        )
+                        att_data = resp.get("data")
+                        if att_data:
+                            content_bytes = base64.urlsafe_b64decode(att_data)
+                    except Exception:
+                        content_bytes = None
+
+                size_bytes = body.get("size") or (len(content_bytes) if content_bytes else 0)
+                items.append(
+                    {
+                        "provider_attachment_id": attachment_id or "",
+                        "filename": filename or "attachment",
+                        "content_type": mime_type,
+                        "size_bytes": size_bytes,
+                        "is_inline": is_inline,
+                        "content_id": content_id or "",
+                        "content_bytes": content_bytes,
+                    }
+                )
+            return items
+
         # Get body - prefer HTML, fallback to plain text
         body_html = ""
         body_plain = ""
+        attachments = []
         
         if "parts" in payload:
             # Multipart message - recursively extract
             body_html, body_plain = extract_body_from_parts(payload["parts"])
+            attachments = extract_attachments_from_parts(payload["parts"])
         else:
             # Single part message
             mime_type = payload.get("mimeType", "")
             body_data = payload.get("body", {}).get("data", "")
             if body_data:
                 try:
-                    decoded = base64.urlsafe_b64decode(body_data).decode("utf-8")
+                    raw_bytes = base64.urlsafe_b64decode(body_data)
                     if mime_type == "text/html":
-                        body_html = decoded
+                        body_html = raw_bytes.decode("utf-8")
                     elif mime_type == "text/plain":
-                        body_plain = decoded
+                        body_plain = raw_bytes.decode("utf-8")
+                    else:
+                        attachments = [
+                            {
+                                "provider_attachment_id": payload.get("body", {}).get("attachmentId") or "",
+                                "filename": (payload.get("filename") or "attachment"),
+                                "content_type": mime_type or "application/octet-stream",
+                                "size_bytes": payload.get("body", {}).get("size") or len(raw_bytes),
+                                "is_inline": False,
+                                "content_id": "",
+                                "content_bytes": raw_bytes,
+                            }
+                        ]
                 except Exception:
                     pass
         
@@ -316,6 +418,7 @@ class GmailService(EmailProviderService):
             "bcc_addresses": parse_addresses(headers.get("bcc", "")),
             "date_sent": date_sent,
             "body_html": final_body,
+            "attachments": attachments,
         }
 
     def _gmail_request_with_backoff(self, request_fn, max_retries: int = 3):
@@ -414,7 +517,7 @@ class GmailService(EmailProviderService):
                             .messages()
                             .get(userId="me", id=mid, format="full")
                         )
-                        parsed_messages.append(self._parse_message(msg_data))
+                        parsed_messages.append(self._parse_message(msg_data, service=service))
                     except Exception as e:
                         sync_audit.warning(
                             "Gmail fetch_messages skipped message account_id=%s external_message_id=%s error=%s",
@@ -456,7 +559,7 @@ class GmailService(EmailProviderService):
                 .get(userId="me", id=external_message_id, format="full")
                 .execute()
             )
-            return self._parse_message(msg_data)
+            return self._parse_message(msg_data, service=service)
         except Exception as e:
             raise ValueError(f"Error fetching Gmail message: {str(e)}")
 
@@ -518,7 +621,7 @@ class GmailService(EmailProviderService):
             for msg in thread.get("messages", []):
                 msg_id = msg.get("id", "")
                 try:
-                    messages.append(self._parse_message(msg))
+                    messages.append(self._parse_message(msg, service=service))
                 except Exception:
                     pass
             return messages
@@ -528,6 +631,27 @@ class GmailService(EmailProviderService):
             if any(keyword in error_str for keyword in ["401", "unauthorized", "invalid_token", "invalid_grant"]):
                 self.clear_cache(account.pk)
             raise ValueError(f"Error fetching Gmail thread: {str(e)}")
+
+    def fetch_attachment_content(
+        self, account: Account, external_message_id: str, provider_attachment_id: str
+    ) -> Optional[bytes]:
+        """Fetch binary attachment content from Gmail by provider attachment id."""
+        if not external_message_id or not provider_attachment_id:
+            return None
+        service = self._get_service(account)
+        try:
+            resp = self._gmail_request_with_backoff(
+                lambda: service.users()
+                .messages()
+                .attachments()
+                .get(userId="me", messageId=external_message_id, id=provider_attachment_id)
+            )
+            raw = resp.get("data")
+            if not raw:
+                return None
+            return base64.urlsafe_b64decode(raw)
+        except Exception:
+            return None
 
     def delete_message(self, account: Account, external_message_id: str):
         """Delete (trash) a message in Gmail"""
@@ -882,6 +1006,29 @@ class MicrosoftService(EmailProviderService):
         from_obj = msg_data.get("from", {})
         from_address = from_obj.get("emailAddress", {}).get("address", "") if from_obj else ""
         from_name = from_obj.get("emailAddress", {}).get("name", "") if from_obj else ""
+        attachments = []
+        for att in msg_data.get("attachments", []) or []:
+            odata_type = str(att.get("@odata.type", "")).lower()
+            if "fileattachment" not in odata_type and att.get("contentBytes") is None:
+                continue
+            content_bytes = None
+            raw_content = att.get("contentBytes")
+            if raw_content:
+                try:
+                    content_bytes = base64.b64decode(raw_content)
+                except Exception:
+                    content_bytes = None
+            attachments.append(
+                {
+                    "provider_attachment_id": att.get("id") or "",
+                    "filename": att.get("name") or "attachment",
+                    "content_type": att.get("contentType") or "application/octet-stream",
+                    "size_bytes": att.get("size") or (len(content_bytes) if content_bytes else 0),
+                    "is_inline": bool(att.get("isInline", False)),
+                    "content_id": att.get("contentId") or "",
+                    "content_bytes": content_bytes,
+                }
+            )
 
         return {
             "external_message_id": msg_data["id"],
@@ -894,6 +1041,7 @@ class MicrosoftService(EmailProviderService):
             "bcc_addresses": parse_addresses(msg_data.get("bccRecipients", [])),
             "date_sent": date_sent,
             "body_html": body_html or "",
+            "attachments": attachments,
         }
 
     @staticmethod
@@ -1081,6 +1229,7 @@ class MicrosoftService(EmailProviderService):
                     msg_resp = self._ms_request_with_backoff(
                         f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}",
                         headers,
+                        params={"$expand": "attachments"},
                     )
                     parsed.append(self._parse_message(msg_resp.json()))
                 except Exception as e:
@@ -1196,6 +1345,7 @@ class MicrosoftService(EmailProviderService):
             response = requests.get(
                 f"https://graph.microsoft.com/v1.0/me/messages/{external_message_id}",
                 headers=headers,
+                params={"$expand": "attachments"},
             )
             response.raise_for_status()
             msg_data = response.json()
@@ -1241,6 +1391,7 @@ class MicrosoftService(EmailProviderService):
                     msg_response = requests.get(
                         f"https://graph.microsoft.com/v1.0/me/messages/{msg_id}",
                         headers=headers,
+                        params={"$expand": "attachments"},
                     )
                     msg_response.raise_for_status()
                     parsed.append(self._parse_message(msg_response.json()))
@@ -1255,6 +1406,28 @@ class MicrosoftService(EmailProviderService):
             return parsed
         except Exception as e:
             raise ValueError(f"Error fetching Microsoft thread messages: {str(e)}")
+
+    def fetch_attachment_content(
+        self, account: Account, external_message_id: str, provider_attachment_id: str
+    ) -> Optional[bytes]:
+        """Fetch binary attachment content from Microsoft Graph by attachment id."""
+        if not external_message_id or not provider_attachment_id:
+            return None
+        headers = self._get_headers(account)
+        try:
+            response = requests.get(
+                f"https://graph.microsoft.com/v1.0/me/messages/{external_message_id}/attachments/{provider_attachment_id}",
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            raw = payload.get("contentBytes")
+            if not raw:
+                return None
+            return base64.b64decode(raw)
+        except Exception:
+            return None
 
 
 class EmailSyncService:
@@ -1449,6 +1622,7 @@ class EmailSyncService:
                         "body_html": msg_data["body_html"],
                     },
                 )
+                sync_email_attachments(email_msg, msg_data.get("attachments") or [])
 
                 # Track this email as synced in this batch
                 synced_email_ids.append(email_msg.pk)

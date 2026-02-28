@@ -27,6 +27,11 @@ def _strip_quoted_email_html(html):
     if not text:
         return html
 
+    # Remove document-level wrappers that can break surrounding page DOM when embedded.
+    text = re.sub(r'<!doctype[^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'</?(?:html|head|body)[^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<(?:meta|link)[^>]*>', '', text, flags=re.IGNORECASE)
+
     # Remove <style> tags and their content (these can't be scoped and affect the whole page)
     text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
     
@@ -462,6 +467,11 @@ def remove_global_style_script(html):
     if not text:
         return html
     
+    # Remove document-level wrappers that can break surrounding page DOM when embedded.
+    text = re.sub(r'<!doctype[^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'</?(?:html|head|body)[^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<(?:meta|link)[^>]*>', '', text, flags=re.IGNORECASE)
+
     # Remove <style> tags and their content (these can't be scoped and affect the whole page)
     text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
     

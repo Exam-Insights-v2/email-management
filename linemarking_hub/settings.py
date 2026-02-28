@@ -187,6 +187,11 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 # Stripe Configuration
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 
+# Web Push (PWA notifications)
+WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
+WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
+WEB_PUSH_CONTACT_EMAIL = os.environ.get("WEB_PUSH_CONTACT_EMAIL", "hello@example.com").strip()
+
 # Logging Configuration
 # DigitalOcean App Platform captures stdout/stderr, so we log to console
 LOGGING = {

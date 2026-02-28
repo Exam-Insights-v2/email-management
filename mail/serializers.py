@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Draft, DraftAttachment, EmailMessage, EmailThread
+from .models import Draft, DraftAttachment, EmailAttachment, EmailMessage, EmailThread
 
 
 class EmailThreadSerializer(serializers.ModelSerializer):
@@ -9,8 +9,15 @@ class EmailThreadSerializer(serializers.ModelSerializer):
         fields = ["id", "account", "external_thread_id", "created_at", "updated_at"]
 
 
+class EmailAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailAttachment
+        fields = ["id", "filename", "content_type", "size_bytes", "is_inline", "content_id"]
+
+
 class EmailMessageSerializer(serializers.ModelSerializer):
     thread = EmailThreadSerializer(read_only=True)
+    attachments = EmailAttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = EmailMessage
@@ -28,6 +35,7 @@ class EmailMessageSerializer(serializers.ModelSerializer):
             "date_sent",
             "body_html",
             "created_at",
+            "attachments",
         ]
 
 
