@@ -267,7 +267,6 @@ Usage:
               <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Conversation</h3>
               <div id="task-email-thread-draft-{{ task.pk }}" class="dark:border-white/10">
               <div class="space-y-4" role="list">
-              {% if email_data.has_draft_reply %}
               {% if email_data.draft %}
               <form id="draft-form-{{ task.pk }}" method="post" action="{% url 'draft_update' email_data.draft.pk %}" data-draft-id="{{ email_data.draft.pk }}">
               {% else %}
@@ -414,7 +413,7 @@ Usage:
                     </div>
                     <div
                       id="draft-body-{{ task.pk }}"
-                      class="draft-body-editor block w-full bg-white dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
+                      class="draft-body-editor block w-full bg-white dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 min-h-[200px] focus:outline-none focus:ring-0 focus:border-gray-200 dark:focus:border-white/10 prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
                       contenteditable="true"
                       data-placeholder="Write your reply..."
                       data-signature="{{ task.account.signature_html|default:''|escapejs }}"
@@ -490,7 +489,6 @@ Usage:
                   </div>
                 </article>
               </form>
-              {% endif %}
 
               {% if email_data.thread_messages|length > 1 %}
               {% for msg in email_data.thread_messages reversed %}
@@ -642,7 +640,12 @@ Usage:
                     }
                   }
                   if (bodyEditor && bodyHtmlInput) {
-                    // Do not append signature on load: draft body from server already includes it when present; appending again caused duplicate signatures (serialisation differences made indexOf miss).
+                    // Show signature in the visible editor for empty drafts.
+                    // Existing draft bodies are left untouched to avoid duplicates.
+                    var initialText = (bodyEditor.textContent || '').replace(/\u00a0/g, ' ').trim();
+                    if (!initialText && signatureHtml) {
+                      bodyEditor.innerHTML = signatureHtml;
+                    }
                     syncBodyToHidden();
                     bodyEditor.addEventListener('input', function() { syncBodyToHidden(); scheduleAutosave(); });
                     bodyEditor.addEventListener('paste', function() { setTimeout(syncBodyToHidden, 0); });

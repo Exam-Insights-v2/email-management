@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime
 from django.conf import settings
@@ -15,6 +16,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
@@ -78,6 +80,25 @@ def _build_reply_recipients(email_obj):
     reply_cc = _dedupe(to_addresses + cc_addresses, exclude=[account_email] + reply_to)
     reply_bcc = _dedupe(bcc_addresses, exclude=[account_email] + reply_to + reply_cc)
     return reply_to, reply_cc, reply_bcc
+
+
+def _format_draft_body_for_display(body_html):
+    """
+    Ensure plain-text drafts retain line breaks when rendered into HTML editors/views.
+    Keeps HTML drafts as-is (after quoted-email stripping).
+    """
+    if not body_html:
+        return ""
+    text = str(body_html)
+    if not text.strip():
+        return ""
+
+    has_html_tags = bool(re.search(r"<[a-zA-Z][^>]*>", text)) or "</" in text
+    if has_html_tags:
+        return _strip_quoted_email_html(text)
+
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return escape(normalized).replace("\n", "<br>")
 
 
 # Jobs CRUD
@@ -462,7 +483,7 @@ def tasks_list(request):
                 "thread_messages": thread_messages,
                 "has_draft_reply": has_draft_reply,
                 "draft": draft,
-                "draft_body_display": _strip_quoted_email_html(draft.body_html) if (draft and draft.body_html) else "",
+                "draft_body_display": _format_draft_body_for_display(draft.body_html) if draft else "",
             }
     
     form = TaskForm(user=request.user, account=account)
@@ -812,7 +833,7 @@ def task_email_data(request, pk):
             "to_addresses": draft.to_addresses or [],
             "cc_addresses": draft.cc_addresses or [],
             "subject": draft.subject or "",
-            "body_html": _strip_quoted_email_html(draft.body_html or "") or "",
+            "body_html": _format_draft_body_for_display(draft.body_html),
         }
     
     return JsonResponse(data)
