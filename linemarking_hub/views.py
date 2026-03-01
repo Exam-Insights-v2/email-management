@@ -82,11 +82,16 @@ def _build_reply_recipients(email_obj):
     return reply_to, reply_cc, reply_bcc
 
 
+# Separator inserted between draft reply and signature (must match automation/action_executors, etc.)
+_DRAFT_SIGNATURE_SEPARATOR = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>'
+
+
 def _format_draft_body_for_display(body_html):
     """
     Ensure plain-text drafts retain line breaks when rendered into HTML editors/views.
     Keeps HTML drafts as-is (after quoted-email stripping).
-    Always converts newlines to <br> so both plain and HTML paths show line breaks.
+    Always converts newlines to <br> in the reply part so line breaks show; signature
+    part is left as-is (already HTML) to avoid massive line breaks in the signature.
     """
     if not body_html:
         return ""
@@ -94,16 +99,27 @@ def _format_draft_body_for_display(body_html):
     if not text.strip():
         return ""
 
-    has_html_tags = bool(re.search(r"<[a-zA-Z][^>]*>", text)) or "</" in text
-    if has_html_tags:
-        result = _strip_quoted_email_html(text)
-    else:
-        normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-        result = escape(normalized).replace("\n", "<br>")
+    def format_part(part: str, convert_newlines_to_br: bool) -> str:
+        if not part.strip():
+            return part
+        has_html_tags = bool(re.search(r"<[a-zA-Z][^>]*>", part)) or "</" in part
+        if has_html_tags:
+            result = _strip_quoted_email_html(part)
+        else:
+            normalized = part.replace("\r\n", "\n").replace("\r", "\n")
+            result = escape(normalized).replace("\n", "<br>")
+        if convert_newlines_to_br:
+            result = result.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+        return result
 
-    # Ensure any remaining newlines (e.g. in HTML path) become line breaks for display
-    result = result.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
-    return result
+    if _DRAFT_SIGNATURE_SEPARATOR in text:
+        main_part, signature_part = text.split(_DRAFT_SIGNATURE_SEPARATOR, 1)
+        return (
+            format_part(main_part, convert_newlines_to_br=True)
+            + _DRAFT_SIGNATURE_SEPARATOR
+            + format_part(signature_part, convert_newlines_to_br=False)
+        )
+    return format_part(text, convert_newlines_to_br=True)
 
 
 # Jobs CRUD

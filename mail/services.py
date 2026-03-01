@@ -44,10 +44,19 @@ def _truncate(value: Optional[str], max_length: int) -> Optional[str]:
     return s[:max_length] if len(s) > max_length else s
 
 
+# Separator between draft reply and signature (must match linemarking_hub/views and automation)
+_DRAFT_SIGNATURE_SEPARATOR = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;"></div>'
+
+
 def _body_html_for_mime(body_html: str) -> str:
-    """Normalise body so newlines become <br> for HTML MIME part (display and send)."""
+    """Normalise body so newlines become <br> for HTML MIME part. Only the reply part
+    is normalised; the signature part is left as-is to avoid extra line breaks in the signature."""
     if not body_html:
         return ""
+    if _DRAFT_SIGNATURE_SEPARATOR in body_html:
+        main_part, signature_part = body_html.split(_DRAFT_SIGNATURE_SEPARATOR, 1)
+        normalised_main = main_part.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+        return normalised_main + _DRAFT_SIGNATURE_SEPARATOR + signature_part
     normalised = body_html.replace("\r\n", "\n").replace("\r", "\n")
     return normalised.replace("\n", "<br>")
 
