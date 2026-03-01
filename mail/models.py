@@ -111,7 +111,7 @@ class EmailAttachment(models.Model):
         EmailMessage, on_delete=models.CASCADE, related_name="attachments"
     )
     provider_attachment_id = models.CharField(max_length=255, blank=True, null=True)
-    filename = models.CharField(max_length=255, blank=True, default="")
+    filename = models.CharField(max_length=1024, blank=True, default="")
     content_type = models.CharField(max_length=128, blank=True, default="")
     size_bytes = models.PositiveIntegerField(default=0)
     is_inline = models.BooleanField(default=False)

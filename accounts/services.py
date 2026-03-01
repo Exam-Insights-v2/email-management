@@ -60,8 +60,12 @@ class GoogleOAuthService:
     ]
 
     @staticmethod
-    def get_oauth_flow(redirect_uri: str, scopes: list = None) -> Flow:
-        """Create OAuth flow with specified scopes"""
+    def get_oauth_flow(
+        redirect_uri: str,
+        scopes: list = None,
+        code_verifier: Optional[str] = None,
+    ) -> Flow:
+        """Create OAuth flow with specified scopes. Pass code_verifier when exchanging a code (PKCE)."""
         if scopes is None:
             scopes = GoogleOAuthService.LOGIN_SCOPES
 
@@ -74,21 +78,21 @@ class GoogleOAuthService:
                 "redirect_uris": [redirect_uri],
             }
         }
-        flow = Flow.from_client_config(
-            client_config, scopes=scopes, redirect_uri=redirect_uri
-        )
+        kwargs: dict = {"redirect_uri": redirect_uri}
+        if code_verifier is not None:
+            kwargs["code_verifier"] = code_verifier
+            kwargs["autogenerate_code_verifier"] = False
+        flow = Flow.from_client_config(client_config, scopes=scopes, **kwargs)
         return flow
 
     @staticmethod
     def get_authorization_url(
         redirect_uri: str, scopes: list = None, force_reauth: bool = False
-    ) -> Tuple[str, str]:
-        """Get authorization URL and state for OAuth flow
+    ) -> Tuple[str, str, Optional[str]]:
+        """Get authorization URL, state, and PKCE code_verifier for OAuth flow.
 
-        Args:
-            redirect_uri: OAuth redirect URI
-            scopes: OAuth scopes to request (defaults to LOGIN_SCOPES)
-            force_reauth: If True, force re-authorization even if user previously granted access
+        Caller must store code_verifier in session and pass it to exchange_code_for_token
+        on the callback request.
         """
         if scopes is None:
             scopes = GoogleOAuthService.LOGIN_SCOPES
@@ -100,15 +104,23 @@ class GoogleOAuthService:
             include_granted_scopes="false",
             prompt=prompt,
         )
-        return authorization_url, state
+        code_verifier = getattr(flow, "code_verifier", None)
+        return authorization_url, state, code_verifier
 
     @staticmethod
-    def exchange_code_for_token(code: str, redirect_uri: str, scopes: list = None) -> Credentials:
-        """Exchange authorization code for access token"""
+    def exchange_code_for_token(
+        code: str,
+        redirect_uri: str,
+        scopes: list = None,
+        code_verifier: Optional[str] = None,
+    ) -> Credentials:
+        """Exchange authorization code for access token. Pass code_verifier from session (PKCE)."""
         if scopes is None:
             scopes = GoogleOAuthService.LOGIN_SCOPES
 
-        flow = GoogleOAuthService.get_oauth_flow(redirect_uri, scopes)
+        flow = GoogleOAuthService.get_oauth_flow(
+            redirect_uri, scopes, code_verifier=code_verifier
+        )
         # Suppress scope mismatch warnings - Google may add additional scopes like 'openid'
         import warnings
         # Configure oauthlib session to not treat scope mismatches as errors
@@ -195,17 +207,26 @@ class GmailOAuthService:
     ] + GoogleOAuthService.GMAIL_SCOPES
 
     @staticmethod
-    def get_authorization_url(redirect_uri: str, force_reauth: bool = False) -> Tuple[str, str]:
-        """Get authorization URL and state for Gmail OAuth flow"""
+    def get_authorization_url(
+        redirect_uri: str, force_reauth: bool = False
+    ) -> Tuple[str, str, Optional[str]]:
+        """Get authorization URL, state, and code_verifier for Gmail OAuth flow."""
         return GoogleOAuthService.get_authorization_url(
             redirect_uri, scopes=GmailOAuthService.SCOPES, force_reauth=force_reauth
         )
 
     @staticmethod
-    def exchange_code_for_token(code: str, redirect_uri: str) -> Credentials:
-        """Exchange authorization code for access token"""
+    def exchange_code_for_token(
+        code: str,
+        redirect_uri: str,
+        code_verifier: Optional[str] = None,
+    ) -> Credentials:
+        """Exchange authorization code for access token. Pass code_verifier from session (PKCE)."""
         return GoogleOAuthService.exchange_code_for_token(
-            code, redirect_uri, scopes=GmailOAuthService.SCOPES
+            code,
+            redirect_uri,
+            scopes=GmailOAuthService.SCOPES,
+            code_verifier=code_verifier,
         )
 
     @staticmethod

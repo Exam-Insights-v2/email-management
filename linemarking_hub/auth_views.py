@@ -41,12 +41,14 @@ def google_oauth_login(request):
     try:
         # Request both login and Gmail scopes to automatically connect email account
         combined_scopes = GoogleOAuthService.LOGIN_SCOPES + GoogleOAuthService.GMAIL_SCOPES
-        auth_url, state = GoogleOAuthService.get_authorization_url(
+        auth_url, state, code_verifier = GoogleOAuthService.get_authorization_url(
             redirect_uri, scopes=combined_scopes
         )
-        # Store state in session for verification
+        # Store state and PKCE code_verifier for verification on callback
         request.session["oauth_state"] = state
         request.session["oauth_purpose"] = "login"
+        if code_verifier is not None:
+            request.session["oauth_code_verifier"] = code_verifier
         return redirect(auth_url)
     except Exception as e:
         messages.error(request, f"Error initiating login: {str(e)}")
@@ -73,11 +75,12 @@ def google_oauth_callback(request):
         return redirect("login")
 
     redirect_uri = build_oauth_redirect_uri(request, "google_oauth_callback")
+    code_verifier = request.session.pop("oauth_code_verifier", None)
     try:
-        # Exchange code for token with combined scopes
+        # Exchange code for token with combined scopes (pass PKCE code_verifier from session)
         combined_scopes = GoogleOAuthService.LOGIN_SCOPES + GoogleOAuthService.GMAIL_SCOPES
         credentials = GoogleOAuthService.exchange_code_for_token(
-            code, redirect_uri, scopes=combined_scopes
+            code, redirect_uri, scopes=combined_scopes, code_verifier=code_verifier
         )
 
         # Create or update user

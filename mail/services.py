@@ -36,6 +36,14 @@ def _since_utc(since: Optional[datetime]) -> Optional[datetime]:
     return since.astimezone(utc_tz.utc)
 
 
+def _truncate(value: Optional[str], max_length: int) -> Optional[str]:
+    """Truncate string to max_length for DB varchar fields; preserve None."""
+    if value is None:
+        return None
+    s = str(value)
+    return s[:max_length] if len(s) > max_length else s
+
+
 def sync_email_attachments(email_message: EmailMessage, attachments: Optional[List[dict]]) -> None:
     """Replace stored inbound attachments for an EmailMessage with latest parsed set."""
     EmailAttachment.objects.filter(email_message=email_message).delete()
@@ -47,12 +55,14 @@ def sync_email_attachments(email_message: EmailMessage, attachments: Optional[Li
         records.append(
             EmailAttachment(
                 email_message=email_message,
-                provider_attachment_id=item.get("provider_attachment_id") or None,
-                filename=item.get("filename") or "",
-                content_type=item.get("content_type") or "",
+                provider_attachment_id=_truncate(
+                    item.get("provider_attachment_id"), 255
+                ),
+                filename=_truncate(item.get("filename") or "", 1024) or "",
+                content_type=_truncate(item.get("content_type") or "", 128) or "",
                 size_bytes=int(item.get("size_bytes") or 0),
                 is_inline=bool(item.get("is_inline", False)),
-                content_id=item.get("content_id") or None,
+                content_id=_truncate(item.get("content_id"), 255),
                 content=item.get("content_bytes"),
             )
         )

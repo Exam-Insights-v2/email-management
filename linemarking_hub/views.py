@@ -1329,7 +1329,11 @@ def account_create(request):
     # Default to normal OAuth to avoid repeated consent screens
     redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     try:
-        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=False)
+        auth_url, state, code_verifier = GmailOAuthService.get_authorization_url(
+            redirect_uri, force_reauth=False
+        )
+        if code_verifier is not None:
+            request.session["oauth_code_verifier"] = code_verifier
         # Store state in session for verification
         request.session["oauth_state"] = state
         # Don't store account_id yet - we'll create it after getting email from OAuth

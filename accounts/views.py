@@ -63,9 +63,13 @@ def account_connect_gmail(request):
     redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
     try:
         # Default to normal OAuth to avoid repeated consent screens.
-        auth_url, state = GmailOAuthService.get_authorization_url(redirect_uri, force_reauth=False)
-        # Store state in session for verification
+        auth_url, state, code_verifier = GmailOAuthService.get_authorization_url(
+            redirect_uri, force_reauth=False
+        )
+        # Store state and PKCE code_verifier for verification on callback
         request.session["oauth_state"] = state
+        if code_verifier is not None:
+            request.session["oauth_code_verifier"] = code_verifier
         if account:
             request.session["oauth_account_id"] = account.pk
         else:
@@ -90,12 +94,15 @@ def account_gmail_oauth_callback(request):
         messages.error(request, "No authorization code received.")
         return redirect(f"{reverse('settings')}?tab=accounts")
 
-    # Exchange code for token
+    # Exchange code for token (pass PKCE code_verifier from session)
     redirect_uri = build_oauth_redirect_uri(request, "gmail_oauth_callback")
+    code_verifier = request.session.pop("oauth_code_verifier", None)
     credentials = None
-    
+
     try:
-        credentials = GmailOAuthService.exchange_code_for_token(code, redirect_uri)
+        credentials = GmailOAuthService.exchange_code_for_token(
+            code, redirect_uri, code_verifier=code_verifier
+        )
     except Warning as w:
         # OAuth scope mismatch warnings - Google may add 'openid' scope automatically
         # These are usually harmless - try to get credentials anyway
@@ -107,7 +114,9 @@ def account_gmail_oauth_callback(request):
             try:
                 # Use the scopes that Google actually granted (including openid)
                 all_scopes = GmailOAuthService.SCOPES
-                flow = GoogleOAuthService.get_oauth_flow(redirect_uri, all_scopes)
+                flow = GoogleOAuthService.get_oauth_flow(
+                    redirect_uri, all_scopes, code_verifier=code_verifier
+                )
                 import warnings
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
