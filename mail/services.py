@@ -44,6 +44,14 @@ def _truncate(value: Optional[str], max_length: int) -> Optional[str]:
     return s[:max_length] if len(s) > max_length else s
 
 
+def _body_html_for_mime(body_html: str) -> str:
+    """Normalise body so newlines become <br> for HTML MIME part (display and send)."""
+    if not body_html:
+        return ""
+    normalised = body_html.replace("\r\n", "\n").replace("\r", "\n")
+    return normalised.replace("\n", "<br>")
+
+
 def sync_email_attachments(email_message: EmailMessage, attachments: Optional[List[dict]]) -> None:
     """Replace stored inbound attachments for an EmailMessage with latest parsed set."""
     EmailAttachment.objects.filter(email_message=email_message).delete()
@@ -835,8 +843,8 @@ class GmailService(EmailProviderService):
             except Exception:
                 pass
 
-        # Add HTML body
-        html_part = email.mime.text.MIMEText(body_html, "html")
+        # Add HTML body (normalise newlines to <br> so plain-text drafts display correctly)
+        html_part = email.mime.text.MIMEText(_body_html_for_mime(body_html), "html")
         message.attach(html_part)
 
         # Encode message
@@ -942,8 +950,8 @@ class GmailService(EmailProviderService):
             except Exception:
                 pass
 
-        # Add HTML body
-        html_part = email.mime.text.MIMEText(draft.body_html or "", "html")
+        # Add HTML body (normalise newlines to <br> so plain-text drafts display correctly)
+        html_part = email.mime.text.MIMEText(_body_html_for_mime(draft.body_html or ""), "html")
         message.attach(html_part)
 
         # Encode message

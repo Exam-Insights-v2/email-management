@@ -86,6 +86,7 @@ def _format_draft_body_for_display(body_html):
     """
     Ensure plain-text drafts retain line breaks when rendered into HTML editors/views.
     Keeps HTML drafts as-is (after quoted-email stripping).
+    Always converts newlines to <br> so both plain and HTML paths show line breaks.
     """
     if not body_html:
         return ""
@@ -95,10 +96,14 @@ def _format_draft_body_for_display(body_html):
 
     has_html_tags = bool(re.search(r"<[a-zA-Z][^>]*>", text)) or "</" in text
     if has_html_tags:
-        return _strip_quoted_email_html(text)
+        result = _strip_quoted_email_html(text)
+    else:
+        normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+        result = escape(normalized).replace("\n", "<br>")
 
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    return escape(normalized).replace("\n", "<br>")
+    # Ensure any remaining newlines (e.g. in HTML path) become line breaks for display
+    result = result.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+    return result
 
 
 # Jobs CRUD
